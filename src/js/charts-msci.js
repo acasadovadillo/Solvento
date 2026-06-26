@@ -58,44 +58,49 @@ function renderMsciChart(data) {
   renderMsciAxes(data, minY, maxY);
 }
 
-async function loadMsci(range, interval) {
-  document.getElementById("msci-date-display").textContent = "Cargando...";
-  try {
-    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/IWDA.AS?interval=${interval}&range=${range}`);
-    if (!r.ok) throw new Error(r.status);
-    const d = await r.json();
-    if (!d) throw new Error("No response");
-    const result = d?.chart?.result?.[0];
-    if (!result) throw new Error("No data");
-    const timestamps = result.timestamp || [];
-    const closes = result.indicators?.quote?.[0]?.close || [];
-    const isIntraday = interval === "5m" || interval === "15m" || interval === "30m" || interval === "60m";
-    const parsed = [];
-    for (let i = 0; i < timestamps.length; i++) {
-      if (closes[i] == null) continue;
-      const ms = timestamps[i] * 1000;
-      const dt = new Date(ms);
-      let f;
-      if (isIntraday) {
-        f = dt.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
-      } else if (range === "5d" || range === "1mo" || range === "3mo") {
-        f = dt.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
-      } else {
-        f = dt.toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
-      }
-      parsed.push({ t: ms, v: closes[i], f: f, vf: closes[i].toFixed(2).replace(".", ",") });
-    }
-    if (!parsed.length) throw new Error("Empty");
+function clearMsciChart() {
+  const ref = document.getElementById("msci-ref-line"); if (ref) ref.style.display = "none";
+  document.getElementById("msci-chart-line").setAttribute("d", "");
+  document.getElementById("msci-chart-area").setAttribute("d", "");
+  document.getElementById("msci-axes").innerHTML = "";
+  document.getElementById("msci-lbl-start").textContent = "";
+  document.getElementById("msci-lbl-end").textContent = "";
+  document.getElementById("msci-rendimiento-display").textContent = "—";
+  document.getElementById("msci-date-display").textContent = "Sin datos disponibles.";
+}
+
+const DAYS_MAP = { "5d": 8, "1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "5y": Infinity };
+
+function loadMsci(range, interval) {
+  const isIntraday = interval === "5m";
+  let parsed = [];
+
+  if (isIntraday) {
+    const src = (typeof msciIntradayData !== "undefined") ? msciIntradayData : [];
+    parsed = src.map(([t, v]) => ({
+      t, v,
+      f: new Date(t).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+      vf: v.toFixed(2).replace(".", ",")
+    }));
+  } else {
+    const src = (typeof msciHistoryData !== "undefined") ? msciHistoryData : [];
+    const daysBack = DAYS_MAP[range] ?? 35;
+    const cutoff = daysBack === Infinity ? 0 : Date.now() - daysBack * 86400000;
+    const useLongFmt = (range === "6mo" || range === "1y" || range === "5y");
+    const filtered = src.filter(([t]) => t >= cutoff);
+    parsed = filtered.map(([t, v]) => ({
+      t, v,
+      f: useLongFmt
+        ? new Date(t).toLocaleDateString("es-ES", { month: "short", year: "2-digit" })
+        : new Date(t).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }),
+      vf: v.toFixed(2).replace(".", ",")
+    }));
+  }
+
+  if (parsed.length) {
     renderMsciChart(parsed);
-  } catch (e) {
-    const ref = document.getElementById("msci-ref-line"); if (ref) ref.style.display = "none";
-    document.getElementById("msci-chart-line").setAttribute("d", "");
-    document.getElementById("msci-chart-area").setAttribute("d", "");
-    document.getElementById("msci-axes").innerHTML = "";
-    document.getElementById("msci-lbl-start").textContent = "";
-    document.getElementById("msci-lbl-end").textContent = "";
-    document.getElementById("msci-rendimiento-display").textContent = "—";
-    document.getElementById("msci-date-display").textContent = "Vista no disponible actualmente.";
+  } else {
+    clearMsciChart();
   }
 }
 
