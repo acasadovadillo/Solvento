@@ -1,4 +1,4 @@
-let btcRaw = [], btcActive = [];
+let btcRaw = [], btcActive = [], btcMaxCached = null;
 window.btcDefaultDateText = "";
 
 function initBtcWebSocket() {
@@ -95,20 +95,16 @@ document.querySelectorAll(".tf-btn-btc").forEach(b => b.addEventListener("click"
   const daysRaw = e.target.dataset.days;
   const days = parseInt(daysRaw);
   if (daysRaw === "max") {
-    document.getElementById("btc-date-display").textContent = "Cargando histórico completo...";
-    fetch("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=eur&days=max")
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(data => { const all = parseBtcPrices(data, false); if (all.length > 0) btcRaw = all; renderBtc(999999); })
-      .catch(() => {
-        document.getElementById("btc-chart-line").setAttribute("d", "");
-        document.getElementById("btc-chart-area").setAttribute("d", "");
-        document.getElementById("btc-axes").innerHTML = "";
-        const ref = document.getElementById("btc-ref-line"); if (ref) ref.style.display = "none";
-        document.getElementById("btc-lbl-start").textContent = "";
-        document.getElementById("btc-lbl-end").textContent = "";
-        document.getElementById("btc-rendimiento-display").textContent = "—";
-        document.getElementById("btc-date-display").textContent = "Vista no disponible actualmente.";
-      });
+    if (!btcMaxCached && typeof btcMaxData !== "undefined" && btcMaxData.length > 0) {
+      btcMaxCached = btcMaxData.map(([t, v]) => ({
+        t,
+        v,
+        f: new Date(t).toLocaleDateString("es-ES"),
+        vf: new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
+      }));
+    }
+    if (btcMaxCached) btcRaw = btcMaxCached;
+    renderBtc(999999);
   } else if (days === 1) {
     document.getElementById("btc-date-display").textContent = "Cargando datos intradiarios...";
     fetch("https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=eur&days=1")
