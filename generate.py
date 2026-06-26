@@ -102,6 +102,36 @@ def parse_date(s):
             continue
     return None
 
+def fetch_msci_history():
+    period2 = int(datetime.now().timestamp())
+    url = (
+        f"https://query1.finance.yahoo.com/v8/finance/chart/IWDA.AS"
+        f"?interval=1d&period1=1253862000&period2={period2}"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        result = data["chart"]["result"][0]
+        timestamps = result["timestamp"]
+        closes = result["indicators"]["quote"][0]["close"]
+        return [[t * 1000, round(v, 4)] for t, v in zip(timestamps, closes) if v is not None]
+    except Exception:
+        return []
+
+def fetch_msci_intraday():
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/IWDA.AS?interval=5m&range=1d"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        result = data["chart"]["result"][0]
+        timestamps = result["timestamp"]
+        closes = result["indicators"]["quote"][0]["close"]
+        return [[t * 1000, round(v, 4)] for t, v in zip(timestamps, closes) if v is not None]
+    except Exception:
+        return []
+
 def fetch_btc_history_max():
     period2 = int(datetime.now().timestamp())
     url = (
@@ -568,6 +598,22 @@ def tabla_activos():
 # 8) ESCRIBIR HTML
 # ════════════════════════════════════════════════════
 
+msci_history = fetch_msci_history()
+if msci_history:
+    msci_history_js = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in msci_history) + "]"
+    print(f"   MSCI histórico:      {len(msci_history)} puntos ({datetime.fromtimestamp(msci_history[0][0]/1000).strftime('%d/%m/%Y')} — {datetime.fromtimestamp(msci_history[-1][0]/1000).strftime('%d/%m/%Y')})")
+else:
+    msci_history_js = "[]"
+    print("   MSCI histórico:      no disponible")
+
+msci_intraday = fetch_msci_intraday()
+if msci_intraday:
+    msci_intraday_js = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in msci_intraday) + "]"
+    print(f"   MSCI intraday:       {len(msci_intraday)} puntos")
+else:
+    msci_intraday_js = "[]"
+    print("   MSCI intraday:       no disponible")
+
 btc_max_points = fetch_btc_history_max()
 if btc_max_points:
     btc_max_data_js = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in btc_max_points) + "]"
@@ -884,7 +930,7 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};</script>
+  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};</script>
   <script src="src/js/navigation.js"></script>
   <script src="src/js/charts-evo.js"></script>
   <script src="src/js/charts-btc.js"></script>
