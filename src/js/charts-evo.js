@@ -1,0 +1,98 @@
+// evoData is injected inline by generate.R before this script loads
+const svgChart = document.getElementById("patrimonio-svg-chart");
+const vLine = document.getElementById("interactive-v-line");
+const iDot = document.getElementById("interactive-dot");
+const valorDisplay = document.getElementById("evo-valor-display");
+const dateDisplay = document.getElementById("evo-date-display");
+const rendDisplay = document.getElementById("evo-rendimiento-display");
+
+function renderChartAxes(data, minY, maxY) {
+  const g = document.getElementById("chart-axes");
+  if (!g) return;
+  const ry = maxY === minY ? 1 : maxY - minY;
+  let html = "";
+  for (let i = 0; i < 5; i++) {
+    const frac = i / 4;
+    const val = minY + ry * frac;
+    const yp = (260 - frac * 220).toFixed(1);
+    const lbl = Math.abs(val) >= 1000
+      ? (val / 1000).toFixed(1).replace(".", ",") + "k"
+      : Math.round(val).toString();
+    html += `<line x1="70" y1="${yp}" x2="980" y2="${yp}" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="3 3"/>`;
+    html += `<text x="984" y="${(parseFloat(yp) + 4).toFixed(1)}" text-anchor="start" font-size="10" fill="#6b7280">${lbl}</text>`;
+  }
+  const n = data.length;
+  const step = Math.max(1, Math.floor(n / 5));
+  const idxs = [];
+  for (let i = 0; i < n; i += step) idxs.push(i);
+  if (idxs[idxs.length - 1] !== n - 1) idxs.push(n - 1);
+  idxs.forEach(i => {
+    html += `<text x="${data[i].x.toFixed(1)}" y="295" text-anchor="middle" font-size="9" fill="#6b7280">${data[i].f}</text>`;
+  });
+  g.innerHTML = html;
+}
+
+function changeTimeframe(period, btnEl) {
+  if (!evoData || !evoData.length) return;
+  document.querySelectorAll(".tf-btn").forEach(b => b.classList.remove("active"));
+  if (btnEl) btnEl.classList.add("active");
+  const maxT = Math.max(...evoData.map(d => d.t)), day = 86400000;
+  let cutoff = 0;
+  if (period === "1D") cutoff = maxT - 1 * day;
+  else if (period === "1M") cutoff = maxT - 30 * day;
+  else if (period === "3M") cutoff = maxT - 90 * day;
+  else if (period === "6M") cutoff = maxT - 180 * day;
+  else if (period === "1Y") cutoff = maxT - 365 * day;
+  const filtered = evoData.filter(d => d.t >= cutoff);
+  if (!filtered.length) return;
+  const minX = Math.min(...filtered.map(d => d.t)), maxX = Math.max(...filtered.map(d => d.t));
+  const minY = Math.min(...filtered.map(d => d.v)), maxY = Math.max(...filtered.map(d => d.v));
+  const rx = maxX === minX ? 1 : maxX - minX, ry = maxY === minY ? 1 : maxY - minY;
+  filtered.forEach(d => { d.x = 70 + (d.t - minX) / rx * 910; d.y = 260 - (d.v - minY) / ry * 220; });
+  let pl = `M ${filtered[0].x} ${filtered[0].y}`;
+  for (let i = 1; i < filtered.length; i++) pl += ` L ${filtered[i].x} ${filtered[i].y}`;
+  document.getElementById("chart-line").setAttribute("d", pl);
+  document.getElementById("chart-area").setAttribute("d", pl + ` L ${filtered[filtered.length - 1].x} 280 L ${filtered[0].x} 280 Z`);
+  const refLine = document.getElementById("evo-ref-line");
+  if (refLine) { refLine.setAttribute("y1", filtered[0].y); refLine.setAttribute("y2", filtered[0].y); }
+  document.getElementById("lbl-start-date").textContent = filtered[0].f;
+  document.getElementById("lbl-end-date").textContent = filtered[filtered.length - 1].f;
+  renderChartAxes(filtered, minY, maxY);
+  const dd = document.getElementById("evo-date-display");
+  dd.textContent = period === "MAX" ? `Desde el inicio (${filtered[0].f})` : `${filtered[0].f} — ${filtered[filtered.length - 1].f}`;
+  window.evoDefaultDateText = dd.textContent;
+  const diff = filtered[filtered.length - 1].v - filtered[0].v;
+  const pct = filtered[0].v ? (diff / Math.abs(filtered[0].v) * 100) : 0;
+  const signo = diff >= 0 ? "+" : "", color = diff >= 0 ? "#10b981" : "#ef4444";
+  rendDisplay.textContent = `${signo}${formatEur(diff)} (${signo}${pct.toFixed(2).replace(".", ",")}%)`;
+  rendDisplay.style.color = color;
+  rendDisplay.style.background = diff >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
+  document.getElementById("chart-line").setAttribute("stroke", color);
+  document.getElementById("chart-area-grad-stop0").setAttribute("stop-color", color);
+  document.getElementById("interactive-dot").style.background = color;
+  window.activeEvoData = filtered;
+}
+
+document.querySelectorAll(".tf-btn").forEach(b => b.addEventListener("click", e => changeTimeframe(e.target.dataset.period, e.target)));
+window.activeEvoData = evoData;
+window.evoDefaultDateText = dateDisplay ? dateDisplay.textContent : "";
+
+if (svgChart && evoData.length) {
+  svgChart.addEventListener("mousemove", e => {
+    const rect = svgChart.getBoundingClientRect(), mx = ((e.clientX - rect.left) / rect.width) * 1000;
+    const data = window.activeEvoData || evoData;
+    let cl = data[0], minD = Math.abs(cl.x - mx);
+    for (let i = 1; i < data.length; i++) { let d = Math.abs(data[i].x - mx); if (d < minD) { minD = d; cl = data[i]; } }
+    vLine.setAttribute("x1", cl.x); vLine.setAttribute("x2", cl.x); vLine.style.display = "block";
+    iDot.style.left = (cl.x / 1000 * 100) + "%"; iDot.style.top = (cl.y / 300 * 100) + "%"; iDot.style.display = "block";
+    if (valorDisplay) { valorDisplay.textContent = cl.vf + " €"; valorDisplay.style.display = "inline-block"; }
+    if (dateDisplay) dateDisplay.textContent = cl.f;
+    if (rendDisplay) rendDisplay.style.display = "none";
+  });
+  svgChart.addEventListener("mouseleave", () => {
+    vLine.style.display = "none"; iDot.style.display = "none";
+    if (valorDisplay) { valorDisplay.textContent = ""; valorDisplay.style.display = "none"; }
+    if (dateDisplay) dateDisplay.textContent = window.evoDefaultDateText;
+    if (rendDisplay) rendDisplay.style.display = "inline-block";
+  });
+}
