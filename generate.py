@@ -2,8 +2,10 @@
 # generate.py — versión 3.0 (Python)
 # Genera index.html a partir de data/movimientos.csv y data/inversiones.csv
 
+import json
 import math
 import re
+import urllib.request
 from datetime import date, datetime
 from pathlib import Path
 
@@ -99,6 +101,23 @@ def parse_date(s):
         except ValueError:
             continue
     return None
+
+def fetch_btc_history_max():
+    period2 = int(datetime.now().timestamp())
+    url = (
+        f"https://query1.finance.yahoo.com/v8/finance/chart/BTC-EUR"
+        f"?interval=1d&period1=1388534400&period2={period2}"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        result = data["chart"]["result"][0]
+        timestamps = result["timestamp"]
+        closes = result["indicators"]["quote"][0]["close"]
+        return [[t * 1000, round(v, 2)] for t, v in zip(timestamps, closes) if v is not None]
+    except Exception:
+        return []
 
 def add_donut_fields(df, total, pct_col="pct"):
     """Añade pct, pct_rest, pct_acum, rotacion al dataframe."""
@@ -549,6 +568,14 @@ def tabla_activos():
 # 8) ESCRIBIR HTML
 # ════════════════════════════════════════════════════
 
+btc_max_points = fetch_btc_history_max()
+if btc_max_points:
+    btc_max_data_js = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in btc_max_points) + "]"
+    print(f"   BTC histórico MAX:   {len(btc_max_points)} puntos ({datetime.fromtimestamp(btc_max_points[0][0]/1000).strftime('%d/%m/%Y')} — {datetime.fromtimestamp(btc_max_points[-1][0]/1000).strftime('%d/%m/%Y')})")
+else:
+    btc_max_data_js = "[]"
+    print("   BTC histórico MAX:   no disponible (se usarán los 365d de CoinGecko)")
+
 html_out = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -857,7 +884,7 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};</script>
+  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};</script>
   <script src="src/js/navigation.js"></script>
   <script src="src/js/charts-evo.js"></script>
   <script src="src/js/charts-btc.js"></script>
