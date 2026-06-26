@@ -47,9 +47,9 @@ CATEGORIA_COLORES = {
 ISIN_YF_MAP = {
     "IE00BYXYYM63": "AGGG.L",
     "IE00B4L5Y983": "IWDA.AS",
-    "IE00B5BMR087": "CSPX.L",
-    "IE000KCS7J59": "IEMA.AS",
-    "IE00B4ND3602": "SGLN.L",
+    "IE00B5BMR087": "CSPX.AS",
+    "IE000KCS7J59": "EMIM.AS",
+    "IE00B4ND3602": "PHAU.AS",
 }
 
 CAT_COLORES_INV  = {"Renta variable": "#3b82f6", "Renta fija": "#10b981"}
@@ -637,6 +637,7 @@ def tabla_activos():
 # ════════════════════════════════════════════════════
 
 pf_hist_parts, pf_intra_parts, pf_cur_parts = [], [], []
+latest_prices, ticker_currency_map = {}, {}
 for asset in PORTFOLIO_ASSETS:
     hist  = fetch_daily_history(asset["ticker"])
     intra = fetch_intraday(asset["ticker"])
@@ -648,9 +649,18 @@ for asset in PORTFOLIO_ASSETS:
     pf_cur_parts.append(f'"{n}":"{asset["moneda"]}"')
     lbl = f"{datetime.fromtimestamp(hist[0][0]/1000).strftime('%d/%m/%Y')} — {datetime.fromtimestamp(hist[-1][0]/1000).strftime('%d/%m/%Y')}" if hist else "sin datos"
     print(f"   {n}: {len(hist)} puntos  {lbl}")
+    ticker = asset["ticker"]
+    if ticker != "BTC-EUR":
+        last_price = intra[-1][1] if intra else (hist[-1][1] if hist else None)
+        if last_price is not None:
+            latest_prices[ticker] = last_price
+        ticker_currency_map[ticker] = "€" if asset["moneda"] == "EUR" else "$"
 portfolio_history_js  = "{" + ",".join(pf_hist_parts)  + "}"
 portfolio_intraday_js = "{" + ",".join(pf_intra_parts) + "}"
 portfolio_currency_js = "{" + ",".join(pf_cur_parts)   + "}"
+latest_prices_js    = json.dumps(latest_prices)
+ticker_currency_js  = json.dumps(ticker_currency_map)
+build_ts = int(datetime.now().timestamp())
 
 portfolio_options = "\n".join(
     f'            <option value="{a["nombre"]}">{a["nombre"]}</option>'
@@ -1039,13 +1049,13 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};</script>
-  <script src="src/js/navigation.js"></script>
-  <script src="src/js/charts-evo.js"></script>
-  <script src="src/js/charts-btc.js"></script>
-  <script src="src/js/charts-msci.js"></script>
-  <script src="src/js/charts-portfolio.js"></script>
-  <script src="src/js/prices.js"></script>
+  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};</script>
+  <script src="src/js/navigation.js?v={build_ts}"></script>
+  <script src="src/js/charts-evo.js?v={build_ts}"></script>
+  <script src="src/js/charts-btc.js?v={build_ts}"></script>
+  <script src="src/js/charts-msci.js?v={build_ts}"></script>
+  <script src="src/js/charts-portfolio.js?v={build_ts}"></script>
+  <script src="src/js/prices.js?v={build_ts}"></script>
 </body>
 </html>"""
 
