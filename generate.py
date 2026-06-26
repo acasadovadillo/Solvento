@@ -563,7 +563,7 @@ html_out = f"""<!DOCTYPE html>
 <nav class="navbar">
   <div class="navbar-brand">
     <h1>💰 Finanzas Personales</h1>
-    <span class="navbar-date">versión 2.0 · Actualizado: {fecha_actualizacion} a las {hora_actualizacion} horas</span>
+    <span class="navbar-date">versión 2.1 · Actualizado: {fecha_actualizacion} a las {hora_actualizacion} horas</span>
   </div>
   <ul class="navbar-menu">
     <li class="navbar-item"><a href="#" data-page="neto" onclick="showPage('neto');return false;">Patrimonio neto</a></li>
