@@ -58,6 +58,16 @@ TIPO_COLORES_INV = {"ETF": "#8b5cf6", "Criptoactivo": "#f59e0b",
 
 R_DONUT = 15.91549430918954
 
+PORTFOLIO_ASSETS = [
+    {"nombre": "Oro Físico",             "ticker": "PHAU.AS", "moneda": "EUR"},
+    {"nombre": "S&P 500",                "ticker": "CSPX.AS", "moneda": "EUR"},
+    {"nombre": "MSCI Emerging Markets",  "ticker": "EMIM.AS", "moneda": "EUR"},
+    {"nombre": "MSCI World",             "ticker": "IWDA.AS", "moneda": "EUR"},
+    {"nombre": "US Aggregate Bond",      "ticker": "AGGG.L",  "moneda": "USD"},
+    {"nombre": "Bitcoin",                "ticker": "BTC-EUR", "moneda": "EUR"},
+    {"nombre": "Apple",                  "ticker": "AAPL",    "moneda": "USD"},
+]
+
 # ════════════════════════════════════════════════════
 # 2) FUNCIONES AUXILIARES
 # ════════════════════════════════════════════════════
@@ -101,6 +111,34 @@ def parse_date(s):
         except ValueError:
             continue
     return None
+
+def fetch_daily_history(ticker):
+    period2 = int(datetime.now().timestamp())
+    url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+           f"?interval=1d&period1=946684800&period2={period2}")
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        result = data["chart"]["result"][0]
+        ts = result["timestamp"]
+        cl = result["indicators"]["quote"][0]["close"]
+        return [[t * 1000, round(v, 4)] for t, v in zip(ts, cl) if v is not None]
+    except Exception:
+        return []
+
+def fetch_intraday(ticker):
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=5m&range=1d"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        result = data["chart"]["result"][0]
+        ts = result["timestamp"]
+        cl = result["indicators"]["quote"][0]["close"]
+        return [[t * 1000, round(v, 4)] for t, v in zip(ts, cl) if v is not None]
+    except Exception:
+        return []
 
 def fetch_msci_history():
     period2 = int(datetime.now().timestamp())
@@ -598,6 +636,27 @@ def tabla_activos():
 # 8) ESCRIBIR HTML
 # ════════════════════════════════════════════════════
 
+pf_hist_parts, pf_intra_parts, pf_cur_parts = [], [], []
+for asset in PORTFOLIO_ASSETS:
+    hist  = fetch_daily_history(asset["ticker"])
+    intra = fetch_intraday(asset["ticker"])
+    n     = asset["nombre"]
+    hist_js  = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in hist)  + "]" if hist  else "[]"
+    intra_js = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in intra) + "]" if intra else "[]"
+    pf_hist_parts.append(f'"{n}":{hist_js}')
+    pf_intra_parts.append(f'"{n}":{intra_js}')
+    pf_cur_parts.append(f'"{n}":"{asset["moneda"]}"')
+    lbl = f"{datetime.fromtimestamp(hist[0][0]/1000).strftime('%d/%m/%Y')} — {datetime.fromtimestamp(hist[-1][0]/1000).strftime('%d/%m/%Y')}" if hist else "sin datos"
+    print(f"   {n}: {len(hist)} puntos  {lbl}")
+portfolio_history_js  = "{" + ",".join(pf_hist_parts)  + "}"
+portfolio_intraday_js = "{" + ",".join(pf_intra_parts) + "}"
+portfolio_currency_js = "{" + ",".join(pf_cur_parts)   + "}"
+
+portfolio_options = "\n".join(
+    f'            <option value="{a["nombre"]}">{a["nombre"]}</option>'
+    for a in PORTFOLIO_ASSETS
+)
+
 msci_history = fetch_msci_history()
 if msci_history:
     msci_history_js = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in msci_history) + "]"
@@ -927,14 +986,65 @@ html_out = f"""<!DOCTYPE html>
       </div>
     </div>
   </div>
+
+  <!-- ══ GRÁFICA CARTERA ══ -->
+  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
+    <div class="dashboard-panel" style="min-height:380px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
+            <select id="portfolio-select" style="background:#12141f;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:6px;padding:0.35rem 0.7rem;font-size:0.85rem;cursor:pointer;outline:none;">
+{portfolio_options}
+            </select>
+            <span id="portfolio-moneda" style="font-size:0.72rem;color:#9ca3af;font-weight:600;background:#2a2d3a;padding:0.2rem 0.45rem;border-radius:4px;letter-spacing:0.04em;">EUR</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
+            <div id="pf-rendimiento-display" style="font-size:1.05rem;font-weight:600;color:#10b981;background:rgba(16,185,129,0.15);padding:0.3rem 0.7rem;border-radius:6px;">--</div>
+            <div id="pf-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;display:none;"></div>
+          </div>
+        </div>
+        <div id="pf-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;text-align:right;"></div>
+      </div>
+      <div class="timeframe-selector">
+        <button class="tf-btn-pf" data-range="1d">1D</button>
+        <button class="tf-btn-pf" data-range="5d">7D</button>
+        <button class="tf-btn-pf active" data-range="1mo">1M</button>
+        <button class="tf-btn-pf" data-range="3mo">3M</button>
+        <button class="tf-btn-pf" data-range="6mo">6M</button>
+        <button class="tf-btn-pf" data-range="1y">1Y</button>
+        <button class="tf-btn-pf" data-range="5y">MAX</button>
+      </div>
+      <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
+        <svg id="pf-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
+          <defs>
+            <linearGradient id="pf-area-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop id="pf-grad-stop0" offset="0%" stop-color="#8b5cf6" stop-opacity="0.25"/>
+              <stop id="pf-grad-stop1" offset="100%" stop-color="#8b5cf6" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <g id="pf-axes"></g>
+          <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
+          <line id="pf-ref-line" x1="70" y1="260" x2="980" y2="260" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" style="display:none;"/>
+          <path id="pf-chart-area" d="" fill="url(#pf-area-grad)"/>
+          <path id="pf-chart-line" d="" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line id="pf-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+        </svg>
+        <div id="pf-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:#8b5cf6;border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
+        <span id="pf-lbl-start">--</span><span id="pf-lbl-end">--</span>
+      </div>
+    </div>
+  </div>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};</script>
+  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};</script>
   <script src="src/js/navigation.js"></script>
   <script src="src/js/charts-evo.js"></script>
   <script src="src/js/charts-btc.js"></script>
   <script src="src/js/charts-msci.js"></script>
+  <script src="src/js/charts-portfolio.js"></script>
   <script src="src/js/prices.js"></script>
 </body>
 </html>"""
