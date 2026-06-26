@@ -909,94 +909,6 @@ html_out = f"""<!DOCTYPE html>
       <tbody>{tabla_activos()}</tbody>
     </table>
   </div>
-  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
-    <div class="dashboard-panel" style="min-height:380px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
-        <div>
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución Histórica Bitcoin (EUR)</div>
-          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
-            <div id="btc-rendimiento-display" style="font-size:1.05rem;font-weight:600;color:#10b981;background:rgba(16,185,129,0.15);padding:0.3rem 0.7rem;border-radius:6px;">--</div>
-            <div id="btc-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;display:none;"></div>
-          </div>
-        </div>
-        <div id="btc-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;text-align:right;">Cargando...</div>
-      </div>
-      <div class="timeframe-selector">
-        <button class="tf-btn-btc" data-days="1">1D</button>
-        <button class="tf-btn-btc" data-days="7">7D</button>
-        <button class="tf-btn-btc active" data-days="30">30D</button>
-        <button class="tf-btn-btc" data-days="90">90D</button>
-        <button class="tf-btn-btc" data-days="180">180D</button>
-        <button class="tf-btn-btc" data-days="max">MAX</button>
-      </div>
-      <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
-        <svg id="btc-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
-          <defs>
-            <linearGradient id="btc-area-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop id="btc-grad-stop0" offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/>
-              <stop id="btc-grad-stop1" offset="100%" stop-color="#f59e0b" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <g id="btc-axes"></g>
-          <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
-          <line id="btc-ref-line" x1="70" y1="260" x2="980" y2="260" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" style="display:none;"/>
-          <path id="btc-chart-area" d="" fill="url(#btc-area-grad)"/>
-          <path id="btc-chart-line" d="" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <line id="btc-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
-        </svg>
-        <div id="btc-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:#f59e0b;border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
-        <span id="btc-lbl-start">--</span><span id="btc-lbl-end">--</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ GRÁFICA MSCI WORLD ══ -->
-  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
-    <div class="dashboard-panel" style="min-height:380px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
-        <div>
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Core MSCI World USD (Acc) · IE00B4L5Y983</div>
-          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
-            <div id="msci-rendimiento-display" style="font-size:1.05rem;font-weight:600;color:#3b82f6;background:rgba(59,130,246,0.15);padding:0.3rem 0.7rem;border-radius:6px;">--</div>
-            <div id="msci-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;display:none;"></div>
-          </div>
-        </div>
-        <div id="msci-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;text-align:right;">Cargando...</div>
-      </div>
-      <div class="timeframe-selector">
-        <button class="tf-btn-msci" data-range="1d" data-interval="5m">1D</button>
-        <button class="tf-btn-msci" data-range="5d" data-interval="1d">7D</button>
-        <button class="tf-btn-msci active" data-range="1mo" data-interval="1d">1M</button>
-        <button class="tf-btn-msci" data-range="3mo" data-interval="1d">3M</button>
-        <button class="tf-btn-msci" data-range="6mo" data-interval="1d">6M</button>
-        <button class="tf-btn-msci" data-range="1y" data-interval="1d">1Y</button>
-        <button class="tf-btn-msci" data-range="5y" data-interval="1wk">MAX</button>
-      </div>
-      <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
-        <svg id="msci-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
-          <defs>
-            <linearGradient id="msci-area-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop id="msci-grad-stop0" offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/>
-              <stop id="msci-grad-stop1" offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <g id="msci-axes"></g>
-          <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
-          <line id="msci-ref-line" x1="70" y1="260" x2="980" y2="260" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" style="display:none;"/>
-          <path id="msci-chart-area" d="" fill="url(#msci-area-grad)"/>
-          <path id="msci-chart-line" d="" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <line id="msci-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
-        </svg>
-        <div id="msci-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:#3b82f6;border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
-        <span id="msci-lbl-start">--</span><span id="msci-lbl-end">--</span>
-      </div>
-    </div>
-  </div>
-
   <!-- ══ GRÁFICA CARTERA ══ -->
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
     <div class="dashboard-panel" style="min-height:380px;">
@@ -1053,7 +965,6 @@ html_out = f"""<!DOCTYPE html>
   <script src="src/js/navigation.js?v={build_ts}"></script>
   <script src="src/js/charts-evo.js?v={build_ts}"></script>
   <script src="src/js/charts-btc.js?v={build_ts}"></script>
-  <script src="src/js/charts-msci.js?v={build_ts}"></script>
   <script src="src/js/charts-portfolio.js?v={build_ts}"></script>
   <script src="src/js/prices.js?v={build_ts}"></script>
 </body>
