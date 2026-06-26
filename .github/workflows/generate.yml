@@ -31,18 +31,14 @@ jobs:
             -o data/inversiones.csv
           echo "✅ inversiones.csv descargado ($(wc -l < data/inversiones.csv) filas)"
 
-      - name: Archivar web del día en historic/
+      - name: Archivar repositorio completo del día en historic/
         run: |
           DATE=$(date +%Y-%m-%d)
           if [ -f index.html ]; then
             mkdir -p historic/$DATE
-            # Ajustar rutas relativas: src/css/ y src/js/ e img/ quedan 2 niveles arriba
-            sed \
-              -e 's|href="src/css/|href="../../src/css/|g' \
-              -e 's|<script src="src/js/|<script src="../../src/js/|g' \
-              -e 's|src="img/|src="../../img/|g' \
-              index.html > historic/$DATE/index.html
-            echo "✅ Archivado en historic/$DATE/"
+            # Copia todo el repo excepto historic/ y .git/ para que las rutas relativas funcionen igual
+            rsync -a --exclude='historic' --exclude='.git' . historic/$DATE/
+            echo "✅ Archivado en historic/$DATE/ ($(du -sh historic/$DATE | cut -f1))"
           else
             echo "ℹ️  No existe index.html previo, se omite el archivado"
           fi
