@@ -772,9 +772,9 @@ html_out = f"""<!DOCTYPE html>
       </div>
       <div class="timeframe-selector">
         <button class="tf-btn" data-period="1D">1D</button>
+        <button class="tf-btn" data-period="1W">1W</button>
         <button class="tf-btn" data-period="1M">1M</button>
-        <button class="tf-btn" data-period="3M">3M</button>
-        <button class="tf-btn" data-period="6M">6M</button>
+        <button class="tf-btn" data-period="YTD">1YTD</button>
         <button class="tf-btn" data-period="1Y">1Y</button>
         <button class="tf-btn active" data-period="MAX">MAX</button>
       </div>
@@ -929,12 +929,11 @@ html_out = f"""<!DOCTYPE html>
       </div>
       <div class="timeframe-selector">
         <button class="tf-btn-pf" data-range="1d">1D</button>
-        <button class="tf-btn-pf" data-range="5d">7D</button>
+        <button class="tf-btn-pf" data-range="1w">1W</button>
         <button class="tf-btn-pf active" data-range="1mo">1M</button>
-        <button class="tf-btn-pf" data-range="3mo">3M</button>
-        <button class="tf-btn-pf" data-range="6mo">6M</button>
+        <button class="tf-btn-pf" data-range="ytd">1YTD</button>
         <button class="tf-btn-pf" data-range="1y">1Y</button>
-        <button class="tf-btn-pf" data-range="5y">MAX</button>
+        <button class="tf-btn-pf" data-range="max">MAX</button>
       </div>
       <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
         <svg id="pf-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
