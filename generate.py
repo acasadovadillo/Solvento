@@ -748,6 +748,12 @@ html_out = f"""<!DOCTYPE html>
       </div>
     </div>
   </div>
+  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
+    <div class="dashboard-panel" style="padding:1.5rem 2rem;">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">Cuentas</div>
+      <div class="legend-box" style="border:none;padding:0;background:transparent;">{legend_patrimonio()}</div>
+    </div>
+  </div>
 </div>
 
 <!-- ══ PÁGINA 2: CUENTAS ══ -->
