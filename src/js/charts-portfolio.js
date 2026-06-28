@@ -1,7 +1,7 @@
 let pfActive = [];
 window.pfDefaultDateText = "";
 
-const PF_DAYS_MAP = { "5d": 8, "1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "5y": Infinity };
+const PF_DAYS_MAP = { "1w": 8, "1mo": 35, "1y": 370, "max": Infinity };
 
 function renderPfAxes(data, minY, maxY) {
   const g = document.getElementById("pf-axes");
@@ -83,9 +83,15 @@ function loadPf(range) {
     }));
   } else {
     const src = (typeof portfolioHistoryData !== "undefined" && portfolioHistoryData[asset]) ? portfolioHistoryData[asset] : [];
-    const daysBack = PF_DAYS_MAP[range] ?? 35;
-    const cutoff = daysBack === Infinity ? 0 : Date.now() - daysBack * 86400000;
-    const useLongFmt = (range === "6mo" || range === "1y" || range === "5y");
+    let cutoff;
+    if (range === "ytd") {
+      const now = new Date();
+      cutoff = new Date(now.getFullYear(), 0, 1).getTime();
+    } else {
+      const daysBack = PF_DAYS_MAP[range] ?? 35;
+      cutoff = daysBack === Infinity ? 0 : Date.now() - daysBack * 86400000;
+    }
+    const useLongFmt = (range === "1y" || range === "max" || range === "ytd");
     parsed = src
       .filter(([t]) => t >= cutoff)
       .map(([t, v]) => ({
