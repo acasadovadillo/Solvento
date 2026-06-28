@@ -578,6 +578,19 @@ def legend_patrimonio():
 </div>""")
     return "\n".join(parts)
 
+def lista_cuentas_simple():
+    parts = []
+    for _, r in saldos.iterrows():
+        parts.append(f"""
+<div class="legend-item">
+  <div style="display:flex;align-items:center;justify-content:center;width:30px;">{r["icono"]}</div>
+  <div style="flex-grow:1;">
+    <span style="color:#ffffff;font-weight:600;font-size:0.95rem;">{html_escape(r["cuenta"])}</span>
+  </div>
+  <div style="text-align:right;color:#9ca3af;font-weight:600;font-size:0.85rem;">{fmt_eur(r["saldo"])}</div>
+</div>""")
+    return "\n".join(parts)
+
 def sectors_gastos():
     parts = []
     for _, r in cat_gastos.iterrows():
@@ -750,8 +763,11 @@ html_out = f"""<!DOCTYPE html>
   </div>
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
     <div class="dashboard-panel" style="padding:1.5rem 2rem;">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">Cuentas</div>
-      <div class="legend-box" style="border:none;padding:0;background:transparent;">{legend_patrimonio()}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cuentas</div>
+        <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(patrimonio_liquido)}</div>
+      </div>
+      <div class="legend-box" style="border:none;padding:0;background:transparent;">{lista_cuentas_simple()}</div>
     </div>
   </div>
 </div>
