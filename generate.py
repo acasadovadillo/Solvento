@@ -591,6 +591,46 @@ def lista_cuentas_simple():
 </div>""")
     return "\n".join(parts)
 
+def tabla_movimientos_html():
+    df = mov.dropna(subset=["fecha"]).copy()
+    sort_cols = ["fecha", "Marca temporal"] if "Marca temporal" in df.columns else ["fecha"]
+    df = df.sort_values(sort_cols, ascending=[False] * len(sort_cols))
+    TIPO_COLOR = {
+        "Ingreso":  ("#10b981", "rgba(16,185,129,0.15)"),
+        "Gasto":    ("#ef4444", "rgba(239,68,68,0.15)"),
+        "Traspaso": ("#3b82f6", "rgba(59,130,246,0.15)"),
+        "Préstamo": ("#f59e0b", "rgba(245,158,11,0.15)"),
+    }
+    rows = []
+    for _, r in df.iterrows():
+        tipo = str(r.get("tipo", "—"))
+        color, bg = TIPO_COLOR.get(tipo, ("#9ca3af", "rgba(156,163,175,0.15)"))
+        fecha_str = r["fecha"].strftime("%d/%m/%Y") if pd.notna(r["fecha"]) else "—"
+        if tipo == "Ingreso":
+            cuenta = str(r.get("cuenta_destino", "—"))
+        else:
+            cuenta = str(r.get("cuenta_origen", "—"))
+        cuenta = cuenta if str(cuenta).strip() not in ("", "-", "nan") else "—"
+        imp = float(r["importe"]) if pd.notna(r["importe"]) else 0.0
+        if tipo == "Ingreso":
+            imp_str, imp_color = f"+{fmt_eur(imp)}", "#10b981"
+        elif tipo == "Gasto":
+            imp_str, imp_color = f"-{fmt_eur(imp)}", "#ef4444"
+        else:
+            imp_str, imp_color = fmt_eur(imp), "#9ca3af"
+        det_raw = r.get("detalle", "")
+        detalle = html_escape(str(det_raw)) if pd.notna(det_raw) and str(det_raw).strip() not in ("", "-") else "—"
+        rows.append(f"""    <tr class="table-row">
+      <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">{fecha_str}</td>
+      <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;">
+        <span style="font-size:0.73rem;font-weight:600;color:{color};background:{bg};padding:0.2rem 0.5rem;border-radius:4px;">{html_escape(tipo)}</span>
+      </td>
+      <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;color:#e5e7eb;font-size:0.87rem;">{detalle}</td>
+      <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;color:#9ca3af;font-size:0.82rem;">{html_escape(cuenta)}</td>
+      <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:{imp_color};font-weight:600;font-family:ui-monospace,monospace;font-size:0.88rem;white-space:nowrap;">{imp_str}</td>
+    </tr>""")
+    return "\n".join(rows)
+
 def sectors_gastos():
     parts = []
     for _, r in cat_gastos.iterrows():
@@ -768,6 +808,33 @@ html_out = f"""<!DOCTYPE html>
         <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(patrimonio_liquido)}</div>
       </div>
       <div class="legend-box" style="border:none;padding:0;background:transparent;">{lista_cuentas_simple()}</div>
+    </div>
+  </div>
+  <div style="max-width:1400px;margin:1rem auto 0;width:100%;text-align:right;padding-right:0.5rem;">
+    <button onclick="showPage('movimientos')" style="background:none;border:none;color:#6b7280;font-size:0.82rem;cursor:pointer;padding:0.4rem 0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">Ver todos los movimientos →</button>
+  </div>
+</div>
+
+<!-- ══ PÁGINA 1b: MOVIMIENTOS ══ -->
+<div class="page" id="page-movimientos">
+  <div class="header-block" style="margin-top:1.5rem;">
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <button onclick="showPage('neto')" style="background:none;border:none;color:#6b7280;font-size:0.85rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">← Volver</button>
+      <h2 class="section-title" style="margin:0;">Movimientos</h2>
+    </div>
+  </div>
+  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
+    <div class="dashboard-panel" style="padding:1.5rem 2rem;">
+      <table class="minimal-table">
+        <thead><tr>
+          <th style="text-align:left;">Fecha</th>
+          <th style="text-align:left;">Tipo</th>
+          <th style="text-align:left;">Detalle</th>
+          <th style="text-align:left;">Cuenta</th>
+          <th style="text-align:right;">Importe</th>
+        </tr></thead>
+        <tbody>{tabla_movimientos_html()}</tbody>
+      </table>
     </div>
   </div>
 </div>
