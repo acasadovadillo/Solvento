@@ -21,10 +21,14 @@ function showMovimientos(cuenta) {
   showPage("movimientos");
   const badge = document.getElementById("mov-filter-badge");
   const label = document.getElementById("mov-filter-label");
+  const saldoEl = document.getElementById("mov-filter-saldo");
   const rows = document.querySelectorAll("#mov-tbody tr");
   if (cuenta) {
     if (badge) badge.style.display = "inline-flex";
-    if (label) label.textContent = cuenta;
+    if (label) label.textContent = cuenta + " · ";
+    if (saldoEl && typeof saldosCuentas !== "undefined" && saldosCuentas[cuenta] !== undefined) {
+      saldoEl.textContent = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(saldosCuentas[cuenta]) + " €";
+    }
     rows.forEach(tr => {
       const cuentas = (tr.dataset.cuentas || "").split("|");
       tr.style.display = cuentas.includes(cuenta) ? "" : "none";
