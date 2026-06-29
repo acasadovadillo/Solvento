@@ -17,6 +17,24 @@ function showPage(id) {
   if (hash) showPage(hash);
 })();
 
+function showMovimientos(cuenta) {
+  showPage("movimientos");
+  const badge = document.getElementById("mov-filter-badge");
+  const label = document.getElementById("mov-filter-label");
+  const rows = document.querySelectorAll("#mov-tbody tr");
+  if (cuenta) {
+    if (badge) badge.style.display = "inline-flex";
+    if (label) label.textContent = cuenta;
+    rows.forEach(tr => {
+      const cuentas = (tr.dataset.cuentas || "").split("|");
+      tr.style.display = cuentas.includes(cuenta) ? "" : "none";
+    });
+  } else {
+    if (badge) badge.style.display = "none";
+    rows.forEach(tr => tr.style.display = "");
+  }
+}
+
 function toggleMenu() { document.getElementById("mobile-menu").classList.toggle("open"); }
 function closeMenu() { document.getElementById("mobile-menu").classList.remove("open"); }
 
