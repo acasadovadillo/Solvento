@@ -783,7 +783,7 @@ html_out = f"""<!DOCTYPE html>
     <span class="navbar-date">versión 2.1 · Actualizado: {fecha_actualizacion} a las {hora_actualizacion} horas</span>
   </div>
   <ul class="navbar-menu">
-    <li class="navbar-item"><a href="#" data-page="neto" onclick="showPage('neto');return false;">Patrimonio neto</a></li>
+    <li class="navbar-item"><a href="#" data-page="patrimonio" onclick="showPage('patrimonio');return false;">Patrimonio</a></li>
     <li class="navbar-item"><a href="#" data-page="cuentas" onclick="showPage('cuentas');return false;">Cuentas</a></li>
     <li class="navbar-item"><a href="#" data-page="inversiones" onclick="showPage('inversiones');return false;">Inversiones</a></li>
   </ul>
@@ -792,19 +792,19 @@ html_out = f"""<!DOCTYPE html>
   </button>
 </nav>
 <div class="mobile-menu" id="mobile-menu">
-  <a href="#" onclick="showPage('neto');closeMenu();return false;">Patrimonio neto</a>
+  <a href="#" onclick="showPage('patrimonio');closeMenu();return false;">Patrimonio</a>
   <a href="#" onclick="showPage('cuentas');closeMenu();return false;">Cuentas</a>
   <a href="#" onclick="showPage('inversiones');closeMenu();return false;">Inversiones</a>
 </div>
 
-<!-- ══ PÁGINA 1: PATRIMONIO NETO ══ -->
-<div class="page active" id="page-neto">
+<!-- ══ PÁGINA 1: PATRIMONIO ══ -->
+<div class="page active" id="page-patrimonio">
   <div class="header-block" style="margin-top:1.5rem;">
-    <h2 class="section-title">Patrimonio neto</h2>
+    <h2 class="section-title">Patrimonio</h2>
   </div>
   <div class="hero-card">
     <div class="hero-main">
-      <span class="hero-label">Patrimonio neto total</span>
+      <span class="hero-label">Patrimonio total</span>
       <span class="hero-value">{fmt_eur(patrimonio_neto)}</span>
       <span class="hero-sub">Actualizado a {fecha_actualizacion} a las {hora_actualizacion} horas</span>
     </div>
@@ -841,7 +841,7 @@ html_out = f"""<!DOCTYPE html>
 <div class="page" id="page-movimientos">
   <div class="header-block" style="margin-top:1.5rem;">
     <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-      <button onclick="showPage('neto')" style="background:none;border:none;color:#6b7280;font-size:0.85rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">← Volver</button>
+      <button onclick="showPage('patrimonio')" style="background:none;border:none;color:#6b7280;font-size:0.85rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">← Volver</button>
       <h2 class="section-title" style="margin:0;">Movimientos</h2>
       <div id="mov-filter-badge" style="display:none;align-items:center;gap:0.4rem;background:#2a2d3a;border:1px solid #4b5563;border-radius:20px;padding:0.25rem 0.6rem 0.25rem 0.75rem;font-size:0.78rem;color:#e5e7eb;">
         <span id="mov-filter-label"></span>
