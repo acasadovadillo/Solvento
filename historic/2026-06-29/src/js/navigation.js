@@ -53,7 +53,8 @@ function filterCuentasMov(btn, cuenta) {
   btn.style.fontWeight = "700";
   document.querySelectorAll("#cuentas-mov-tbody tr").forEach(tr => {
     if (cuenta === "__all__") {
-      tr.style.display = "";
+      // In Todos, hide the destination-side of traspasos to avoid double-counting
+      tr.style.display = tr.dataset.traspasoDir === "entrada" ? "none" : "";
     } else {
       tr.style.display = (tr.dataset.cuentas || "").split("|").includes(cuenta) ? "" : "none";
     }
