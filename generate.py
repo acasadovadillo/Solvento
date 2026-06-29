@@ -581,8 +581,9 @@ def legend_patrimonio():
 def lista_cuentas_simple():
     parts = []
     for _, r in saldos.iterrows():
+        cuenta_js = html_escape(r["cuenta"]).replace("'", "\\'")
         parts.append(f"""
-<div class="legend-item">
+<div class="legend-item" onclick="showMovimientos('{cuenta_js}')" style="cursor:pointer;transition:background 0.15s;border-radius:8px;padding-left:0.5rem;margin-left:-0.5rem;" onmouseover="this.style.background='#ffffff08'" onmouseout="this.style.background='transparent'">
   <div style="display:flex;align-items:center;justify-content:center;width:30px;">{r["icono"]}</div>
   <div style="flex-grow:1;">
     <span style="color:#ffffff;font-weight:600;font-size:0.95rem;">{html_escape(r["cuenta"])}</span>
@@ -620,7 +621,10 @@ def tabla_movimientos_html():
             imp_str, imp_color = fmt_eur(imp), "#9ca3af"
         det_raw = r.get("detalle", "")
         detalle = html_escape(str(det_raw)) if pd.notna(det_raw) and str(det_raw).strip() not in ("", "-") else "—"
-        rows.append(f"""    <tr class="table-row">
+        co = str(r.get("cuenta_origen", "")).strip()
+        cd = str(r.get("cuenta_destino", "")).strip()
+        cuentas_involucradas = "|".join(c for c in [co, cd] if c and c not in ("-", "nan"))
+        rows.append(f"""    <tr class="table-row" data-cuentas="{html_escape(cuentas_involucradas)}">
       <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">{fecha_str}</td>
       <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;">
         <span style="font-size:0.73rem;font-weight:600;color:{color};background:{bg};padding:0.2rem 0.5rem;border-radius:4px;">{html_escape(tipo)}</span>
@@ -818,9 +822,13 @@ html_out = f"""<!DOCTYPE html>
 <!-- ══ PÁGINA 1b: MOVIMIENTOS ══ -->
 <div class="page" id="page-movimientos">
   <div class="header-block" style="margin-top:1.5rem;">
-    <div style="display:flex;align-items:center;gap:1rem;">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
       <button onclick="showPage('neto')" style="background:none;border:none;color:#6b7280;font-size:0.85rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">← Volver</button>
       <h2 class="section-title" style="margin:0;">Movimientos</h2>
+      <div id="mov-filter-badge" style="display:none;align-items:center;gap:0.4rem;background:#2a2d3a;border:1px solid #4b5563;border-radius:20px;padding:0.25rem 0.6rem 0.25rem 0.75rem;font-size:0.78rem;color:#e5e7eb;">
+        <span id="mov-filter-label"></span>
+        <button onclick="showMovimientos(null)" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;line-height:1;font-size:1rem;" title="Limpiar filtro">×</button>
+      </div>
     </div>
   </div>
   <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
@@ -833,7 +841,7 @@ html_out = f"""<!DOCTYPE html>
           <th style="text-align:left;">Cuenta</th>
           <th style="text-align:right;">Importe</th>
         </tr></thead>
-        <tbody>{tabla_movimientos_html()}</tbody>
+        <tbody id="mov-tbody">{tabla_movimientos_html()}</tbody>
       </table>
     </div>
   </div>
