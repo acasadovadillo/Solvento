@@ -717,6 +717,7 @@ portfolio_intraday_js = "{" + ",".join(pf_intra_parts) + "}"
 portfolio_currency_js = "{" + ",".join(pf_cur_parts)   + "}"
 latest_prices_js    = json.dumps(latest_prices)
 ticker_currency_js  = json.dumps(ticker_currency_map)
+saldos_cuentas_js   = json.dumps({r["cuenta"]: round(r["saldo"], 2) for _, r in saldos.iterrows()})
 build_ts = int(datetime.now().timestamp())
 
 portfolio_options = "\n".join(
@@ -827,6 +828,7 @@ html_out = f"""<!DOCTYPE html>
       <h2 class="section-title" style="margin:0;">Movimientos</h2>
       <div id="mov-filter-badge" style="display:none;align-items:center;gap:0.4rem;background:#2a2d3a;border:1px solid #4b5563;border-radius:20px;padding:0.25rem 0.6rem 0.25rem 0.75rem;font-size:0.78rem;color:#e5e7eb;">
         <span id="mov-filter-label"></span>
+        <span id="mov-filter-saldo" style="color:#9ca3af;font-weight:700;"></span>
         <button onclick="showMovimientos(null)" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;line-height:1;font-size:1rem;" title="Limpiar filtro">×</button>
       </div>
     </div>
@@ -1057,7 +1059,7 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};</script>
+  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};</script>
   <script src="src/js/navigation.js?v={build_ts}"></script>
   <script src="src/js/charts-evo.js?v={build_ts}"></script>
   <script src="src/js/charts-btc.js?v={build_ts}"></script>
