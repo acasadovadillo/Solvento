@@ -61,6 +61,34 @@ function filterCuentasMov(btn, cuenta) {
   });
 }
 
+let explorarTipoActivo = '__all__';
+
+function explorarSetTipo(btn, tipo) {
+  explorarTipoActivo = tipo;
+  document.querySelectorAll('.explorar-tab').forEach(b => {
+    b.style.borderBottom = '2px solid transparent';
+    b.style.color = '#6b7280';
+    b.style.fontWeight = '400';
+  });
+  btn.style.borderBottom = '2px solid #ffffff';
+  btn.style.color = '#ffffff';
+  btn.style.fontWeight = '700';
+  explorarFiltrar();
+}
+
+function explorarFiltrar() {
+  const q = (document.getElementById('explorar-search')?.value || '').toLowerCase();
+  let visible = 0;
+  document.querySelectorAll('.asset-card').forEach(card => {
+    const matchTipo   = explorarTipoActivo === '__all__' || card.dataset.tipo === explorarTipoActivo;
+    const matchSearch = !q || (card.dataset.search || '').includes(q);
+    card.style.display = matchTipo && matchSearch ? '' : 'none';
+    if (matchTipo && matchSearch) visible++;
+  });
+  const empty = document.getElementById('explorar-empty');
+  if (empty) empty.style.display = visible === 0 ? '' : 'none';
+}
+
 function toggleMenu() { document.getElementById("mobile-menu").classList.toggle("open"); }
 function closeMenu() { document.getElementById("mobile-menu").classList.remove("open"); }
 

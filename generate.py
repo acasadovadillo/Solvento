@@ -739,6 +739,81 @@ def tabla_activos():
     </tr>""")
     return "\n".join(rows)
 
+def tarjetas_activos_html():
+    TIPO_SLUG = {
+        "ETF":                "etf",
+        "Acciones":           "acciones",
+        "Criptoactivo":       "cripto",
+        "Fondo de inversión": "fondo",
+    }
+    TIPO_CONF = {
+        "ETF":                ("#8b5cf6", "rgba(139,92,246,0.15)"),
+        "Acciones":           ("#ec4899", "rgba(236,72,153,0.15)"),
+        "Criptoactivo":       ("#f59e0b", "rgba(245,158,11,0.15)"),
+        "Fondo de inversión": ("#14b8a6", "rgba(20,184,166,0.15)"),
+    }
+    CAT_CONF = {
+        "Renta variable": ("#3b82f6", "rgba(59,130,246,0.12)"),
+        "Renta fija":     ("#10b981", "rgba(16,185,129,0.12)"),
+    }
+    cards = []
+    for _, r in inv_raw.sort_values("importe", ascending=False).iterrows():
+        tipo     = str(r.get("tipo", "—")).strip()
+        nombre   = str(r["Nombre"]).strip()
+        isin_val = str(r["ISIN"]).strip()
+        if isin_val in ("-", "", "nan"):
+            isin_val = "—"
+        banco    = str(r.get("Banco", "—")).strip()
+        cat      = str(r.get("categoria", "—")).strip()
+        importe  = float(r["importe"])
+        pct      = (importe / total_inversiones * 100) if total_inversiones > 0 else 0.0
+        tcolor, tbg = TIPO_CONF.get(tipo, ("#6b7280", "rgba(107,114,128,0.15)"))
+        ccolor, cbg = CAT_CONF.get(cat, ("#6b7280", "rgba(107,114,128,0.12)"))
+        slug     = TIPO_SLUG.get(tipo, re.sub(r"[^a-z0-9]", "-", tipo.lower()))
+        ticker_r = str(r.get("ticker_raw", "")).strip()
+        if ticker_r and ticker_r not in ("-", "", "nan"):
+            lbl = ticker_r[:4].upper()
+        else:
+            words = nombre.split()
+            lbl = "".join(w[0] for w in words if w and w[0].isalpha())[:3].upper()
+        search_str = f"{nombre.lower()} {isin_val.lower()} {banco.lower()} {tipo.lower()}"
+        cards.append(
+            f'<div class="asset-card" data-tipo="{slug}" data-search="{html_escape(search_str)}"'
+            f' style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:16px;padding:1.25rem 1.5rem;'
+            f'transition:border-color 0.2s,box-shadow 0.2s;"'
+            f' onmouseover="this.style.borderColor=\'#3b4257\';this.style.boxShadow=\'0 4px 20px rgba(0,0,0,0.4)\'"'
+            f' onmouseout="this.style.borderColor=\'#2a2d3a\';this.style.boxShadow=\'none\'">\n'
+            f'  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;margin-bottom:0.9rem;">\n'
+            f'    <div style="display:flex;align-items:center;gap:0.75rem;min-width:0;">\n'
+            f'      <div style="width:44px;height:44px;border-radius:10px;background:{tbg};border:1px solid {tcolor}40;'
+            f'display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;'
+            f'color:{tcolor};font-family:ui-monospace,monospace;flex-shrink:0;">{html_escape(lbl)}</div>\n'
+            f'      <div style="min-width:0;">\n'
+            f'        <div style="color:#ffffff;font-weight:700;font-size:0.92rem;line-height:1.3;">{html_escape(nombre)}</div>\n'
+            f'        <div style="color:#6b7280;font-size:0.75rem;margin-top:0.1rem;">{html_escape(banco)}</div>\n'
+            f'      </div>\n'
+            f'    </div>\n'
+            f'    <span style="font-size:0.7rem;font-weight:700;color:{tcolor};background:{tbg};'
+            f'padding:0.2rem 0.65rem;border-radius:20px;white-space:nowrap;flex-shrink:0;'
+            f'border:1px solid {tcolor}35;">{html_escape(tipo)}</span>\n'
+            f'  </div>\n'
+            f'  <div style="margin-bottom:0.9rem;">\n'
+            f'    <span style="font-size:0.72rem;color:{ccolor};background:{cbg};'
+            f'padding:0.2rem 0.5rem;border-radius:4px;font-weight:600;">{html_escape(cat)}</span>\n'
+            f'  </div>\n'
+            f'  <div style="border-top:1px solid #2a2d3a;padding-top:0.75rem;'
+            f'display:flex;justify-content:space-between;align-items:flex-end;gap:0.5rem;">\n'
+            f'    <span style="color:#4b5563;font-size:0.72rem;font-family:ui-monospace,monospace;'
+            f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">{html_escape(isin_val)}</span>\n'
+            f'    <div style="text-align:right;flex-shrink:0;">\n'
+            f'      <div style="color:#ffffff;font-weight:700;font-size:0.92rem;">{fmt_eur(importe)}</div>\n'
+            f'      <div style="color:#3b82f6;font-size:0.72rem;font-weight:600;margin-top:0.1rem;">{fmt_pct(pct)} portafolio</div>\n'
+            f'    </div>\n'
+            f'  </div>\n'
+            f'</div>'
+        )
+    return "\n".join(cards)
+
 # ════════════════════════════════════════════════════
 # 8) ESCRIBIR HTML
 # ════════════════════════════════════════════════════
@@ -819,6 +894,7 @@ html_out = f"""<!DOCTYPE html>
     <li class="navbar-item"><a href="#" data-page="patrimonio" onclick="showPage('patrimonio');return false;">Patrimonio</a></li>
     <li class="navbar-item"><a href="#" data-page="cuentas" onclick="showPage('cuentas');return false;">Cuentas</a></li>
     <li class="navbar-item"><a href="#" data-page="inversiones" onclick="showPage('inversiones');return false;">Inversiones</a></li>
+    <li class="navbar-item"><a href="#" data-page="explorar" onclick="showPage('explorar');return false;">Explorar</a></li>
   </ul>
   <button class="hamburger" onclick="toggleMenu()" aria-label="Menú">
     <span></span><span></span><span></span>
@@ -828,6 +904,7 @@ html_out = f"""<!DOCTYPE html>
   <a href="#" onclick="showPage('patrimonio');closeMenu();return false;">Patrimonio</a>
   <a href="#" onclick="showPage('cuentas');closeMenu();return false;">Cuentas</a>
   <a href="#" onclick="showPage('inversiones');closeMenu();return false;">Inversiones</a>
+  <a href="#" onclick="showPage('explorar');closeMenu();return false;">Explorar</a>
 </div>
 
 <!-- ══ PÁGINA 1: PATRIMONIO ══ -->
@@ -1127,6 +1204,55 @@ html_out = f"""<!DOCTYPE html>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
         <span id="pf-lbl-start">--</span><span id="pf-lbl-end">--</span>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PÁGINA 4: EXPLORAR ACTIVOS ══ -->
+<div class="page" id="page-explorar">
+  <div style="max-width:1400px;margin:0 auto 2rem;">
+    <div style="margin-top:1.5rem;margin-bottom:2rem;">
+      <h1 style="font-size:2.4rem;font-weight:800;color:#ffffff;line-height:1.1;margin:0 0 0.5rem 0;">
+        Explorar <span style="font-style:italic;color:#3b82f6;">activos</span>
+      </h1>
+      <p style="color:#6b7280;font-size:0.92rem;margin:0;">
+        Los {len(inv_raw)} activos de tu portafolio. Busca o filtra para explorarlos.
+      </p>
+    </div>
+    <div style="position:relative;margin-bottom:1.25rem;">
+      <svg style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:#6b7280;pointer-events:none;" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input id="explorar-search" type="text" placeholder="Buscar por nombre o ISIN..."
+        oninput="explorarFiltrar()"
+        style="width:100%;box-sizing:border-box;background:#1a1d27;border:1px solid #2a2d3a;border-radius:12px;
+               padding:0.75rem 1rem 0.75rem 2.75rem;color:#e5e7eb;font-size:0.9rem;outline:none;
+               transition:border-color 0.2s;"
+        onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#2a2d3a'">
+    </div>
+    <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.5rem;overflow-x:auto;">
+      <button class="explorar-tab" onclick="explorarSetTipo(this,'__all__')"
+        style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;
+               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Todos</button>
+      <button class="explorar-tab" onclick="explorarSetTipo(this,'acciones')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Acciones</button>
+      <button class="explorar-tab" onclick="explorarSetTipo(this,'etf')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">ETFs</button>
+      <button class="explorar-tab" onclick="explorarSetTipo(this,'cripto')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Criptoactivos</button>
+      <button class="explorar-tab" onclick="explorarSetTipo(this,'fondo')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Fondos</button>
+    </div>
+    <div id="explorar-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem;">
+      {tarjetas_activos_html()}
+    </div>
+    <div id="explorar-empty" style="display:none;text-align:center;padding:4rem 2rem;">
+      <div style="color:#4b5563;font-size:2rem;margin-bottom:0.75rem;">🔍</div>
+      <div style="color:#6b7280;font-size:0.92rem;">No se encontraron activos que coincidan.</div>
     </div>
   </div>
 </div>
