@@ -347,22 +347,73 @@ else:
 # 4) LEER Y PROCESAR INVERSIONES
 # ════════════════════════════════════════════════════
 
-inv_raw = pd.read_csv(INVERSIONES_PATH, encoding="utf-8", dtype=str)
-inv_raw = inv_raw.rename(columns={"Tipo": "categoria", "Activo": "tipo", "Valor": "importe"})
-for col in ["tipo", "categoria"]:
-    if col in inv_raw.columns:
-        inv_raw[col] = inv_raw[col].str.strip()
-
-if "ISIN" not in inv_raw.columns:
-    inv_raw["ISIN"] = "-"
+_df_inv = pd.read_csv(INVERSIONES_PATH, encoding="utf-8", dtype=str)
+_df_inv = _df_inv.rename(columns={"Tipo": "categoria", "Activo": "tipo"})
+for col in ["tipo", "categoria", "ISIN", "Nombre"]:
+    if col in _df_inv.columns:
+        _df_inv[col] = _df_inv[col].str.strip()
+if "ISIN" not in _df_inv.columns:
+    _df_inv["ISIN"] = "-"
 else:
-    inv_raw["ISIN"] = inv_raw["ISIN"].fillna("-").str.strip().replace("", "-")
+    _df_inv["ISIN"] = _df_inv["ISIN"].fillna("-").replace("", "-")
+for col in ("Coste", "fecha", "Valor"):
+    if col not in _df_inv.columns:
+        _df_inv[col] = ""
 
-inv_raw["importe"] = pd.to_numeric(inv_raw["importe"], errors="coerce").fillna(0.0)
+_df_inv["_valor_n"] = pd.to_numeric(_df_inv["Valor"], errors="coerce")
+_df_inv["_coste_n"] = pd.to_numeric(_df_inv["Coste"], errors="coerce")
 
-total_inversiones = round(inv_raw["importe"].sum(), 2)
-patrimonio_neto   = round(patrimonio_liquido + total_inversiones, 2)
-ratio_inv         = (total_inversiones / patrimonio_neto * 100) if patrimonio_neto != 0 else 0.0
+# Filas de valor actual (una por activo) y filas de aportación (una por compra)
+inv_raw  = _df_inv[_df_inv["_valor_n"].notna()].copy().rename(columns={"_valor_n": "importe"})
+inv_apor = _df_inv[_df_inv["_coste_n"].notna()].copy()
+
+# Clave de cruce: ISIN cuando está disponible, nombre en caso contrario (Bitcoin usa nombre)
+def _jk(df):
+    return df.apply(lambda r: r["ISIN"] if r["ISIN"] not in ("-", "", "nan") else str(r.get("Nombre", "")).strip(), axis=1)
+
+inv_raw["_jk"] = _jk(inv_raw)
+
+if len(inv_apor) > 0:
+    inv_apor = inv_apor.copy()
+    inv_apor["_jk"] = _jk(inv_apor)
+    inv_apor["_fecha"] = pd.to_datetime(inv_apor["fecha"].str.strip(), dayfirst=True, errors="coerce")
+    inv_apor["_unidades_n"] = pd.to_numeric(inv_apor["Unidades"] if "Unidades" in inv_apor.columns else "", errors="coerce")
+    _coste_agg = inv_apor.groupby("_jk").agg(
+        coste_total=("_coste_n",  "sum"),
+        fecha_primera=("_fecha",  "min"),
+        n_aportaciones=("_coste_n", "count"),
+    ).reset_index()
+    inv_raw = inv_raw.merge(_coste_agg, on="_jk", how="left")
+else:
+    inv_raw["coste_total"]    = float("nan")
+    inv_raw["fecha_primera"]  = pd.NaT
+    inv_raw["n_aportaciones"] = 0
+
+# Rentabilidad simple y CAGR por activo
+inv_raw["ganancia"]  = inv_raw["importe"] - inv_raw["coste_total"]
+inv_raw["rent_pct"]  = ((inv_raw["importe"] / inv_raw["coste_total"]) - 1) * 100
+
+_hoy = datetime.now()
+def _cagr(r):
+    if pd.isna(r["coste_total"]) or r["coste_total"] <= 0 or pd.isnull(r["fecha_primera"]):
+        return float("nan")
+    anos = ((_hoy - r["fecha_primera"]).days) / 365.25
+    return (math.pow(r["importe"] / r["coste_total"], 1.0 / anos) - 1) * 100 if anos >= 0.01 else float("nan")
+
+inv_raw["cagr"] = inv_raw.apply(_cagr, axis=1)
+
+# Totales globales de inversión
+total_inversiones  = round(inv_raw["importe"].sum(), 2)
+_coste_validos     = inv_raw["coste_total"].dropna()
+total_coste_inv    = round(_coste_validos.sum(), 2) if len(_coste_validos) > 0 else 0.0
+total_ganancia_inv = round(total_inversiones - total_coste_inv, 2) if total_coste_inv > 0 else 0.0
+total_rent_inv_pct = ((total_inversiones / total_coste_inv) - 1) * 100 if total_coste_inv > 0 else float("nan")
+hay_rentabilidad   = total_coste_inv > 0
+
+patrimonio_neto = round(patrimonio_liquido + total_inversiones, 2)
+ratio_inv       = (total_inversiones / patrimonio_neto * 100) if patrimonio_neto != 0 else 0.0
+
+inv_raw["pct"] = (inv_raw["importe"] / total_inversiones * 100) if total_inversiones != 0 else 0.0
 
 inv_cat = inv_raw.groupby("categoria")["importe"].sum().round(2).reset_index()
 inv_cat = inv_cat.sort_values("importe", ascending=False).reset_index(drop=True)
@@ -377,7 +428,6 @@ inv_tipo = add_donut_fields(inv_tipo, total_inversiones)
 # Tickers para precios en tiempo real
 if "Ticker" not in inv_raw.columns:
     inv_raw["Ticker"] = ""
-
 inv_raw["ticker_raw"] = inv_raw["Ticker"].fillna("").str.strip().replace("-", "")
 inv_raw["ticker_yf"]  = inv_raw.apply(
     lambda r: "BTC" if r["ticker_raw"] == "BTC"
@@ -714,29 +764,90 @@ def tabla_gastos():
     return "\n".join(rows)
 
 def tabla_activos():
+    TD = "padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;"
     rows = []
-    for _, r in inv_activos.iterrows():
-        ticker = r["ticker_yf"]
+    for _, r in inv_raw.sort_values("importe", ascending=False).iterrows():
+        ticker = r.get("ticker_yf")
         if pd.notna(ticker) and ticker:
-            elem_id = "mkt-" + re.sub(r"[^A-Za-z0-9]", "_", ticker)
-            price_td = (
-                f'<td id="{elem_id}" style="padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;'
-                f'text-align:right;color:#f59e0b;font-weight:600;font-size:0.9rem;font-family:ui-monospace,monospace;"'
-                f' data-ticker="{ticker}">—</td>'
-            )
+            elem_id = "mkt-" + re.sub(r"[^A-Za-z0-9]", "_", str(ticker))
+            price_td = (f'<td id="{elem_id}" style="{TD}text-align:right;color:#f59e0b;font-weight:600;'
+                        f'font-size:0.9rem;font-family:ui-monospace,monospace;" data-ticker="{ticker}">—</td>')
         else:
-            price_td = '<td style="padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#4b5563;font-size:0.85rem;">N/D</td>'
-        rows.append(f"""
-    <tr class="table-row">
-      <td style="padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;text-align:left;">
-        <div style="font-weight:600;color:#ffffff;font-size:0.9rem;">{html_escape(str(r["Nombre"]))}</div>
-        <div style="font-size:0.75rem;color:#6b7280;margin-top:0.15rem;">{html_escape(str(r["tipo"]))}</div>
-      </td>
-      <td style="padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;text-align:left;color:#9ca3af;font-size:0.85rem;font-family:ui-monospace,monospace;">{html_escape(str(r["ISIN"]))}</td>
-      <td style="padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;">{fmt_eur(r["importe"])}</td>
-      <td style="padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#3b82f6;font-weight:600;font-size:0.9rem;">{fmt_pct(r["pct"])}</td>
-      {price_td}
-    </tr>""")
+            price_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">N/D</td>'
+        coste_val  = r.get("coste_total")
+        ganancia   = r.get("ganancia")
+        rent_pct   = r.get("rent_pct")
+        cagr_val   = r.get("cagr")
+        has_coste  = pd.notna(coste_val) and coste_val > 0
+        if has_coste:
+            g_color = "#10b981" if ganancia >= 0 else "#ef4444"
+            g_signo = "+" if ganancia >= 0 else ""
+            coste_td = f'<td style="{TD}text-align:right;color:#9ca3af;font-size:0.88rem;font-family:ui-monospace,monospace;">{fmt_eur(coste_val)}</td>'
+            rent_td  = (f'<td style="{TD}text-align:right;">'
+                        f'<div style="color:{g_color};font-weight:600;font-size:0.88rem;">{g_signo}{fmt_eur(ganancia)}</div>'
+                        f'<div style="color:{g_color};font-size:0.75rem;opacity:0.85;">{g_signo}{rent_pct:.2f}%'
+                        + (f' · CAGR {cagr_val:.1f}%' if pd.notna(cagr_val) else '') +
+                        f'</div></td>')
+        else:
+            coste_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
+            rent_td  = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
+        rows.append(
+            f'<tr class="table-row">'
+            f'<td style="{TD}text-align:left;">'
+            f'<div style="font-weight:600;color:#ffffff;font-size:0.9rem;">{html_escape(str(r["Nombre"]))}</div>'
+            f'<div style="font-size:0.75rem;color:#6b7280;margin-top:0.15rem;">{html_escape(str(r["tipo"]))}</div>'
+            f'</td>'
+            f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.85rem;font-family:ui-monospace,monospace;">{html_escape(str(r["ISIN"]))}</td>'
+            f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;">{fmt_eur(r["importe"])}</td>'
+            f'{coste_td}{rent_td}'
+            f'<td style="{TD}text-align:right;color:#3b82f6;font-weight:600;font-size:0.9rem;">{fmt_pct(r["pct"])}</td>'
+            f'{price_td}'
+            f'</tr>'
+        )
+    return "\n".join(rows)
+
+def tabla_aportaciones():
+    if len(inv_apor) == 0:
+        return '<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:#6b7280;">Sin aportaciones registradas</td></tr>'
+    TIPO_COLOR = {
+        "ETF": "#8b5cf6", "Acciones": "#ec4899",
+        "Criptoactivo": "#f59e0b", "Fondo de inversión": "#14b8a6",
+    }
+    TD = "padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;"
+    df = inv_apor.copy()
+    if "_fecha" in df.columns:
+        df = df.sort_values("_fecha", ascending=False)
+    rows = []
+    for _, r in df.iterrows():
+        nombre   = str(r.get("Nombre", "—"))
+        tipo     = str(r.get("tipo", "—"))
+        banco    = str(r.get("Banco", "—"))
+        coste    = r["_coste_n"]
+        fecha_v  = r.get("_fecha")
+        fecha_s  = fecha_v.strftime("%d/%m/%Y") if pd.notna(fecha_v) else str(r.get("fecha", "—"))
+        unidades = r.get("_unidades_n", float("nan"))
+        has_u    = pd.notna(unidades) and unidades > 0
+        tipo_color = TIPO_COLOR.get(tipo, "#6b7280")
+        tipo_chip  = (f'<span style="font-size:0.68rem;font-weight:600;color:{tipo_color};'
+                      f'background:{tipo_color}22;padding:0.15rem 0.45rem;border-radius:4px;'
+                      f'margin-top:0.2rem;display:inline-block;">{html_escape(tipo)}</span>')
+        if has_u:
+            unidades_td = f'<td style="{TD}text-align:right;color:#e5e7eb;font-size:0.85rem;font-family:ui-monospace,monospace;">{unidades:g}</td>'
+            precio_td   = f'<td style="{TD}text-align:right;color:#9ca3af;font-size:0.85rem;font-family:ui-monospace,monospace;">{fmt_eur(coste / unidades)}</td>'
+        else:
+            unidades_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
+            precio_td   = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
+        rows.append(
+            f'<tr class="table-row">'
+            f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.82rem;font-family:ui-monospace,monospace;white-space:nowrap;">{fecha_s}</td>'
+            f'<td style="{TD}text-align:left;">'
+            f'<div style="font-weight:600;color:#ffffff;font-size:0.88rem;">{html_escape(nombre)}</div>'
+            f'{tipo_chip}</td>'
+            f'<td style="{TD}text-align:left;color:#6b7280;font-size:0.82rem;">{html_escape(banco)}</td>'
+            f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;font-family:ui-monospace,monospace;">{fmt_eur(coste)}</td>'
+            f'{unidades_td}{precio_td}'
+            f'</tr>'
+        )
     return "\n".join(rows)
 
 def tarjetas_activos_html():
@@ -776,6 +887,25 @@ def tarjetas_activos_html():
         else:
             words = nombre.split()
             lbl = "".join(w[0] for w in words if w and w[0].isalpha())[:3].upper()
+        coste_val = r.get("coste_total")
+        ganancia  = r.get("ganancia")
+        rent_pct  = r.get("rent_pct")
+        cagr_val  = r.get("cagr")
+        has_coste = pd.notna(coste_val) and float(coste_val) > 0
+        if has_coste:
+            g_color  = "#10b981" if float(ganancia) >= 0 else "#ef4444"
+            g_signo  = "+" if float(ganancia) >= 0 else ""
+            cagr_txt = f" · CAGR {cagr_val:.1f}%" if pd.notna(cagr_val) else ""
+            rent_html = (
+                f'  <div style="border-top:1px solid #2a2d3a;padding-top:0.6rem;margin-top:0.6rem;'
+                f'display:flex;justify-content:space-between;align-items:center;">\n'
+                f'    <span style="color:#6b7280;font-size:0.72rem;">Invertido: {fmt_eur(float(coste_val))}</span>\n'
+                f'    <span style="color:{g_color};font-weight:700;font-size:0.82rem;">'
+                f'{g_signo}{fmt_eur(float(ganancia))} ({g_signo}{float(rent_pct):.2f}%{cagr_txt})</span>\n'
+                f'  </div>\n'
+            )
+        else:
+            rent_html = ""
         search_str = f"{nombre.lower()} {isin_val.lower()} {banco.lower()} {tipo.lower()}"
         cards.append(
             f'<div class="asset-card" data-tipo="{slug}" data-search="{html_escape(search_str)}"'
@@ -810,6 +940,7 @@ def tarjetas_activos_html():
             f'      <div style="color:#3b82f6;font-size:0.72rem;font-weight:600;margin-top:0.1rem;">{fmt_pct(pct)} portafolio</div>\n'
             f'    </div>\n'
             f'  </div>\n'
+            f'{rent_html}'
             f'</div>'
         )
     return "\n".join(cards)
@@ -948,6 +1079,8 @@ html_out = f"""<!DOCTYPE html>
         <th style="text-align:left;">Activo</th>
         <th style="text-align:left;">ISIN</th>
         <th style="text-align:right;">Valor actual</th>
+        <th style="text-align:right;">Invertido</th>
+        <th style="text-align:right;">Rentabilidad</th>
         <th style="text-align:right;">Peso</th>
         <th style="text-align:right;">Mercado</th>
       </tr></thead>
@@ -1117,9 +1250,25 @@ html_out = f"""<!DOCTYPE html>
 
 <!-- ══ PÁGINA 3: INVERSIONES ══ -->
 <div class="page" id="page-inversiones">
-  <div class="header-block">
-    <h2 class="section-title">Inversiones</h2>
-    <div class="section-subtitle">{fmt_eur(total_inversiones)}</div>
+  <div class="hero-card" style="margin-top:1.5rem;">
+    <div class="hero-main">
+      <span class="hero-label">Valor actual</span>
+      <span class="hero-value">{fmt_eur(total_inversiones)}</span>
+    </div>
+    <div class="hero-breakdown">
+      <div class="hero-item">
+        <span class="hero-item-label">Invertido</span>
+        <span class="hero-item-value">{fmt_eur(total_coste_inv) if hay_rentabilidad else "—"}</span>
+      </div>
+      <div class="hero-item">
+        <span class="hero-item-label">Ganancia</span>
+        <span class="hero-item-value" style="color:{'#10b981' if total_ganancia_inv >= 0 else '#ef4444'};">{('+' if total_ganancia_inv >= 0 else '') + fmt_eur(total_ganancia_inv) if hay_rentabilidad else '—'}</span>
+      </div>
+      <div class="hero-item">
+        <span class="hero-item-label">Rentabilidad</span>
+        <span class="hero-item-value" style="color:{'#10b981' if total_rent_inv_pct >= 0 else '#ef4444'};">{('+' if total_rent_inv_pct >= 0 else '') + f'{total_rent_inv_pct:.2f}%' if hay_rentabilidad else '—'}</span>
+      </div>
+    </div>
   </div>
   <div class="chart-container-double">
     <div class="chart-block">
@@ -1152,6 +1301,8 @@ html_out = f"""<!DOCTYPE html>
         <th style="text-align:left;">Activo</th>
         <th style="text-align:left;">ISIN</th>
         <th style="text-align:right;">Valor actual</th>
+        <th style="text-align:right;">Invertido</th>
+        <th style="text-align:right;">Rentabilidad</th>
         <th style="text-align:right;">Peso</th>
         <th style="text-align:right;">Mercado</th>
       </tr></thead>
@@ -1204,6 +1355,26 @@ html_out = f"""<!DOCTYPE html>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
         <span id="pf-lbl-start">--</span><span id="pf-lbl-end">--</span>
       </div>
+    </div>
+  </div>
+  <!-- ══ HISTORIAL DE APORTACIONES ══ -->
+  <div style="max-width:1400px;margin:2rem auto 0;width:100%;padding-bottom:2rem;">
+    <div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Historial de aportaciones</div>
+        <div style="font-size:0.82rem;color:#9ca3af;">{len(inv_apor)} compras · {fmt_eur(total_coste_inv) if hay_rentabilidad else "—"} invertido</div>
+      </div>
+      <table class="minimal-table">
+        <thead><tr>
+          <th style="text-align:left;">Fecha</th>
+          <th style="text-align:left;">Activo</th>
+          <th style="text-align:left;">Banco</th>
+          <th style="text-align:right;">Importe</th>
+          <th style="text-align:right;">Unidades</th>
+          <th style="text-align:right;">Precio/ud</th>
+        </tr></thead>
+        <tbody>{tabla_aportaciones()}</tbody>
+      </table>
     </div>
   </div>
 </div>
