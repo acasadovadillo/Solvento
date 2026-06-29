@@ -602,17 +602,35 @@ def tabla_movimientos_html():
         "Traspaso": ("#3b82f6", "rgba(59,130,246,0.15)"),
         "Préstamo": ("#f59e0b", "rgba(245,158,11,0.15)"),
     }
+    # Compute running balances backwards from current balances
+    account_running = {r["cuenta"]: float(r["saldo"]) for _, r in saldos.iterrows()}
     rows = []
     for _, r in df.iterrows():
         tipo = str(r.get("tipo", "—"))
         color, bg = TIPO_COLOR.get(tipo, ("#9ca3af", "rgba(156,163,175,0.15)"))
         fecha_str = r["fecha"].strftime("%d/%m/%Y") if pd.notna(r["fecha"]) else "—"
-        if tipo == "Ingreso":
-            cuenta = str(r.get("cuenta_destino", "—"))
-        else:
-            cuenta = str(r.get("cuenta_origen", "—"))
-        cuenta = cuenta if str(cuenta).strip() not in ("", "-", "nan") else "—"
         imp = float(r["importe"]) if pd.notna(r["importe"]) else 0.0
+        co = str(r.get("cuenta_origen", "")).strip()
+        cd = str(r.get("cuenta_destino", "")).strip()
+        co = co if co not in ("", "-", "nan") else ""
+        cd = cd if cd not in ("", "-", "nan") else ""
+        cuentas_involucradas = "|".join(c for c in [co, cd] if c)
+        # Primary account for saldo display: destination for Ingreso, origin otherwise; fallback to the other side
+        primary = cd if tipo == "Ingreso" else co
+        if not primary:
+            primary = co if tipo == "Ingreso" else cd
+        saldo_val = account_running.get(primary)
+        saldo_str = fmt_eur(saldo_val) if saldo_val is not None else "—"
+        # Undo this transaction to reconstruct the balance before it
+        if tipo == "Gasto" and co in account_running:
+            account_running[co] += imp
+        elif tipo == "Ingreso" and cd in account_running:
+            account_running[cd] -= imp
+        elif tipo in ("Traspaso", "Préstamo"):
+            if co in account_running:
+                account_running[co] += imp
+            if cd in account_running:
+                account_running[cd] -= imp
         if tipo == "Ingreso":
             imp_str, imp_color = f"+{fmt_eur(imp)}", "#10b981"
         elif tipo == "Gasto":
@@ -621,17 +639,16 @@ def tabla_movimientos_html():
             imp_str, imp_color = fmt_eur(imp), "#9ca3af"
         det_raw = r.get("detalle", "")
         detalle = html_escape(str(det_raw)) if pd.notna(det_raw) and str(det_raw).strip() not in ("", "-") else "—"
-        co = str(r.get("cuenta_origen", "")).strip()
-        cd = str(r.get("cuenta_destino", "")).strip()
-        cuentas_involucradas = "|".join(c for c in [co, cd] if c and c not in ("-", "nan"))
         rows.append(f"""    <tr class="table-row" data-cuentas="{html_escape(cuentas_involucradas)}">
       <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">{fecha_str}</td>
       <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;">
-        <span style="font-size:0.73rem;font-weight:600;color:{color};background:{bg};padding:0.2rem 0.5rem;border-radius:4px;">{html_escape(tipo)}</span>
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <span style="font-size:0.73rem;font-weight:600;color:{color};background:{bg};padding:0.2rem 0.5rem;border-radius:4px;white-space:nowrap;flex-shrink:0;">{html_escape(tipo)}</span>
+          <span style="color:#e5e7eb;font-size:0.87rem;">{detalle}</span>
+        </div>
       </td>
-      <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;color:#e5e7eb;font-size:0.87rem;">{detalle}</td>
-      <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;color:#9ca3af;font-size:0.82rem;">{html_escape(cuenta)}</td>
       <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:{imp_color};font-weight:600;font-family:ui-monospace,monospace;font-size:0.88rem;white-space:nowrap;">{imp_str}</td>
+      <td style="padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#9ca3af;font-family:ui-monospace,monospace;font-size:0.85rem;white-space:nowrap;">{saldo_str}</td>
     </tr>""")
     return "\n".join(rows)
 
@@ -838,10 +855,9 @@ html_out = f"""<!DOCTYPE html>
       <table class="minimal-table">
         <thead><tr>
           <th style="text-align:left;">Fecha</th>
-          <th style="text-align:left;">Tipo</th>
-          <th style="text-align:left;">Detalle</th>
-          <th style="text-align:left;">Cuenta</th>
+          <th style="text-align:left;">Concepto</th>
           <th style="text-align:right;">Importe</th>
+          <th style="text-align:right;">Saldo</th>
         </tr></thead>
         <tbody id="mov-tbody">{tabla_movimientos_html()}</tbody>
       </table>
