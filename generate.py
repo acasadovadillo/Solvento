@@ -582,8 +582,7 @@ def lista_cuentas_simple():
     parts = []
     for _, r in saldos.iterrows():
         cuenta_js = html_escape(r["cuenta"]).replace("'", "\\'")
-        parts.append(f"""
-<div class="legend-item" onclick="showMovimientos('{cuenta_js}')" style="cursor:pointer;transition:background 0.15s;border-radius:8px;padding-left:0.5rem;margin-left:-0.5rem;" onmouseover="this.style.background='#ffffff08'" onmouseout="this.style.background='transparent'">
+        parts.append(f"""<div onclick="showMovimientos('{cuenta_js}')" style="display:flex;align-items:center;gap:1rem;padding:0.7rem 2rem;margin:0 -2rem;border-radius:0;cursor:pointer;transition:background 0.15s;border-bottom:1px solid #2a2d3a;" onmouseover="this.style.background='#ffffff08'" onmouseout="this.style.background='transparent'">
   <div style="display:flex;align-items:center;justify-content:center;width:30px;">{r["icono"]}</div>
   <div style="flex-grow:1;">
     <span style="color:#ffffff;font-weight:600;font-size:0.95rem;">{html_escape(r["cuenta"])}</span>
@@ -799,14 +798,10 @@ html_out = f"""<!DOCTYPE html>
 
 <!-- ══ PÁGINA 1: PATRIMONIO ══ -->
 <div class="page active" id="page-patrimonio">
-  <div class="header-block" style="margin-top:1.5rem;">
-    <h2 class="section-title">Patrimonio</h2>
-  </div>
-  <div class="hero-card">
+  <div class="hero-card" style="margin-top:1.5rem;">
     <div class="hero-main">
-      <span class="hero-label">Patrimonio total</span>
+      <span class="hero-label">Patrimonio</span>
       <span class="hero-value">{fmt_eur(patrimonio_neto)}</span>
-      <span class="hero-sub">Actualizado a {fecha_actualizacion} a las {hora_actualizacion} horas</span>
     </div>
     <div class="hero-breakdown">
       <div class="hero-item">
@@ -829,11 +824,24 @@ html_out = f"""<!DOCTYPE html>
         <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cuentas</div>
         <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(patrimonio_liquido)}</div>
       </div>
-      <div class="legend-box" style="border:none;padding:0;background:transparent;">{lista_cuentas_simple()}</div>
+      <div class="legend-box" style="border:none;padding:0;background:transparent;gap:0;">{lista_cuentas_simple()}</div>
+      <div style="text-align:right;padding-top:0.75rem;">
+        <button onclick="showPage('movimientos')" style="background:none;border:none;color:#6b7280;font-size:0.82rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">Ver todos los movimientos →</button>
+      </div>
     </div>
   </div>
-  <div style="max-width:1400px;margin:1rem auto 0;width:100%;text-align:right;padding-right:0.5rem;">
-    <button onclick="showPage('movimientos')" style="background:none;border:none;color:#6b7280;font-size:0.82rem;cursor:pointer;padding:0.4rem 0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">Ver todos los movimientos →</button>
+  <div class="table-container">
+    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Inversiones</div>
+    <table class="minimal-table">
+      <thead><tr>
+        <th style="text-align:left;">Activo</th>
+        <th style="text-align:left;">ISIN</th>
+        <th style="text-align:right;">Valor actual</th>
+        <th style="text-align:right;">Peso</th>
+        <th style="text-align:right;">Mercado</th>
+      </tr></thead>
+      <tbody>{tabla_activos()}</tbody>
+    </table>
   </div>
 </div>
 
@@ -979,6 +987,21 @@ html_out = f"""<!DOCTYPE html>
       </table>
     </div>
   </div>
+  <div class="table-container">
+    <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.25rem;overflow-x:auto;">
+      <button class="cmov-tab" onclick="filterCuentasMov(this,'__all__')" style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;margin-bottom:-1px;">Todos</button>
+      {"".join(f'<button class="cmov-tab" onclick="filterCuentasMov(this,\'{html_escape(r["cuenta"]).replace(chr(39), chr(92)+chr(39))}\')" style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;margin-bottom:-1px;">{html_escape(r["cuenta"])}</button>' for _, r in saldos.iterrows())}
+    </div>
+    <table class="minimal-table">
+      <thead><tr>
+        <th style="text-align:left;">Fecha</th>
+        <th style="text-align:left;">Concepto</th>
+        <th style="text-align:right;">Importe</th>
+        <th style="text-align:right;">Saldo</th>
+      </tr></thead>
+      <tbody id="cuentas-mov-tbody">{tabla_movimientos_html()}</tbody>
+    </table>
+  </div>
 </div>
 
 <!-- ══ PÁGINA 3: INVERSIONES ══ -->
@@ -1012,7 +1035,7 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
   <div class="table-container">
-    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Desglose detallado de activos</div>
+    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Inversiones</div>
     <table class="minimal-table">
       <thead><tr>
         <th style="text-align:left;">Activo</th>

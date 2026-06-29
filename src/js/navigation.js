@@ -3,6 +3,8 @@ function formatEur(val) {
 }
 
 function showPage(id) {
+  const current = document.querySelector(".page.active");
+  const alreadyActive = current && current.id === "page-" + id;
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   const pg = document.getElementById("page-" + id);
   if (pg) pg.classList.add("active");
@@ -10,6 +12,7 @@ function showPage(id) {
     a.classList.toggle("active", a.dataset.page === id);
   });
   window.location.hash = id;
+  if (alreadyActive) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 (function () {
@@ -37,6 +40,24 @@ function showMovimientos(cuenta) {
     if (badge) badge.style.display = "none";
     rows.forEach(tr => tr.style.display = "");
   }
+}
+
+function filterCuentasMov(btn, cuenta) {
+  document.querySelectorAll(".cmov-tab").forEach(b => {
+    b.style.borderBottom = "2px solid transparent";
+    b.style.color = "#6b7280";
+    b.style.fontWeight = "400";
+  });
+  btn.style.borderBottom = "2px solid #ffffff";
+  btn.style.color = "#ffffff";
+  btn.style.fontWeight = "700";
+  document.querySelectorAll("#cuentas-mov-tbody tr").forEach(tr => {
+    if (cuenta === "__all__") {
+      tr.style.display = "";
+    } else {
+      tr.style.display = (tr.dataset.cuentas || "").split("|").includes(cuenta) ? "" : "none";
+    }
+  });
 }
 
 function toggleMenu() { document.getElementById("mobile-menu").classList.toggle("open"); }
