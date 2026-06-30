@@ -1061,9 +1061,11 @@ def tarjetas_activos_html():
 
 pf_hist_parts, pf_intra_parts, pf_cur_parts = [], [], []
 latest_prices, ticker_currency_map = {}, {}
+_raw_pf_hist = {}
 for asset in PORTFOLIO_ASSETS:
     hist  = fetch_daily_history(asset["ticker"])
     intra = fetch_intraday(asset["ticker"])
+    _raw_pf_hist[asset["ticker"]] = hist
     n     = asset["nombre"]
     hist_js  = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in hist)  + "]" if hist  else "[]"
     intra_js = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in intra) + "]" if intra else "[]"
@@ -1085,6 +1087,107 @@ latest_prices_js    = json.dumps(latest_prices)
 ticker_currency_js  = json.dumps(ticker_currency_map)
 saldos_cuentas_js   = json.dumps({r["cuenta"]: round(r["saldo"], 2) for _, r in saldos.iterrows()})
 build_ts = int(datetime.now().timestamp())
+
+# ── Patrimonio neto histórico (líquido + inversiones) ──────────────────────
+# Precio EUR por fecha para cada ticker
+_tdp = {}  # {ticker: ([dates], [prices_eur])}
+for _pa in PORTFOLIO_ASSETS:
+    _tk, _mon = _pa["ticker"], _pa["moneda"]
+    _ds, _ps = [], []
+    for _ts2, _p in _raw_pf_hist.get(_tk, []):
+        _ds.append(datetime.fromtimestamp(_ts2 / 1000).date())
+        _ps.append(_p * _FX_EUR.get("USD", 0.926) if _mon == "USD" else _p)
+    _tdp[_tk] = (_ds, _ps)
+
+# Unidades acumuladas por jk y fecha
+_utl = {}  # {jk: ([dates], [cum_units])}
+if len(inv_apor) > 0:
+    for _jk2, _grp2 in inv_apor.groupby("_jk"):
+        _g2 = _grp2.sort_values("_fecha").dropna(subset=["_fecha"])
+        _cd2, _cu2, _run2 = [], [], 0.0
+        for _, _r2 in _g2.iterrows():
+            _u2 = _r2.get("_unidades_n", 0)
+            _run2 += (_u2 if not (isinstance(_u2, float) and math.isnan(_u2)) else 0)
+            _cd2.append(_r2["_fecha"].date())
+            _cu2.append(_run2)
+        _utl[_jk2] = (_cd2, _cu2)
+
+_yft2jk = {a["yf_ticker"]: _jk_v(a["Nombre"], a["ISIN"])
+           for a in ACTIVOS_CONFIG if a.get("yf_ticker")}
+_bankinter_fix = sum(float(a.get("valor_manual", 0) or 0)
+                     for a in ACTIVOS_CONFIG if not a.get("yf_ticker"))
+
+def _inv_en(d):
+    total = _bankinter_fix
+    for _pa2 in PORTFOLIO_ASSETS:
+        _tk2 = _pa2["ticker"]
+        _jk3 = _yft2jk.get(_tk2)
+        if not _jk3:
+            continue
+        _tld, _tlu = _utl.get(_jk3, ([], []))
+        _units2 = 0.0
+        for _i2 in range(len(_tld) - 1, -1, -1):
+            if _tld[_i2] <= d:
+                _units2 = _tlu[_i2]
+                break
+        if _units2 <= 0:
+            continue
+        _dpd, _dpp = _tdp.get(_tk2, ([], []))
+        for _i3 in range(len(_dpd) - 1, -1, -1):
+            if _dpd[_i3] <= d:
+                total += _units2 * _dpp[_i3]
+                break
+    return total
+
+if n_puntos > 0:
+    _neto_vals = [round(row["patrimonio_acum"] + _inv_en(row["fecha"]), 2)
+                  for _, row in evo.iterrows()]
+    _neto_min  = min(_neto_vals)
+    _neto_max  = max(_neto_vals)
+    _neto_rng  = (_neto_max - _neto_min) if _neto_max != _neto_min else 1.0
+    _neto_y    = [260 - (v - _neto_min) / _neto_rng * 220 for v in _neto_vals]
+
+    _xs = evo["x_svg"].tolist()
+    _neto_pts_svg = [f"M {_xs[0]:.2f} {_neto_y[0]:.2f}"] + \
+                    [f"L {_xs[i]:.2f} {_neto_y[i]:.2f}" for i in range(1, len(_neto_vals))]
+    neto_path_d = " ".join(_neto_pts_svg)
+    neto_area_d = f"{neto_path_d} L {_xs[-1]:.2f} 280 L {_xs[0]:.2f} 280 Z"
+
+    neto_diff   = _neto_vals[-1] - _neto_vals[0]
+    neto_signo  = "+" if neto_diff >= 0 else ""
+    neto_color  = "#10b981" if neto_diff >= 0 else "#ef4444"
+    neto_bg     = "rgba(16,185,129,0.15)" if neto_diff >= 0 else "rgba(239,68,68,0.15)"
+    neto_pct    = (neto_diff / abs(_neto_vals[0]) * 100) if _neto_vals[0] != 0 else 0.0
+    fmt_neto_rend = f"{neto_signo}{fmt_eur(neto_diff)} ({neto_signo}{fmt_pct(neto_pct)})"
+
+    _ny_parts = []
+    for _ni in range(5):
+        _nf = _ni / 4
+        _nv = _neto_min + (_neto_max - _neto_min) * _nf
+        _nyp = 260 - _nf * 220
+        _nlbl = (f"{_nv/1000:.1f}".replace(".", ",") + "k") if abs(_nv) >= 1000 else str(round(_nv))
+        _ny_parts.append(
+            f'<line x1="70" y1="{_nyp:.1f}" x2="980" y2="{_nyp:.1f}" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="3 3"/>'
+            f'<text x="984" y="{_nyp+4:.1f}" text-anchor="start" font-size="10" fill="#6b7280">{_nlbl}</text>'
+        )
+    neto_y_axis_svg = "\n".join(_ny_parts)
+
+    _neto_js = []
+    for _ni2, (_, _erow2) in enumerate(evo.iterrows()):
+        _nts = int(datetime(_erow2["fecha"].year, _erow2["fecha"].month, _erow2["fecha"].day).timestamp() * 1000)
+        _nv2 = _neto_vals[_ni2]
+        _neto_js.append(
+            f'{{t:{_nts},v:{_nv2:.2f},f:\'{_erow2["fecha"].strftime("%d/%m/%Y")}\','
+            f'vf:\'{fmt_eur(_nv2).replace(" €","")}\',x:{_xs[_ni2]:.2f},y:{_neto_y[_ni2]:.2f}}}'
+        )
+    neto_hist_js = "[" + ",".join(_neto_js) + "]"
+else:
+    neto_path_d = "M 70 120 L 980 120"
+    neto_area_d = "M 70 120 L 980 120 L 980 280 L 70 280 Z"
+    neto_y_axis_svg = ""
+    neto_color = "#10b981"; neto_bg = "rgba(16,185,129,0.15)"
+    fmt_neto_rend = "0,00 € (0,00%)"
+    neto_hist_js = "[]"
 
 portfolio_options = "\n".join(
     f'            <option value="{a["nombre"]}">{a["nombre"]}</option>'
@@ -1170,6 +1273,43 @@ html_out = f"""<!DOCTYPE html>
       </div>
     </div>
   </div>
+  <!-- ══ GRÁFICO PATRIMONIO NETO TOTAL ══ -->
+  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
+    <div class="dashboard-panel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del patrimonio neto</div>
+          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
+            <div id="neto-rend-display" style="font-size:1.05rem;font-weight:600;color:{neto_color};background:{neto_bg};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_neto_rend}</div>
+            <div id="neto-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div id="neto-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
+        </div>
+      </div>
+      <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
+        <svg id="neto-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
+          <defs>
+            <linearGradient id="neto-area-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="{neto_color}" stop-opacity="0.2"/>
+              <stop offset="100%" stop-color="{neto_color}" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <g id="neto-chart-axes">{neto_y_axis_svg}{x_axis_svg}</g>
+          <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
+          <path id="neto-chart-area" d="{neto_area_d}" fill="url(#neto-area-grad)"/>
+          <path id="neto-chart-line" d="{neto_path_d}" fill="none" stroke="{neto_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line id="neto-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+        </svg>
+        <div id="neto-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{neto_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
+        <span>{fecha_ini_lbl}</span><span>{fecha_fin_lbl}</span>
+      </div>
+    </div>
+  </div>
+
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
     <div class="dashboard-panel" style="padding:1.5rem 2rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
@@ -1543,7 +1683,40 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};</script>
+  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};
+  (function(){{
+    const svg = document.getElementById('neto-svg-chart');
+    if (!svg || !netoHistData.length) return;
+    const vline = document.getElementById('neto-v-line');
+    const dot   = document.getElementById('neto-dot');
+    const rdis  = document.getElementById('neto-rend-display');
+    const vdis  = document.getElementById('neto-valor-display');
+    const ddis  = document.getElementById('neto-date-display');
+    function onMove(e) {{
+      const rect = svg.getBoundingClientRect();
+      const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const pct = Math.max(0, Math.min(1, cx / rect.width));
+      const vbW = 1000, svgX = 70 + pct * (980 - 70);
+      let best = netoHistData[0], bd = Infinity;
+      for (const p of netoHistData) {{ const d = Math.abs(p.x - svgX); if (d < bd) {{ bd = d; best = p; }} }}
+      const bx = best.x / vbW * rect.width, by = best.y / 300 * rect.height;
+      vline.setAttribute('x1', best.x); vline.setAttribute('x2', best.x); vline.style.display = '';
+      dot.style.left = bx + 'px'; dot.style.top = by + 'px'; dot.style.display = '';
+      rdis.style.display = 'none'; vdis.style.display = 'inline-block';
+      vdis.textContent = best.vf + ' €';
+      ddis.textContent = best.f;
+    }}
+    function onLeave() {{
+      vline.style.display = 'none'; dot.style.display = 'none';
+      rdis.style.display = ''; vdis.style.display = 'none';
+      ddis.textContent = 'Desde el inicio';
+    }}
+    svg.addEventListener('mousemove', onMove);
+    svg.addEventListener('mouseleave', onLeave);
+    svg.addEventListener('touchmove', e => {{ e.preventDefault(); onMove(e); }}, {{passive:false}});
+    svg.addEventListener('touchend', onLeave);
+  }})();
+  </script>
   <script src="src/js/navigation.js?v={build_ts}"></script>
   <script src="src/js/charts-evo.js?v={build_ts}"></script>
   <script src="src/js/charts-btc.js?v={build_ts}"></script>
