@@ -14,6 +14,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Notificar fallo por email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{secrets.MAIL_USERNAME}}
+          password: ${{secrets.MAIL_PASSWORD}}
+          subject: "⚠️ Finanzas Personales — fallo en el workflow (${{github.run_id}})"
+          to: acasadovadillo@gmail.com
+          from: Finanzas Personales Bot
+          body: |
+            El workflow "Actualizar finanzas" ha fallado.
+
+            Repositorio: ${{github.repository}}
+            Run ID: ${{github.run_id}}
+            Fecha: ${{github.event.head_commit.timestamp}}
+
+            Ver detalles: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
