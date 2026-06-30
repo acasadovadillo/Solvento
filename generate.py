@@ -1073,7 +1073,10 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
   <div class="table-container">
-    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Inversiones</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Inversiones</div>
+      <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(total_inversiones)}</div>
+    </div>
     <table class="minimal-table">
       <thead><tr>
         <th style="text-align:left;">Activo</th>
