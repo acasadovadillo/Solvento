@@ -31,13 +31,6 @@ jobs:
             -o data/inversiones.csv
           echo "✅ inversiones.csv descargado ($(wc -l < data/inversiones.csv) filas)"
 
-      - name: Descargar fondos_manuales.csv desde Google Sheets
-        run: |
-          curl -L \
-            "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=1115001182" \
-            -o data/fondos_manuales.csv
-          echo "✅ fondos_manuales.csv descargado ($(wc -l < data/fondos_manuales.csv) filas)"
-
       - name: Archivar repositorio completo del día en historic/
         run: |
           DATE=$(date +%Y-%m-%d)
@@ -61,7 +54,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add data/movimientos.csv data/inversiones.csv data/fondos_manuales.csv index.html historic/
+          git add data/movimientos.csv data/inversiones.csv index.html historic/
 
           if git diff --cached --quiet; then
             echo "No hay cambios"

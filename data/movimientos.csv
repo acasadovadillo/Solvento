@@ -29,8 +29,6 @@ Marca temporal,fecha,tipo,importe,cuenta_origen,cuenta_destino,tipo_ingreso,tipo
 30/06/2026 12:10:09,30/06/2026,Gasto,19.94,Santander,-,,Transporte > Transporte público y privado,,,Uber con Laura Colorado Pedrero
 30/06/2026 12:26:59,30/06/2026,Ingreso,1010.16,-,Trade Republic,Ingreso de ajuste,,,,Para ajustar todos los gastos de compras de activos de inversión
 30/06/2026 17:43:29,30/06/2026,Préstamo,256.36,-,Bankinter,,,Devolución,ABIES,SiteGround ABIES
-30/06/2026 18:55:14,30/06/2026,Gasto,3,Bankinter,-,,"Ocio > Bares, restaurantes y eventos",,,100 Montaditos Cerveza y Patatas
-30/06/2026 21:58:34,30/06/2026,Gasto,4.10,Santander,-,,Alimentación > Chino Alimentación,,,2 Litros de Mahou y 1 bolsa
 22/06/2026 20:35:41,26/02/2026,Ingreso,12311.71,-,Bankinter,Ingreso de ajuste,,,,Saldo en cuenta inicial
 22/06/2026 20:36:48,26/02/2026,Ingreso,21.95,-,Santander,Ingreso de ajuste,,,,Saldo en cuenta inicial
 22/06/2026 20:37:35,26/02/2026,Ingreso,85.7,-,Efectivo,Ingreso de ajuste,,,,Saldo en cuenta inicial
@@ -269,88 +267,88 @@ Marca temporal,fecha,tipo,importe,cuenta_origen,cuenta_destino,tipo_ingreso,tipo
 ,22/06/2026,Gasto,9.35,Santander,-,,Fumar,,,Estanco tabaco + filtros
 ,22/06/2026,Gasto,34.56,Santander,-,,Alimentación > Supermercado,,,Carrefour
 ,22/06/2026,Gasto,12,Bankinter,-,,ABIES,,,Cuota Socio 2026
-,18/08/2025,Gasto,10.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,16/09/2025,Gasto,10.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,16/10/2025,Gasto,40.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,17/11/2025,Gasto,40.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,16/12/2025,Gasto,40.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,16/01/2026,Gasto,40.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,16/02/2026,Gasto,40.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,16/03/2026,Gasto,40.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,16/04/2026,Gasto,40.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,18/05/2026,Gasto,40.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,16/06/2026,Gasto,10.00,Trade Republic,-,,Inversiones,,,US Aggregate Bond USD (Acc)
-,18/08/2025,Gasto,5.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,16/09/2025,Gasto,5.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,16/10/2025,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,17/11/2025,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,16/12/2025,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,16/01/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,16/02/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,16/03/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,16/04/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,18/05/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,16/06/2026,Gasto,45.00,Trade Republic,-,,Inversiones,,,Core MSCI World USD (Acc)
-,18/08/2025,Gasto,5.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,16/09/2025,Gasto,5.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,09/10/2025,Gasto,4.45,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,16/10/2025,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,17/11/2025,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,16/12/2025,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,16/01/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,16/02/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,16/03/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,16/04/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,18/05/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,16/06/2026,Gasto,20.00,Trade Republic,-,,Inversiones,,,Core S&P 500 USD (Acc)
-,18/08/2025,Gasto,2.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,16/09/2025,Gasto,2.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,16/10/2025,Gasto,10.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,17/11/2025,Gasto,10.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,16/12/2025,Gasto,10.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,16/01/2026,Gasto,10.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,16/02/2026,Gasto,10.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,16/03/2026,Gasto,10.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,16/04/2026,Gasto,10.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,18/05/2026,Gasto,10.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,16/06/2026,Gasto,15.00,Trade Republic,-,,Inversiones,,,MSCI Emerging Markets USD (Acc)
-,18/08/2025,Gasto,2.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/09/2025,Gasto,2.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/10/2025,Gasto,7.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/10/2025,Gasto,4.89,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,23/10/2025,Gasto,0.75,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,03/11/2025,Gasto,0.63,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,10/11/2025,Gasto,4.94,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,17/11/2025,Gasto,7.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,17/11/2025,Gasto,6.58,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,24/11/2025,Gasto,3.70,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,02/12/2025,Gasto,4.51,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,09/12/2025,Gasto,4.11,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/12/2025,Gasto,7.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/12/2025,Gasto,5.82,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,23/12/2025,Gasto,4.91,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,02/01/2026,Gasto,0.30,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,09/01/2026,Gasto,2.40,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/01/2026,Gasto,7.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/01/2026,Gasto,3.60,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,23/01/2026,Gasto,1.71,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,23/02/2026,Gasto,3.70,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,09/03/2026,Gasto,0.30,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/03/2026,Gasto,7.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/03/2026,Gasto,0.03,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/04/2026,Gasto,7.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,18/05/2026,Gasto,7.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,02/06/2026,Gasto,0.30,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,16/06/2026,Gasto,7.00,Trade Republic,-,,Inversiones,,,Physical Gold USD (Acc)
-,18/08/2025,Gasto,0.915,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/09/2025,Gasto,0.911,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/10/2025,Gasto,2.957,Trade Republic,-,,Inversiones,,,Bitcoin
-,17/11/2025,Gasto,2.976,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/12/2025,Gasto,2.943,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/01/2026,Gasto,2.973,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/02/2026,Gasto,2.980,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/03/2026,Gasto,2.969,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/04/2026,Gasto,2.955,Trade Republic,-,,Inversiones,,,Bitcoin
-,18/05/2026,Gasto,2.994,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/06/2026,Gasto,2.963,Trade Republic,-,,Inversiones,,,Bitcoin
-,16/12/2025,Gasto,9.998,Trade Republic,-,,Inversiones,,,Apple
+,18/08/2025,Gasto,10.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,16/09/2025,Gasto,10.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,16/10/2025,Gasto,40.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,17/11/2025,Gasto,40.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,16/12/2025,Gasto,40.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,16/01/2026,Gasto,40.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,16/02/2026,Gasto,40.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,16/03/2026,Gasto,40.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,16/04/2026,Gasto,40.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,18/05/2026,Gasto,40.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,16/06/2026,Gasto,10.00,Trade Republic,-,,Inversión,,,US Aggregate Bond USD (Acc)
+,18/08/2025,Gasto,5.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,16/09/2025,Gasto,5.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,16/10/2025,Gasto,20.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,17/11/2025,Gasto,20.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,16/12/2025,Gasto,20.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,16/01/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,16/02/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,16/03/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,16/04/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,18/05/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,16/06/2026,Gasto,45.00,Trade Republic,-,,Inversión,,,Core MSCI World USD (Acc)
+,18/08/2025,Gasto,5.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,16/09/2025,Gasto,5.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,09/10/2025,Gasto,4.45,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,16/10/2025,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,17/11/2025,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,16/12/2025,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,16/01/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,16/02/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,16/03/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,16/04/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,18/05/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,16/06/2026,Gasto,20.00,Trade Republic,-,,Inversión,,,Core S&P 500 USD (Acc)
+,18/08/2025,Gasto,2.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,16/09/2025,Gasto,2.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,16/10/2025,Gasto,10.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,17/11/2025,Gasto,10.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,16/12/2025,Gasto,10.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,16/01/2026,Gasto,10.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,16/02/2026,Gasto,10.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,16/03/2026,Gasto,10.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,16/04/2026,Gasto,10.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,18/05/2026,Gasto,10.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,16/06/2026,Gasto,15.00,Trade Republic,-,,Inversión,,,MSCI Emerging Markets USD (Acc)
+,18/08/2025,Gasto,2.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/09/2025,Gasto,2.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/10/2025,Gasto,7.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/10/2025,Gasto,4.89,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,23/10/2025,Gasto,0.75,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,03/11/2025,Gasto,0.63,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,10/11/2025,Gasto,4.94,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,17/11/2025,Gasto,7.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,17/11/2025,Gasto,6.58,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,24/11/2025,Gasto,3.70,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,02/12/2025,Gasto,4.51,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,09/12/2025,Gasto,4.11,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/12/2025,Gasto,7.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/12/2025,Gasto,5.82,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,23/12/2025,Gasto,4.91,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,02/01/2026,Gasto,0.30,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,09/01/2026,Gasto,2.40,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/01/2026,Gasto,7.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/01/2026,Gasto,3.60,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,23/01/2026,Gasto,1.71,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,23/02/2026,Gasto,3.70,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,09/03/2026,Gasto,0.30,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/03/2026,Gasto,7.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/03/2026,Gasto,0.03,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/04/2026,Gasto,7.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,18/05/2026,Gasto,7.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,02/06/2026,Gasto,0.30,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,16/06/2026,Gasto,7.00,Trade Republic,-,,Inversión,,,Physical Gold USD (Acc)
+,18/08/2025,Gasto,0.915,Trade Republic,-,,Inversión,,,Bitcoin
+,16/09/2025,Gasto,0.911,Trade Republic,-,,Inversión,,,Bitcoin
+,16/10/2025,Gasto,2.957,Trade Republic,-,,Inversión,,,Bitcoin
+,17/11/2025,Gasto,2.976,Trade Republic,-,,Inversión,,,Bitcoin
+,16/12/2025,Gasto,2.943,Trade Republic,-,,Inversión,,,Bitcoin
+,16/01/2026,Gasto,2.973,Trade Republic,-,,Inversión,,,Bitcoin
+,16/02/2026,Gasto,2.980,Trade Republic,-,,Inversión,,,Bitcoin
+,16/03/2026,Gasto,2.969,Trade Republic,-,,Inversión,,,Bitcoin
+,16/04/2026,Gasto,2.955,Trade Republic,-,,Inversión,,,Bitcoin
+,18/05/2026,Gasto,2.994,Trade Republic,-,,Inversión,,,Bitcoin
+,16/06/2026,Gasto,2.963,Trade Republic,-,,Inversión,,,Bitcoin
+,16/12/2025,Gasto,9.998,Trade Republic,-,,Inversión,,,Apple
