@@ -187,6 +187,50 @@ def fetch_btc_history_max():
     except Exception:
         return []
 
+def _fetch_fx_eur(currency):
+    """Devuelve cuántos EUR vale 1 unidad de `currency`. None si falla."""
+    if currency in ("EUR", ""):
+        return 1.0
+    req = urllib.request.Request(
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{currency}EUR=X?interval=1d&range=5d",
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        closes = [v for v in data["chart"]["result"][0]["indicators"]["quote"][0]["close"] if v is not None]
+        return closes[-1] if closes else None
+    except Exception:
+        return None
+
+_FX_EUR = {
+    "USD": _fetch_fx_eur("USD") or 0.926,
+    "GBP": _fetch_fx_eur("GBP") or 1.168,
+}
+
+def fetch_precio_actual_eur(ticker):
+    """Precio más reciente del ticker en EUR (convierte USD/GBp automáticamente)."""
+    req = urllib.request.Request(
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=5d",
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as r:
+            data = json.loads(r.read())
+        result = data["chart"]["result"][0]
+        closes = [v for v in result["indicators"]["quote"][0]["close"] if v is not None]
+        if not closes:
+            return None
+        price = closes[-1]
+        cur = result["meta"].get("currency", "EUR")
+        if cur == "GBp":
+            price = price / 100 * _FX_EUR.get("GBP", 1.168)
+        elif cur != "EUR":
+            price = price * _FX_EUR.get(cur, 1.0)
+        return round(price, 6)
+    except Exception:
+        return None
+
 def add_donut_fields(df, total, pct_col="pct"):
     """Añade pct, pct_rest, pct_acum, rotacion al dataframe."""
     df = df.copy()
@@ -344,9 +388,36 @@ else:
     evo_ref_y = "120"
 
 # ════════════════════════════════════════════════════
-# 4) LEER Y PROCESAR INVERSIONES
+# 4) LEER Y PROCESAR INVERSIONES (PRECIOS EN TIEMPO REAL)
 # ════════════════════════════════════════════════════
 
+# ── Metadatos: activos con ticker de Yahoo Finance ──
+ACTIVOS_CONFIG = [
+    {"Nombre": "US Aggregate Bond USD (Acc)",    "ISIN": "IE00BYXYYM63", "Ticker": "-",    "categoria": "Renta fija",     "tipo": "ETF",              "Banco": "Trade Republic", "yf_ticker": "AGGG.L"},
+    {"Nombre": "Core MSCI World USD (Acc)",      "ISIN": "IE00B4L5Y983", "Ticker": "-",    "categoria": "Renta variable", "tipo": "ETF",              "Banco": "Trade Republic", "yf_ticker": "IWDA.AS"},
+    {"Nombre": "Core S&P 500 USD (Acc)",         "ISIN": "IE00B5BMR087", "Ticker": "-",    "categoria": "Renta variable", "tipo": "ETF",              "Banco": "Trade Republic", "yf_ticker": "CSPX.AS"},
+    {"Nombre": "MSCI Emerging Markets USD (Acc)","ISIN": "IE000KCS7J59", "Ticker": "-",    "categoria": "Renta variable", "tipo": "ETF",              "Banco": "Trade Republic", "yf_ticker": "EMIM.AS"},
+    {"Nombre": "Physical Gold USD (Acc)",        "ISIN": "IE00B4ND3602", "Ticker": "-",    "categoria": "Renta variable", "tipo": "ETF",              "Banco": "Trade Republic", "yf_ticker": "PHAU.AS"},
+    {"Nombre": "Bitcoin",                        "ISIN": "-",            "Ticker": "BTC",  "categoria": "Renta variable", "tipo": "Criptoactivo",     "Banco": "Trade Republic", "yf_ticker": "BTC-EUR"},
+    {"Nombre": "Apple",                          "ISIN": "US0378331005", "Ticker": "AAPL", "categoria": "Renta variable", "tipo": "Acciones",         "Banco": "Trade Republic", "yf_ticker": "AAPL"},
+]
+
+# ── Fondos sin ticker público (valor manual en fondos_manuales.csv) ──
+_FONDOS_PATH = Path("data/fondos_manuales.csv")
+if _FONDOS_PATH.exists():
+    for _, _fr in pd.read_csv(_FONDOS_PATH, dtype=str).iterrows():
+        ACTIVOS_CONFIG.append({
+            "Nombre":       str(_fr.get("Nombre", "")).strip(),
+            "ISIN":         str(_fr.get("ISIN", "-")).strip(),
+            "Ticker":       "-",
+            "categoria":    str(_fr.get("categoria", "Renta variable")).strip(),
+            "tipo":         str(_fr.get("tipo", "Fondo de inversión")).strip(),
+            "Banco":        str(_fr.get("Banco", "")).strip(),
+            "yf_ticker":    None,
+            "valor_manual": float(_fr.get("Valor", 0) or 0),
+        })
+
+# ── Leer aportaciones (todo inversiones.csv son aportaciones) ──
 _df_inv = pd.read_csv(INVERSIONES_PATH, encoding="utf-8", dtype=str)
 _df_inv = _df_inv.rename(columns={"Tipo": "categoria", "Activo": "tipo"})
 for col in ["tipo", "categoria", "ISIN", "Nombre"]:
@@ -356,54 +427,89 @@ if "ISIN" not in _df_inv.columns:
     _df_inv["ISIN"] = "-"
 else:
     _df_inv["ISIN"] = _df_inv["ISIN"].fillna("-").replace("", "-")
-for col in ("Coste", "fecha", "Valor"):
+for col in ("Coste", "fecha"):
     if col not in _df_inv.columns:
         _df_inv[col] = ""
 
-_df_inv["_valor_n"] = pd.to_numeric(_df_inv["Valor"], errors="coerce")
 _df_inv["_coste_n"] = pd.to_numeric(_df_inv["Coste"], errors="coerce")
-
-# Filas de valor actual (una por activo) y filas de aportación (una por compra)
-inv_raw  = _df_inv[_df_inv["_valor_n"].notna()].copy().rename(columns={"_valor_n": "importe"})
 inv_apor = _df_inv[_df_inv["_coste_n"].notna()].copy()
 
-# Clave de cruce: ISIN cuando está disponible, nombre en caso contrario (Bitcoin usa nombre)
-def _jk(df):
-    return df.apply(lambda r: r["ISIN"] if r["ISIN"] not in ("-", "", "nan") else str(r.get("Nombre", "")).strip(), axis=1)
-
-inv_raw["_jk"] = _jk(inv_raw)
+# ── Clave de cruce: ISIN o Nombre (Bitcoin no tiene ISIN) ──
+def _jk_v(nombre, isin):
+    s = str(isin).strip()
+    return s if s not in ("-", "", "nan") else str(nombre).strip()
 
 if len(inv_apor) > 0:
-    inv_apor = inv_apor.copy()
-    inv_apor["_jk"] = _jk(inv_apor)
-    inv_apor["_fecha"] = pd.to_datetime(inv_apor["fecha"].str.strip(), dayfirst=True, errors="coerce")
-    inv_apor["_unidades_n"] = pd.to_numeric(inv_apor["Unidades"] if "Unidades" in inv_apor.columns else "", errors="coerce")
+    inv_apor["_jk"]         = inv_apor.apply(lambda r: _jk_v(r.get("Nombre", ""), r.get("ISIN", "-")), axis=1)
+    inv_apor["_fecha"]      = pd.to_datetime(inv_apor["fecha"].str.strip(), dayfirst=True, errors="coerce")
+    inv_apor["_unidades_n"] = pd.to_numeric(inv_apor["Unidades"] if "Unidades" in inv_apor.columns else pd.Series(dtype=str), errors="coerce")
     _coste_agg = inv_apor.groupby("_jk").agg(
-        coste_total=("_coste_n",  "sum"),
-        fecha_primera=("_fecha",  "min"),
-        n_aportaciones=("_coste_n", "count"),
+        coste_total    =("_coste_n",    "sum"),
+        unidades_total =("_unidades_n", "sum"),
+        fecha_primera  =("_fecha",      "min"),
+        n_aportaciones =("_coste_n",    "count"),
     ).reset_index()
-    inv_raw = inv_raw.merge(_coste_agg, on="_jk", how="left")
 else:
-    inv_raw["coste_total"]    = float("nan")
-    inv_raw["fecha_primera"]  = pd.NaT
-    inv_raw["n_aportaciones"] = 0
+    _coste_agg = pd.DataFrame(columns=["_jk","coste_total","unidades_total","fecha_primera","n_aportaciones"])
 
-# Rentabilidad simple y CAGR por activo
-inv_raw["ganancia"]  = inv_raw["importe"] - inv_raw["coste_total"]
-inv_raw["rent_pct"]  = ((inv_raw["importe"] / inv_raw["coste_total"]) - 1) * 100
+# ── Construir inv_raw: precio live × unidades ──
+_inv_rows = []
+for _a in ACTIVOS_CONFIG:
+    _jk = _jk_v(_a["Nombre"], _a["ISIN"])
+    _ag = _coste_agg[_coste_agg["_jk"] == _jk]
+    _coste  = float(_ag["coste_total"].values[0])    if len(_ag) > 0 else float("nan")
+    _unids  = float(_ag["unidades_total"].values[0]) if len(_ag) > 0 else float("nan")
+    _fp_raw = _ag["fecha_primera"].values[0]         if len(_ag) > 0 else None
+    _fp     = pd.Timestamp(_fp_raw) if _fp_raw is not None and not pd.isnull(_fp_raw) else pd.NaT
+    _n_apor = int(_ag["n_aportaciones"].values[0])   if len(_ag) > 0 else 0
+
+    _yft = _a.get("yf_ticker")
+    if _yft:
+        _precio  = fetch_precio_actual_eur(_yft)
+        _importe = round(_precio * _unids, 2) if (_precio and not math.isnan(_unids)) else float("nan")
+    else:
+        _importe = float(_a.get("valor_manual", float("nan")))
+
+    _inv_rows.append({
+        "Nombre":         _a["Nombre"],
+        "ISIN":           _a["ISIN"],
+        "Ticker":         _a.get("Ticker", "-"),
+        "categoria":      _a["categoria"],
+        "tipo":           _a["tipo"],
+        "Banco":          _a["Banco"],
+        "importe":        _importe,
+        "coste_total":    _coste,
+        "unidades_total": _unids,
+        "fecha_primera":  _fp,
+        "n_aportaciones": _n_apor,
+        "ticker_yf":      _yft,
+        "_jk":            _jk,
+    })
+    if _yft:
+        _p_str = f"{_precio:.4f} €" if _precio else "ERROR"
+        print(f"   {_a['Nombre'][:30]:30s} {_yft:12s} → {_p_str}")
+
+inv_raw = pd.DataFrame(_inv_rows)
+inv_raw["importe"] = pd.to_numeric(inv_raw["importe"], errors="coerce")
+
+# ── Rentabilidad ──
+inv_raw["ganancia"] = inv_raw["importe"] - inv_raw["coste_total"]
+inv_raw["rent_pct"] = ((inv_raw["importe"] / inv_raw["coste_total"]) - 1) * 100
 
 _hoy = datetime.now()
 def _cagr(r):
     if pd.isna(r["coste_total"]) or r["coste_total"] <= 0 or pd.isnull(r["fecha_primera"]):
         return float("nan")
-    anos = ((_hoy - r["fecha_primera"]).days) / 365.25
+    _fp = r["fecha_primera"]
+    if not isinstance(_fp, pd.Timestamp):
+        _fp = pd.Timestamp(_fp)
+    anos = ((_hoy - _fp).days) / 365.25
     return (math.pow(r["importe"] / r["coste_total"], 1.0 / anos) - 1) * 100 if anos >= 0.01 else float("nan")
 
 inv_raw["cagr"] = inv_raw.apply(_cagr, axis=1)
 
-# Totales globales de inversión
-total_inversiones  = round(inv_raw["importe"].sum(), 2)
+# ── Totales ──
+total_inversiones  = round(inv_raw["importe"].dropna().sum(), 2)
 _coste_validos     = inv_raw["coste_total"].dropna()
 total_coste_inv    = round(_coste_validos.sum(), 2) if len(_coste_validos) > 0 else 0.0
 total_ganancia_inv = round(total_inversiones - total_coste_inv, 2) if total_coste_inv > 0 else 0.0
@@ -415,31 +521,24 @@ ratio_inv       = (total_inversiones / patrimonio_neto * 100) if patrimonio_neto
 
 inv_raw["pct"] = (inv_raw["importe"] / total_inversiones * 100) if total_inversiones != 0 else 0.0
 
-inv_cat = inv_raw.groupby("categoria")["importe"].sum().round(2).reset_index()
+inv_cat = inv_raw.dropna(subset=["importe"]).groupby("categoria")["importe"].sum().round(2).reset_index()
 inv_cat = inv_cat.sort_values("importe", ascending=False).reset_index(drop=True)
 inv_cat["accent"] = inv_cat["categoria"].map(CAT_COLORES_INV).fillna("#6b7280")
 inv_cat = add_donut_fields(inv_cat, total_inversiones)
 
-inv_tipo = inv_raw.groupby("tipo")["importe"].sum().round(2).reset_index()
+inv_tipo = inv_raw.dropna(subset=["importe"]).groupby("tipo")["importe"].sum().round(2).reset_index()
 inv_tipo = inv_tipo.sort_values("importe", ascending=False).reset_index(drop=True)
 inv_tipo["accent"] = inv_tipo["tipo"].map(TIPO_COLORES_INV).fillna("#64748b")
 inv_tipo = add_donut_fields(inv_tipo, total_inversiones)
 
-# Tickers para precios en tiempo real
-if "Ticker" not in inv_raw.columns:
-    inv_raw["Ticker"] = ""
-inv_raw["ticker_raw"] = inv_raw["Ticker"].fillna("").str.strip().replace("-", "")
-inv_raw["ticker_yf"]  = inv_raw.apply(
-    lambda r: "BTC" if r["ticker_raw"] == "BTC"
-    else r["ticker_raw"] if r["ticker_raw"] not in ("", "-")
-    else ISIN_YF_MAP.get(r["ISIN"], ""),
+# ticker_raw para compatibilidad con funciones HTML existentes
+inv_raw["ticker_raw"] = inv_raw.apply(
+    lambda r: "BTC" if r["Nombre"] == "Bitcoin"
+    else str(r.get("Ticker", "") or "").strip().replace("-", ""),
     axis=1
 )
-inv_raw["ticker_yf"] = inv_raw["ticker_yf"].replace("", None)
 
-inv_activos = inv_raw.groupby(["Nombre", "tipo", "ISIN", "ticker_yf"], dropna=False)["importe"].sum().round(2).reset_index()
-inv_activos["pct"] = (inv_activos["importe"] / total_inversiones * 100) if total_inversiones != 0 else 0.0
-inv_activos = inv_activos.sort_values("importe", ascending=False).reset_index(drop=True)
+inv_activos = inv_raw.dropna(subset=["importe"]).sort_values("importe", ascending=False).reset_index(drop=True)
 
 # ════════════════════════════════════════════════════
 # 5) RESUMEN MENSUAL
