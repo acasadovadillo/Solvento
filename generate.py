@@ -1142,16 +1142,52 @@ def _inv_en(d):
 if n_puntos > 0:
     _neto_vals = [round(row["patrimonio_acum"] + _inv_en(row["fecha"]), 2)
                   for _, row in evo.iterrows()]
-    _neto_min  = min(_neto_vals)
-    _neto_max  = max(_neto_vals)
+    # ── Benchmark: ¿qué pasaría si todo hubiera ido a MSCI World? ──
+    _msci_dpd, _msci_dpp = _tdp.get("IWDA.AS", ([], []))
+    def _msci_p(d):
+        for _i in range(len(_msci_dpd)-1, -1, -1):
+            if _msci_dpd[_i] <= d: return _msci_dpp[_i]
+        return None
+
+    _bench_vals = []
+    for _, _er in evo.iterrows():
+        _bv = _bankinter_fix
+        for _, _ar in inv_apor.iterrows():
+            _afd = _ar.get("_fecha")
+            if pd.isna(_afd) or _afd.date() > _er["fecha"]: continue
+            _ac = _ar.get("_coste_n", 0)
+            if not _ac or math.isnan(_ac): continue
+            if str(_ar.get("Banco", "")).strip() == "Bankinter": continue
+            _pb = _msci_p(_afd.date()); _pn = _msci_p(_er["fecha"])
+            _bv += _ac * (_pn / _pb) if (_pb and _pb > 0 and _pn) else _ac
+        _bench_vals.append(round(_bv + _er["patrimonio_acum"], 2))
+
+    # Benchmark stats
+    _bench_inv_fin  = _bench_vals[-1] - evo["patrimonio_acum"].iloc[-1]
+    bench_rent_pct  = ((_bench_inv_fin / total_coste_inv) - 1) * 100 if total_coste_inv > 0 else float("nan")
+    diff_vs_bench   = total_rent_inv_pct - bench_rent_pct if not math.isnan(bench_rent_pct) else float("nan")
+    bench_valor     = round(_bench_inv_fin, 2)
+    bench_signo     = "+" if bench_rent_pct >= 0 else ""
+    diff_signo      = "+" if diff_vs_bench >= 0 else ""
+    diff_color      = "#10b981" if diff_vs_bench >= 0 else "#ef4444"
+
+    # Y-axis escala combinada (neto + benchmark)
+    _all_vals = _neto_vals + _bench_vals
+    _neto_min  = min(_all_vals)
+    _neto_max  = max(_all_vals)
     _neto_rng  = (_neto_max - _neto_min) if _neto_max != _neto_min else 1.0
     _neto_y    = [260 - (v - _neto_min) / _neto_rng * 220 for v in _neto_vals]
+    _bench_y   = [260 - (v - _neto_min) / _neto_rng * 220 for v in _bench_vals]
 
     _xs = evo["x_svg"].tolist()
     _neto_pts_svg = [f"M {_xs[0]:.2f} {_neto_y[0]:.2f}"] + \
                     [f"L {_xs[i]:.2f} {_neto_y[i]:.2f}" for i in range(1, len(_neto_vals))]
     neto_path_d = " ".join(_neto_pts_svg)
     neto_area_d = f"{neto_path_d} L {_xs[-1]:.2f} 280 L {_xs[0]:.2f} 280 Z"
+    bench_path_d = " ".join(
+        [f"M {_xs[0]:.2f} {_bench_y[0]:.2f}"] +
+        [f"L {_xs[i]:.2f} {_bench_y[i]:.2f}" for i in range(1, len(_bench_vals))]
+    )
 
     neto_diff   = _neto_vals[-1] - _neto_vals[0]
     neto_signo  = "+" if neto_diff >= 0 else ""
@@ -1184,10 +1220,13 @@ if n_puntos > 0:
 else:
     neto_path_d = "M 70 120 L 980 120"
     neto_area_d = "M 70 120 L 980 120 L 980 280 L 70 280 Z"
+    bench_path_d = "M 70 120 L 980 120"
     neto_y_axis_svg = ""
     neto_color = "#10b981"; neto_bg = "rgba(16,185,129,0.15)"
     fmt_neto_rend = "0,00 € (0,00%)"
     neto_hist_js = "[]"
+    bench_rent_pct = float("nan"); diff_vs_bench = float("nan")
+    bench_valor = 0.0; bench_signo = "+"; diff_signo = "+"; diff_color = "#6b7280"
 
 portfolio_options = "\n".join(
     f'            <option value="{a["nombre"]}">{a["nombre"]}</option>'
@@ -1281,6 +1320,7 @@ html_out = f"""<!DOCTYPE html>
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del patrimonio neto</div>
           <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
             <div id="neto-rend-display" style="font-size:1.05rem;font-weight:600;color:{neto_color};background:{neto_bg};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_neto_rend}</div>
+            <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:#6b7280;"><span style="display:inline-block;width:18px;height:2px;background:#6b7280;border-top:2px dashed #6b7280;"></span>MSCI World</div>
             <div id="neto-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
           </div>
         </div>
@@ -1299,6 +1339,7 @@ html_out = f"""<!DOCTYPE html>
           <g id="neto-chart-axes">{neto_y_axis_svg}{x_axis_svg}</g>
           <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
           <path id="neto-chart-area" d="{neto_area_d}" fill="url(#neto-area-grad)"/>
+          <path id="bench-chart-line" d="{bench_path_d}" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
           <path id="neto-chart-line" d="{neto_path_d}" fill="none" stroke="{neto_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           <line id="neto-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
         </svg>
@@ -1524,6 +1565,30 @@ html_out = f"""<!DOCTYPE html>
       </div>
     </div>
   </div>
+  <!-- ══ BENCHMARK MSCI WORLD ══ -->
+  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
+    <div class="dashboard-panel" style="padding:1.5rem 2rem;">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">Benchmark · MSCI World (mismo capital, mismas fechas)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1.5rem;">
+        <div>
+          <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.3rem;">Tu cartera</div>
+          <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if total_rent_inv_pct >= 0 else '#ef4444'};">{'+'  if total_rent_inv_pct >= 0 else ''}{total_rent_inv_pct:.2f}%</div>
+          <div style="font-size:0.82rem;color:#9ca3af;margin-top:0.15rem;">{fmt_eur(total_inversiones)}</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.3rem;">MSCI World</div>
+          <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if not math.isnan(bench_rent_pct) and bench_rent_pct >= 0 else '#6b7280'};">{f'{bench_signo}{bench_rent_pct:.2f}%' if not math.isnan(bench_rent_pct) else '—'}</div>
+          <div style="font-size:0.82rem;color:#9ca3af;margin-top:0.15rem;">{fmt_eur(bench_valor) if not math.isnan(bench_rent_pct) else '—'}</div>
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.3rem;">Tu alpha</div>
+          <div style="font-size:1.4rem;font-weight:700;color:{diff_color};">{f'{diff_signo}{diff_vs_bench:.2f}%' if not math.isnan(diff_vs_bench) else '—'}</div>
+          <div style="font-size:0.82rem;color:#9ca3af;margin-top:0.15rem;">{'sobre el índice' if not math.isnan(diff_vs_bench) else ''}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="chart-container-double">
     <div class="chart-block">
       <div class="chart-block-title">Estrategia de inversión</div>
