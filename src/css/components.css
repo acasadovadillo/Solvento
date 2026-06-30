@@ -1,0 +1,132 @@
+/* ── Hero card ── */
+.hero-card {
+  max-width: 1400px; margin: 0 auto 2rem;
+  background: linear-gradient(135deg, #1a1d27 0%, #1e2335 100%);
+  border: 1px solid #2a2d3a; border-radius: 24px; padding: 2rem 2.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 1.5rem;
+}
+.hero-main { display: flex; flex-direction: column; gap: 0.4rem; }
+.hero-label { font-size: 0.82rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.07em; }
+.hero-value { font-size: 3rem; font-weight: 800; color: #fff; letter-spacing: -0.03em; line-height: 1; }
+.hero-sub { font-size: 0.85rem; color: #6b7280; }
+.hero-breakdown { display: flex; gap: 2rem; flex-wrap: wrap; }
+.hero-item {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  padding: 1rem 1.5rem; background: #12141d; border: 1px solid #2a2d3a;
+  border-radius: 14px; min-width: 160px;
+}
+.hero-item-label { font-size: 0.72rem; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
+.hero-item-value { font-size: 1.35rem; font-weight: 700; color: #fff; }
+
+/* ── Dashboard grid & panels ── */
+.dashboard-main-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+  max-width: 1400px; margin: 0 auto 2rem; width: 100%; align-items: stretch;
+}
+.dashboard-panel {
+  background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 20px;
+  padding: 2rem; display: flex; flex-direction: column;
+  height: 100%; position: relative;
+}
+
+/* ── Timeframe selector & buttons ── */
+.timeframe-selector {
+  display: flex; gap: 0.25rem; background: #12141d; padding: 0.25rem;
+  border-radius: 10px; border: 1px solid #2a2d3a;
+  margin-bottom: 1.5rem; align-self: flex-start; flex-wrap: wrap;
+}
+.tf-btn, .tf-btn-btc, .tf-btn-msci, .tf-btn-pf {
+  background: transparent; border: none; color: #6b7280;
+  padding: 0.4rem 0.8rem; font-size: 0.76rem; font-weight: 700;
+  border-radius: 7px; cursor: pointer; transition: all 0.15s;
+}
+.tf-btn:hover, .tf-btn-btc:hover, .tf-btn-msci:hover, .tf-btn-pf:hover { color: #fff; background: #222533; }
+.tf-btn.active, .tf-btn-btc.active, .tf-btn-msci.active, .tf-btn-pf.active {
+  color: #fff; background: #2a2d3a; border: 1px solid #4b5563;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* ── Legend ── */
+.legend-box {
+  background: #1e2230; border: 1px solid #2a2d3a; border-radius: 14px;
+  padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; gap: 0.8rem;
+}
+.legend-item { display: flex; align-items: center; gap: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid #2a2d3a; }
+.legend-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+/* ── Donut charts ── */
+.chart-container-double {
+  display: flex; justify-content: center; align-items: stretch;
+  gap: 2rem; flex-wrap: wrap; margin: 0 auto; max-width: 1400px;
+}
+.chart-block {
+  display: flex; flex-direction: column; align-items: center;
+  background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 20px;
+  padding: 2rem; min-width: 300px; flex: 1; justify-content: center;
+}
+.chart-block-title {
+  font-size: 0.82rem; font-weight: 600; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 1.5rem; text-align: left; width: 100%;
+}
+.chart-wrapper { position: relative; width: 200px; height: 200px; flex-shrink: 0; margin: 0 auto; }
+.donut { width: 100%; height: 100%; transform: rotate(-90deg); background: transparent; border-radius: 50%; }
+.sector { fill: none; stroke-width: 4.5; transition: stroke-width 0.2s, opacity 0.2s; cursor: pointer; }
+.sector:hover { stroke-width: 5.5; }
+.donut:hover .sector:not(:hover) { opacity: 0.4; }
+.donut-center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 120px; height: 120px; background: #1a1d27; border: 1px solid #2a2d3a;
+  border-radius: 50%; display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  box-shadow: inset 0 4px 12px rgba(0,0,0,0.3); text-align: center;
+}
+.chart-label {
+  position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%);
+  background: #1e2230; border: 1px solid #3b4257; color: #fff;
+  padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.78rem; font-weight: 500;
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; z-index: 10;
+}
+
+/* ── Tables ── */
+.table-container {
+  max-width: 1400px; width: 100%; margin: 2rem auto 0;
+  background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 20px; padding: 2rem;
+}
+.minimal-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+.minimal-table th {
+  color: #6b7280; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; font-size: 0.72rem;
+  padding: 0.75rem 1rem; border-bottom: 1px solid #2a2d3a;
+}
+.table-row { transition: background 0.15s; }
+.table-row:hover { background: #222533; }
+.table-row:last-child td { border-bottom: none !important; }
+
+/* ── Gastos layout ── */
+.gastos-layout { display: grid; grid-template-columns: 220px 1fr; gap: 2rem; align-items: start; }
+.minimalist-table {
+  width: 100%; border-collapse: collapse; background: #1a1d27;
+  border-radius: 12px; overflow: hidden; border: 1px solid #2a2d3a; color: #e8eaf0;
+}
+.minimalist-table th {
+  text-align: left; padding: 0.8rem 1.2rem; font-size: 0.78rem;
+  text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280;
+  border-bottom: 1px solid #2a2d3a; font-weight: 600;
+}
+.minimalist-table td {
+  padding: 1rem 1.2rem; font-size: 0.95rem; font-weight: 500;
+  border-bottom: 1px solid #2a2d3a; vertical-align: middle;
+}
+.minimalist-table tr:last-child td { border-bottom: none; }
+
+/* ── Utility & badges ── */
+.right-align { text-align: right; }
+.btc-value { color: #f59e0b; font-weight: 700; font-size: 1.15rem; }
+.ticker-symbol { color: #9ca3af; font-weight: 600; font-size: 0.9rem; }
+.badge-cripto {
+  background: rgba(245,158,11,0.15); color: #f59e0b;
+  padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;
+}
