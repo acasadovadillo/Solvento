@@ -572,7 +572,10 @@ resumen_mensual = (
     .sort_values("mes")
     .reset_index(drop=True)
 )
-resumen_mensual["balance"] = resumen_mensual["ingresos"] - resumen_mensual["gastos"]
+resumen_mensual["balance"]      = resumen_mensual["ingresos"] - resumen_mensual["gastos"]
+resumen_mensual["tasa_ahorro"] = resumen_mensual.apply(
+    lambda r: (r["balance"] / r["ingresos"] * 100) if r["ingresos"] > 0 else float("nan"), axis=1
+)
 resumen_mensual["mes_lbl"] = resumen_mensual["mes"].apply(
     lambda d: d.strftime("%b %Y").capitalize()
 )
@@ -633,14 +636,22 @@ monthly_chart_svg = build_monthly_chart(resumen_mensual)
 def tabla_mensual_html(df):
     rows = []
     for _, row in df.iterrows():
-        bal_color = "#10b981" if row["balance"] >= 0 else "#ef4444"
-        signo     = "+" if row["balance"] >= 0 else ""
+        bal_color  = "#10b981" if row["balance"] >= 0 else "#ef4444"
+        signo      = "+" if row["balance"] >= 0 else ""
+        tasa       = row.get("tasa_ahorro", float("nan"))
+        if pd.isna(tasa):
+            tasa_td = f'<td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#4b5563;">—</td>'
+        else:
+            ta_color = "#10b981" if tasa >= 20 else ("#f59e0b" if tasa >= 0 else "#ef4444")
+            tasa_td  = (f'<td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;">'
+                        f'<span style="color:{ta_color};font-weight:700;font-size:0.88rem;">{tasa:.1f}%</span></td>')
         rows.append(f"""
     <tr class="table-row">
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;color:#ffffff;font-weight:600;">{row["mes_lbl"]}</td>
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#10b981;font-weight:600;">{fmt_eur(row["ingresos"])}</td>
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#ef4444;font-weight:600;">{fmt_eur(row["gastos"])}</td>
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:{bal_color};font-weight:700;">{signo}{fmt_eur(row["balance"])}</td>
+      {tasa_td}
     </tr>""")
     return "\n".join(rows)
 
@@ -1304,6 +1315,7 @@ html_out = f"""<!DOCTYPE html>
         <th style="text-align:right;">Ingresos</th>
         <th style="text-align:right;">Gastos</th>
         <th style="text-align:right;">Balance</th>
+        <th style="text-align:right;">Ahorro</th>
       </tr></thead>
       <tbody>{tabla_mensual_html(resumen_mensual)}</tbody>
     </table>
