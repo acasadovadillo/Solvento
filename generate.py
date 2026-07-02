@@ -324,7 +324,6 @@ saldos["pct_acum"] = saldos["pct"].cumsum().shift(1).fillna(0.0)
 saldos["rotacion"] = saldos["pct_acum"] * 3.6
 
 fecha_actualizacion = date.today().strftime("%d/%m/%Y")
-hora_actualizacion  = datetime.now().strftime("%H:%M")
 
 # Evolución diaria
 evo = movimientos_fecha.dropna(subset=["fecha"]).copy()
@@ -1329,7 +1328,7 @@ html_out = f"""<!DOCTYPE html>
 <nav class="navbar">
   <div class="navbar-brand">
     <h1>💰 Solvento</h1>
-    <span class="navbar-date">versión 2.1 · Actualizado: {fecha_actualizacion} a las {hora_actualizacion} horas</span>
+    <span class="navbar-date">versión 2.1 · Precios del {fecha_actualizacion}</span>
   </div>
   <select class="nav-select" onchange="showPage(this.value)" aria-label="Sección">
     <option value="patrimonio">Patrimonio</option>
