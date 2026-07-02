@@ -1,0 +1,88 @@
+fecha,Nombre,Ticker,ISIN,Tipo,Activo,Banco,Valor,Coste,Unidades
+18/08/2025,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,10.00,2.091
+16/09/2025,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,10.00,2.076
+16/10/2025,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,40.00,8.134
+17/11/2025,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,40.00,8.136
+16/12/2025,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,40.00,8.238
+16/01/2026,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,40.00,8.063
+16/02/2026,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,40.00,8.130
+16/03/2026,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,40.00,7.984
+16/04/2026,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,40.00,8.153
+18/05/2026,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,40.00,8.152
+16/06/2026,US Aggregate Bond USD (Acc),-,IE00BYXYYM63,Renta fija,ETF,Trade Republic,,10.00,2.009
+18/08/2025,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,5.00,0.0477
+16/09/2025,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,5.00,0.0472
+16/10/2025,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,20.00,0.184
+17/11/2025,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,20.00,0.182
+16/12/2025,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,20.00,0.182
+16/01/2026,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,20.00,0.175
+16/02/2026,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,20.00,0.178
+16/03/2026,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,20.00,0.178
+16/04/2026,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,20.00,0.174
+18/05/2026,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,20.00,0.165
+16/06/2026,Core MSCI World USD (Acc),-,IE00B4L5Y983,Renta variable,ETF,Trade Republic,,45.00,0.362
+18/08/2025,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,5.00,0.008483
+16/09/2025,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,5.00,0.008362
+09/10/2025,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,4.45,0.00715
+16/10/2025,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0326
+17/11/2025,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0321
+16/12/2025,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0324
+16/01/2026,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0312
+16/02/2026,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0323
+16/03/2026,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0319
+16/04/2026,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0312
+18/05/2026,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0292
+16/06/2026,Core S&P 500 USD (Acc),-,IE00B5BMR087,Renta variable,ETF,Trade Republic,,20.00,0.0285
+18/08/2025,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,2.00,0.170
+16/09/2025,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,2.00,0.163
+16/10/2025,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,10.00,0.782
+17/11/2025,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,10.00,0.773
+16/12/2025,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,10.00,0.800
+16/01/2026,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,10.00,0.720
+16/02/2026,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,10.00,0.697
+16/03/2026,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,10.00,0.715
+16/04/2026,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,10.00,0.679
+18/05/2026,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,10.00,0.643
+16/06/2026,MSCI Emerging Markets USD (Acc),-,IE000KCS7J59,Renta variable,ETF,Trade Republic,,15.00,0.893
+18/08/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,2.00,0.0359
+16/09/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,2.00,0.0329
+16/10/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,7.00,0.0993
+16/10/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,4.89,0.0694
+23/10/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,0.75,0.0109
+03/11/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,0.63,0.00933
+10/11/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,4.94,0.0721
+17/11/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,7.00,0.103
+17/11/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,6.58,0.0966
+24/11/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,3.70,0.054
+02/12/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,4.51,0.0643
+09/12/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,4.11,0.0587
+16/12/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,7.00,0.099
+16/12/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,5.82,0.0823
+23/12/2025,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,4.91,0.0665
+02/01/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,0.30,0.004127
+09/01/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,2.40,0.0322
+16/01/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,7.00,0.091
+16/01/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,3.60,0.0468
+23/01/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,1.71,0.0211
+23/02/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,3.70,0.0437
+09/03/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,0.30,0.003486
+16/03/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,7.00,0.0827
+16/03/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,0.03,0.000354
+16/04/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,7.00,0.0883
+18/05/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,7.00,0.0923
+02/06/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,0.30,0.003976
+16/06/2026,Physical Gold USD (Acc),-,IE00B4ND3602,Renta variable,ETF,Trade Republic,,7.00,0.0964
+16/12/2025,Apple,AAPL,US0378331005,Renta variable,Acciones,Trade Republic,,9.998,0.0432
+18/08/2025,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,0.915,0.000009
+16/09/2025,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,0.911,0.000009
+16/10/2025,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.957,0.00003
+17/11/2025,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.976,0.000035
+16/12/2025,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.943,0.000039
+16/01/2026,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.973,0.000035
+16/02/2026,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.980,0.00005
+16/03/2026,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.969,0.000045
+16/04/2026,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.955,0.000045
+18/05/2026,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.994,0.000044
+16/06/2026,Bitcoin,BTC,-,Renta variable,Criptoactivo,Trade Republic,,2.963,0.00005
+20/10/2024,Bankinter Horizonte 2028 Cl R,-,ES0159038001,Renta fija,Fondo de inversión,Bankinter,,15801.42,158.42792
+20/10/2024,Bankinter Premium Moderado R,-,ES0164586036,Renta variable,Fondo de inversión,Bankinter,,16877.36,141.43055
