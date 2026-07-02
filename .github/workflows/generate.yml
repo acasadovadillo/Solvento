@@ -36,26 +36,71 @@ jobs:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      - name: Descargar movimientos.csv desde Google Sheets
+      - name: Descargar y validar movimientos.csv
         run: |
-          curl -L \
+          curl -fsSL \
             "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=1656633092" \
             -o data/movimientos.csv
-          echo "✅ movimientos.csv descargado ($(wc -l < data/movimientos.csv) filas)"
+          BYTES=$(wc -c < data/movimientos.csv)
+          FILAS=$(wc -l < data/movimientos.csv)
+          echo "movimientos.csv — $FILAS filas, $BYTES bytes"
+          if head -1 data/movimientos.csv | grep -qi "<!doctype\|<html"; then
+            echo "❌ Google Sheets devolvió HTML (error de acceso o sesión caducada)"
+            exit 1
+          fi
+          if [ "$BYTES" -lt 1000 ]; then
+            echo "❌ Archivo demasiado pequeño ($BYTES bytes) — descarga incompleta o vacía"
+            exit 1
+          fi
+          if [ "$FILAS" -lt 50 ]; then
+            echo "❌ Solo $FILAS filas — se esperaban ≥50 (posible truncado)"
+            exit 1
+          fi
+          echo "✅ movimientos.csv válido ($FILAS filas, $BYTES bytes)"
 
-      - name: Descargar inversiones.csv desde Google Sheets
+      - name: Descargar y validar inversiones.csv
         run: |
-          curl -L \
+          curl -fsSL \
             "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=0" \
             -o data/inversiones.csv
-          echo "✅ inversiones.csv descargado ($(wc -l < data/inversiones.csv) filas)"
+          BYTES=$(wc -c < data/inversiones.csv)
+          FILAS=$(wc -l < data/inversiones.csv)
+          echo "inversiones.csv — $FILAS filas, $BYTES bytes"
+          if head -1 data/inversiones.csv | grep -qi "<!doctype\|<html"; then
+            echo "❌ Google Sheets devolvió HTML (error de acceso o sesión caducada)"
+            exit 1
+          fi
+          if [ "$BYTES" -lt 200 ]; then
+            echo "❌ Archivo demasiado pequeño ($BYTES bytes) — descarga incompleta o vacía"
+            exit 1
+          fi
+          if [ "$FILAS" -lt 10 ]; then
+            echo "❌ Solo $FILAS filas — se esperaban ≥10 (posible truncado)"
+            exit 1
+          fi
+          echo "✅ inversiones.csv válido ($FILAS filas, $BYTES bytes)"
 
-      - name: Descargar fondos_manuales.csv desde Google Sheets
+      - name: Descargar y validar fondos_manuales.csv
         run: |
-          curl -L \
+          curl -fsSL \
             "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=1115001182" \
             -o data/fondos_manuales.csv
-          echo "✅ fondos_manuales.csv descargado ($(wc -l < data/fondos_manuales.csv) filas)"
+          BYTES=$(wc -c < data/fondos_manuales.csv)
+          FILAS=$(wc -l < data/fondos_manuales.csv)
+          echo "fondos_manuales.csv — $FILAS filas, $BYTES bytes"
+          if head -1 data/fondos_manuales.csv | grep -qi "<!doctype\|<html"; then
+            echo "❌ Google Sheets devolvió HTML (error de acceso o sesión caducada)"
+            exit 1
+          fi
+          if [ "$BYTES" -lt 50 ]; then
+            echo "❌ Archivo demasiado pequeño ($BYTES bytes) — descarga incompleta o vacía"
+            exit 1
+          fi
+          if [ "$FILAS" -lt 3 ]; then
+            echo "❌ Solo $FILAS filas — se esperaban ≥3 (cabecera + 2 fondos Bankinter)"
+            exit 1
+          fi
+          echo "✅ fondos_manuales.csv válido ($FILAS filas, $BYTES bytes)"
 
       - name: Archivar repositorio completo del día en historic/
         run: |
