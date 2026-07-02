@@ -1262,7 +1262,7 @@ html_out = f"""<!DOCTYPE html>
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Finanzas Personales</title>
+  <title>Solvento</title>
   <link rel="stylesheet" href="src/css/base.css">
   <link rel="stylesheet" href="src/css/layout.css">
   <link rel="stylesheet" href="src/css/components.css">
@@ -1270,7 +1270,7 @@ html_out = f"""<!DOCTYPE html>
 <body>
 <nav class="navbar">
   <div class="navbar-brand">
-    <h1>💰 Finanzas Personales</h1>
+    <h1>💰 Solvento</h1>
     <span class="navbar-date">versión 2.1 · Actualizado: {fecha_actualizacion} a las {hora_actualizacion} horas</span>
   </div>
   <ul class="navbar-menu">

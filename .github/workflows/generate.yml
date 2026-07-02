@@ -1,4 +1,4 @@
-name: Actualizar finanzas
+name: Actualizar Solvento
 
 on:
   workflow_dispatch:
@@ -22,11 +22,11 @@ jobs:
           server_port: 465
           username: ${{secrets.MAIL_USERNAME}}
           password: ${{secrets.MAIL_PASSWORD}}
-          subject: "⚠️ Finanzas Personales — fallo en el workflow (${{github.run_id}})"
+          subject: "⚠️ Solvento — fallo en el workflow (${{github.run_id}})"
           to: acasadovadillo@gmail.com
           from: Finanzas Personales Bot
           body: |
-            El workflow "Actualizar finanzas" ha fallado.
+            El workflow "Actualizar Solvento" ha fallado.
 
             Repositorio: ${{github.repository}}
             Run ID: ${{github.run_id}}
