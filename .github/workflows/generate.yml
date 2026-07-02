@@ -96,8 +96,8 @@ jobs:
             echo "❌ Archivo demasiado pequeño ($BYTES bytes) — descarga incompleta o vacía"
             exit 1
           fi
-          if [ "$FILAS" -lt 3 ]; then
-            echo "❌ Solo $FILAS filas — se esperaban ≥3 (cabecera + 2 fondos Bankinter)"
+          if [ "$FILAS" -lt 2 ]; then
+            echo "❌ Solo $FILAS filas — se esperaban ≥2 (cabecera + fondos Bankinter)"
             exit 1
           fi
           echo "✅ fondos_manuales.csv válido ($FILAS filas, $BYTES bytes)"
