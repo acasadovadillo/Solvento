@@ -837,7 +837,11 @@ def tabla_movimientos_html():
         co = co if co not in ("", "-", "nan") else ""
         cd = cd if cd not in ("", "-", "nan") else ""
         det_raw = r.get("detalle", "")
-        detalle = html_escape(str(det_raw)) if pd.notna(det_raw) and str(det_raw).strip() not in ("", "-") else "—"
+        det_txt = html_escape(str(det_raw)) if pd.notna(det_raw) and str(det_raw).strip() not in ("", "-") else "—"
+        es_ajuste = str(r.get("tipo_gasto", "")).strip().lower() == "gasto de ajuste" or \
+                    str(r.get("tipo_ingreso", "")).strip().lower() == "ingreso de ajuste"
+        detalle = (f'<span style="color:#6b7280;font-size:0.78rem;font-weight:600;margin-right:0.3rem;">Ajuste:</span>{det_txt}'
+                   if es_ajuste else det_txt)
         td_fecha    = f'<td style="{TD}color:#9ca3af;font-size:0.82rem;white-space:nowrap;">{fecha_str}</td>'
         td_concepto = (f'<td style="{TD}"><div style="display:flex;align-items:center;gap:0.6rem;">'
                        f'<span style="font-size:0.73rem;font-weight:600;color:{color};background:{bg};'

@@ -1,7 +1,7 @@
 {
   "prices": {
     "AGGG.L": {
-      "price_eur": 3.838184,
+      "price_eur": 3.837745,
       "date": "2026-07-02"
     },
     "IWDA.AS": {
@@ -21,29 +21,21 @@
       "date": "2026-07-02"
     },
     "BTC-EUR": {
-<<<<<<< HEAD
-      "price_eur": 53873.109375,
+      "price_eur": 53904.609375,
       "date": "2026-07-02"
     },
     "AAPL": {
-      "price_eur": 269.171444,
-=======
-      "price_eur": 53879.351562,
-      "date": "2026-07-02"
-    },
-    "AAPL": {
-      "price_eur": 268.909018,
->>>>>>> 8b30d9f (Corregir tasa de ahorro excluyendo inversiones del gasto de consumo)
+      "price_eur": 269.665404,
       "date": "2026-07-02"
     }
   },
   "fx": {
     "USD": {
-      "rate": 0.8747000098228455,
+      "rate": 0.8745999932289124,
       "date": "2026-07-02"
     },
     "GBP": {
-      "rate": 1.167099952697754,
+      "rate": 1.167199969291687,
       "date": "2026-07-02"
     }
   }
