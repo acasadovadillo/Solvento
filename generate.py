@@ -1340,6 +1340,8 @@ else:
     btc_max_data_js = "[]"
     print("   BTC histórico MAX:   no disponible (se usarán los 365d de CoinGecko)")
 
+_mov_html = tabla_movimientos_html()
+
 html_out = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1480,7 +1482,7 @@ html_out = f"""<!DOCTYPE html>
           <th style="text-align:right;">Importe</th>
           <th style="text-align:right;">Saldo</th>
         </tr></thead>
-        <tbody id="mov-tbody">{tabla_movimientos_html()}</tbody>
+        <tbody id="mov-tbody">{_mov_html}</tbody>
       </table>
     </div>
   </div>
@@ -1614,7 +1616,7 @@ html_out = f"""<!DOCTYPE html>
         <th style="text-align:right;">Importe</th>
         <th style="text-align:right;">Saldo</th>
       </tr></thead>
-      <tbody id="cuentas-mov-tbody">{tabla_movimientos_html()}</tbody>
+      <tbody id="cuentas-mov-tbody">{_mov_html}</tbody>
     </table>
   </div>
 </div>
