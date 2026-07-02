@@ -15,9 +15,10 @@ import pandas as pd
 # 1) CONFIGURACIÓN
 # ════════════════════════════════════════════════════
 
-CSV_PATH         = Path("data/movimientos.csv")
-INVERSIONES_PATH = Path("data/inversiones.csv")
-HTML_PATH        = Path("index.html")
+CSV_PATH          = Path("data/movimientos.csv")
+INVERSIONES_PATH  = Path("data/inversiones.csv")
+HTML_PATH         = Path("index.html")
+PRICES_CACHE_PATH = Path("data/prices_cache.json")
 
 CUENTAS_CONFIG = [
     {"cuenta": "Bankinter",      "icono": '<img src="img/logo-bankinter.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#FF6200"},
@@ -187,8 +188,17 @@ def fetch_btc_history_max():
     except Exception:
         return []
 
+# ── Caché de precios (fallback si Yahoo Finance no responde) ──
+try:
+    _PCACHE = json.loads(PRICES_CACHE_PATH.read_text(encoding="utf-8")) if PRICES_CACHE_PATH.exists() else {}
+except Exception:
+    _PCACHE = {}
+_PCACHE.setdefault("prices", {})
+_PCACHE.setdefault("fx", {})
+_price_sources = {}  # {yf_ticker: "live" | "cache:YYYY-MM-DD" | "error"}
+
 def _fetch_fx_eur(currency):
-    """Devuelve cuántos EUR vale 1 unidad de `currency`. None si falla."""
+    """Devuelve cuántos EUR vale 1 unidad de `currency`. Usa caché si falla."""
     if currency in ("EUR", ""):
         return 1.0
     req = urllib.request.Request(
@@ -199,17 +209,25 @@ def _fetch_fx_eur(currency):
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
         closes = [v for v in data["chart"]["result"][0]["indicators"]["quote"][0]["close"] if v is not None]
-        return closes[-1] if closes else None
+        rate = closes[-1] if closes else None
+        if rate:
+            _PCACHE["fx"][currency] = {"rate": rate, "date": str(date.today())}
+            return rate
+        return None
     except Exception:
+        cached = _PCACHE["fx"].get(currency)
+        if cached:
+            print(f"   FX {currency}/EUR: usando caché del {cached['date']} ({cached['rate']:.4f})")
+            return cached["rate"]
         return None
 
 _FX_EUR = {
-    "USD": _fetch_fx_eur("USD") or 0.926,
-    "GBP": _fetch_fx_eur("GBP") or 1.168,
+    "USD": _fetch_fx_eur("USD") or _PCACHE["fx"].get("USD", {}).get("rate") or 0.926,
+    "GBP": _fetch_fx_eur("GBP") or _PCACHE["fx"].get("GBP", {}).get("rate") or 1.168,
 }
 
 def fetch_precio_actual_eur(ticker):
-    """Precio más reciente del ticker en EUR (convierte USD/GBp automáticamente)."""
+    """Precio más reciente en EUR. Guarda en caché; usa caché si Yahoo falla."""
     req = urllib.request.Request(
         f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=5d",
         headers={"User-Agent": "Mozilla/5.0"},
@@ -220,15 +238,24 @@ def fetch_precio_actual_eur(ticker):
         result = data["chart"]["result"][0]
         closes = [v for v in result["indicators"]["quote"][0]["close"] if v is not None]
         if not closes:
-            return None
+            raise ValueError("sin cierres")
         price = closes[-1]
         cur = result["meta"].get("currency", "EUR")
         if cur == "GBp":
             price = price / 100 * _FX_EUR.get("GBP", 1.168)
         elif cur != "EUR":
             price = price * _FX_EUR.get(cur, 1.0)
-        return round(price, 6)
+        price = round(price, 6)
+        _PCACHE["prices"][ticker] = {"price_eur": price, "date": str(date.today())}
+        _price_sources[ticker] = "live"
+        return price
     except Exception:
+        cached = _PCACHE["prices"].get(ticker)
+        if cached:
+            print(f"   ⚠️  {ticker}: Yahoo no disponible — usando caché del {cached['date']}")
+            _price_sources[ticker] = f"cache:{cached['date']}"
+            return cached["price_eur"]
+        _price_sources[ticker] = "error"
         return None
 
 def add_donut_fields(df, total, pct_col="pct"):
@@ -467,8 +494,10 @@ for _a in ACTIVOS_CONFIG:
     if _yft:
         _precio  = fetch_precio_actual_eur(_yft)
         _importe = round(_precio * _unids, 2) if (_precio and not math.isnan(_unids)) else float("nan")
+        _pfuente = _price_sources.get(_yft, "error")
     else:
         _importe = float(_a.get("valor_manual", float("nan")))
+        _pfuente = "manual"
 
     _inv_rows.append({
         "Nombre":         _a["Nombre"],
@@ -484,13 +513,25 @@ for _a in ACTIVOS_CONFIG:
         "n_aportaciones": _n_apor,
         "ticker_yf":      _yft,
         "_jk":            _jk,
+        "precio_fuente":  _pfuente,
     })
     if _yft:
-        _p_str = f"{_precio:.4f} €" if _precio else "ERROR"
-        print(f"   {_a['Nombre'][:30]:30s} {_yft:12s} → {_p_str}")
+        src_lbl = {"live": "✅ live", "error": "❌ sin precio"}.get(_pfuente, f"⚠️  caché {_pfuente.split(':')[-1]}")
+        _p_str  = f"{_precio:.4f} €" if _precio else "—"
+        print(f"   {_a['Nombre'][:30]:30s} {_yft:12s} → {_p_str}  [{src_lbl}]")
 
 inv_raw = pd.DataFrame(_inv_rows)
 inv_raw["importe"] = pd.to_numeric(inv_raw["importe"], errors="coerce")
+
+# Guardar caché actualizada
+try:
+    PRICES_CACHE_PATH.write_text(json.dumps(_PCACHE, indent=2, ensure_ascii=False), encoding="utf-8")
+    n_live  = sum(1 for v in _price_sources.values() if v == "live")
+    n_cache = sum(1 for v in _price_sources.values() if v.startswith("cache:"))
+    n_err   = sum(1 for v in _price_sources.values() if v == "error")
+    print(f"   Caché: {n_live} live · {n_cache} desde caché · {n_err} sin precio")
+except Exception as e:
+    print(f"   ⚠️  No se pudo guardar el caché de precios: {e}")
 
 # ── Rentabilidad ──
 inv_raw["ganancia"] = inv_raw["importe"] - inv_raw["coste_total"]
@@ -901,6 +942,15 @@ def tabla_activos():
         else:
             coste_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
             rent_td  = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
+        _pf = str(r.get("precio_fuente", "live"))
+        if _pf.startswith("cache:"):
+            _cd = datetime.strptime(_pf.split(":", 1)[1], "%Y-%m-%d").strftime("%d/%m/%Y")
+            _val_td = (f'<td style="{TD}text-align:right;" title="Precio del {_cd} (Yahoo no disponible)">'
+                       f'<span style="color:#f59e0b;font-weight:600;font-size:0.9rem;">{fmt_eur(r["importe"])}</span>'
+                       f'<span style="display:block;font-size:0.68rem;color:#f59e0b;opacity:0.7;">≈ {_cd}</span>'
+                       f'</td>')
+        else:
+            _val_td = f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;">{fmt_eur(r["importe"])}</td>'
         rows.append(
             f'<tr class="table-row">'
             f'<td style="{TD}text-align:left;">'
@@ -908,7 +958,7 @@ def tabla_activos():
             f'<div style="font-size:0.75rem;color:#6b7280;margin-top:0.15rem;">{html_escape(str(r["tipo"]))}</div>'
             f'</td>'
             f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.85rem;font-family:ui-monospace,monospace;">{html_escape(str(r["ISIN"]))}</td>'
-            f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;">{fmt_eur(r["importe"])}</td>'
+            f'{_val_td}'
             f'{coste_td}{rent_td}'
             f'<td style="{TD}text-align:right;color:#3b82f6;font-weight:600;font-size:0.9rem;">{fmt_pct(r["pct"])}</td>'
             f'{price_td}'
@@ -1002,6 +1052,14 @@ def tarjetas_activos_html():
         rent_pct  = r.get("rent_pct")
         cagr_val  = r.get("cagr")
         has_coste = pd.notna(coste_val) and float(coste_val) > 0
+        _pfc = str(r.get("precio_fuente", "live"))
+        if _pfc.startswith("cache:"):
+            _cdc = datetime.strptime(_pfc.split(":", 1)[1], "%Y-%m-%d").strftime("%d/%m/%Y")
+            _cache_badge = (f'<span title="Precio del {_cdc} (Yahoo no disponible)" '
+                            f'style="font-size:0.65rem;color:#f59e0b;background:rgba(245,158,11,0.15);'
+                            f'padding:0.1rem 0.4rem;border-radius:3px;font-weight:600;margin-left:0.4rem;">≈ {_cdc}</span>')
+        else:
+            _cache_badge = ""
         if has_coste:
             g_color  = "#10b981" if float(ganancia) >= 0 else "#ef4444"
             g_signo  = "+" if float(ganancia) >= 0 else ""
@@ -1046,7 +1104,7 @@ def tarjetas_activos_html():
             f'    <span style="color:#4b5563;font-size:0.72rem;font-family:ui-monospace,monospace;'
             f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">{html_escape(isin_val)}</span>\n'
             f'    <div style="text-align:right;flex-shrink:0;">\n'
-            f'      <div style="color:#ffffff;font-weight:700;font-size:0.92rem;">{fmt_eur(importe)}</div>\n'
+            f'      <div style="color:#ffffff;font-weight:700;font-size:0.92rem;">{fmt_eur(importe)}{_cache_badge}</div>\n'
             f'      <div style="color:#3b82f6;font-size:0.72rem;font-weight:600;margin-top:0.1rem;">{fmt_pct(pct)} portafolio</div>\n'
             f'    </div>\n'
             f'  </div>\n'
