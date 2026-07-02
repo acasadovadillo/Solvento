@@ -1359,6 +1359,7 @@ html_out = f"""<!DOCTYPE html>
   <select class="nav-select" onchange="showPage(this.value)" aria-label="Sección">
     <option value="patrimonio">Patrimonio</option>
     <option value="cuentas">Cuentas</option>
+    <option value="movimientos">Movimientos</option>
     <option value="inversiones">Inversiones</option>
     <option value="explorar">Explorar</option>
   </select>
