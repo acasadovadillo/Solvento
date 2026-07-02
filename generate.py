@@ -596,23 +596,37 @@ ingresos_mes["mes"] = ingresos_mes["fecha"].apply(floor_month)
 ingresos_mes = ingresos_mes.groupby("mes")["importe"].sum().round(2).reset_index()
 ingresos_mes.columns = ["mes", "ingresos"]
 
+_es_inversion = mov_con_fecha["tipo_gasto"].fillna("").str.strip().str.lower() == "inversiones"
+
 gastos_mes = (
     mov_con_fecha[
         (mov_con_fecha["tipo"] == "Gasto") &
-        ~mov_con_fecha["tipo_gasto"].fillna("").str.contains("ajuste", case=False)
+        ~mov_con_fecha["tipo_gasto"].fillna("").str.contains("ajuste", case=False) &
+        ~_es_inversion
     ].copy()
 )
 gastos_mes["mes"] = gastos_mes["fecha"].apply(floor_month)
 gastos_mes = gastos_mes.groupby("mes")["importe"].sum().round(2).reset_index()
 gastos_mes.columns = ["mes", "gastos"]
 
+invertido_mes = (
+    mov_con_fecha[
+        (mov_con_fecha["tipo"] == "Gasto") & _es_inversion
+    ].copy()
+)
+invertido_mes["mes"] = invertido_mes["fecha"].apply(floor_month)
+invertido_mes = invertido_mes.groupby("mes")["importe"].sum().round(2).reset_index()
+invertido_mes.columns = ["mes", "invertido"]
+
 resumen_mensual = (
-    ingresos_mes.merge(gastos_mes, on="mes", how="outer")
+    ingresos_mes
+    .merge(gastos_mes,   on="mes", how="outer")
+    .merge(invertido_mes, on="mes", how="outer")
     .fillna(0.0)
     .sort_values("mes")
     .reset_index(drop=True)
 )
-resumen_mensual["balance"]      = resumen_mensual["ingresos"] - resumen_mensual["gastos"]
+resumen_mensual["balance"]     = resumen_mensual["ingresos"] - resumen_mensual["gastos"]
 resumen_mensual["tasa_ahorro"] = resumen_mensual.apply(
     lambda r: (r["balance"] / r["ingresos"] * 100) if r["ingresos"] > 0 else float("nan"), axis=1
 )
@@ -685,11 +699,18 @@ def tabla_mensual_html(df):
             ta_color = "#10b981" if tasa >= 20 else ("#f59e0b" if tasa >= 0 else "#ef4444")
             tasa_td  = (f'<td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;">'
                         f'<span style="color:{ta_color};font-weight:700;font-size:0.88rem;">{tasa:.1f}%</span></td>')
+        inv_mes = row.get("invertido", 0.0)
+        inv_td = (f'<td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;'
+                  f'color:#8b5cf6;font-weight:600;">{fmt_eur(inv_mes)}</td>'
+                  if inv_mes > 0 else
+                  f'<td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;'
+                  f'color:#4b5563;">—</td>')
         rows.append(f"""
     <tr class="table-row">
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;color:#ffffff;font-weight:600;">{row["mes_lbl"]}</td>
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#10b981;font-weight:600;">{fmt_eur(row["ingresos"])}</td>
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#ef4444;font-weight:600;">{fmt_eur(row["gastos"])}</td>
+      {inv_td}
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:{bal_color};font-weight:700;">{signo}{fmt_eur(row["balance"])}</td>
       {tasa_td}
     </tr>""")
@@ -701,7 +722,8 @@ def tabla_mensual_html(df):
 
 gastos_df = mov_con_fecha[
     (mov_con_fecha["tipo"] == "Gasto") &
-    ~mov_con_fecha["tipo_gasto"].fillna("").str.contains("ajuste", case=False)
+    ~mov_con_fecha["tipo_gasto"].fillna("").str.contains("ajuste", case=False) &
+    ~(mov_con_fecha["tipo_gasto"].fillna("").str.strip().str.lower() == "inversiones")
 ].copy()
 
 gastos_df["cat_top"] = (
@@ -1543,6 +1565,7 @@ html_out = f"""<!DOCTYPE html>
         <th style="text-align:left;">Mes</th>
         <th style="text-align:right;">Ingresos</th>
         <th style="text-align:right;">Gastos</th>
+        <th style="text-align:right;">Invertido</th>
         <th style="text-align:right;">Balance</th>
         <th style="text-align:right;">Ahorro</th>
       </tr></thead>
