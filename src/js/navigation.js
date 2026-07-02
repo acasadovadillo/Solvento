@@ -8,9 +8,8 @@ function showPage(id) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   const pg = document.getElementById("page-" + id);
   if (pg) pg.classList.add("active");
-  document.querySelectorAll(".navbar-item a, .mobile-menu a").forEach(a => {
-    a.classList.toggle("active", a.dataset.page === id);
-  });
+  const sel = document.querySelector(".nav-select");
+  if (sel) sel.value = id;
   window.location.hash = id;
   if (alreadyActive) window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -89,13 +88,6 @@ function explorarFiltrar() {
   if (empty) empty.style.display = visible === 0 ? '' : 'none';
 }
 
-function toggleMenu() { document.getElementById("mobile-menu").classList.toggle("open"); }
-function closeMenu() { document.getElementById("mobile-menu").classList.remove("open"); }
-
-document.addEventListener("click", function (e) {
-  const menu = document.getElementById("mobile-menu"), btn = document.querySelector(".hamburger");
-  if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) menu.classList.remove("open");
-});
 
 document.querySelectorAll(".donut").forEach(donut => {
   const wrapper = donut.closest(".chart-wrapper");

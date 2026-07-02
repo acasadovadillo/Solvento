@@ -1273,22 +1273,13 @@ html_out = f"""<!DOCTYPE html>
     <h1>💰 Solvento</h1>
     <span class="navbar-date">versión 2.1 · Actualizado: {fecha_actualizacion} a las {hora_actualizacion} horas</span>
   </div>
-  <ul class="navbar-menu">
-    <li class="navbar-item"><a href="#" data-page="patrimonio" onclick="showPage('patrimonio');return false;">Patrimonio</a></li>
-    <li class="navbar-item"><a href="#" data-page="cuentas" onclick="showPage('cuentas');return false;">Cuentas</a></li>
-    <li class="navbar-item"><a href="#" data-page="inversiones" onclick="showPage('inversiones');return false;">Inversiones</a></li>
-    <li class="navbar-item"><a href="#" data-page="explorar" onclick="showPage('explorar');return false;">Explorar</a></li>
-  </ul>
-  <button class="hamburger" onclick="toggleMenu()" aria-label="Menú">
-    <span></span><span></span><span></span>
-  </button>
+  <select class="nav-select" onchange="showPage(this.value)" aria-label="Sección">
+    <option value="patrimonio">Patrimonio</option>
+    <option value="cuentas">Cuentas</option>
+    <option value="inversiones">Inversiones</option>
+    <option value="explorar">Explorar</option>
+  </select>
 </nav>
-<div class="mobile-menu" id="mobile-menu">
-  <a href="#" onclick="showPage('patrimonio');closeMenu();return false;">Patrimonio</a>
-  <a href="#" onclick="showPage('cuentas');closeMenu();return false;">Cuentas</a>
-  <a href="#" onclick="showPage('inversiones');closeMenu();return false;">Inversiones</a>
-  <a href="#" onclick="showPage('explorar');closeMenu();return false;">Explorar</a>
-</div>
 
 <!-- ══ PÁGINA 1: PATRIMONIO ══ -->
 <div class="page active" id="page-patrimonio">

@@ -7,31 +7,17 @@
 }
 .navbar-brand h1 { font-size: 1.1rem; font-weight: 700; color: #fff; }
 .navbar-brand .navbar-date { color: #6b7280; font-size: 0.72rem; }
-.navbar-menu { list-style: none; display: flex; gap: 0.5rem; }
-.navbar-item a {
-  color: #fff; text-decoration: none; font-size: 0.82rem; font-weight: 500;
-  padding: 0.45rem 0.85rem; border-radius: 8px; background: #2a2d3a;
-  transition: background 0.2s; white-space: nowrap;
+.nav-select {
+  appearance: none; -webkit-appearance: none;
+  background: #2a2d3a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
+  color: #fff; border: 1px solid #3b4054; border-radius: 8px;
+  font-size: 0.82rem; font-weight: 600; font-family: inherit;
+  padding: 0.45rem 2.2rem 0.45rem 0.9rem;
+  cursor: pointer; outline: none; transition: background 0.2s, border-color 0.2s;
+  min-width: 140px;
 }
-.navbar-item a:hover { background: #3b4054; }
-.navbar-item a.active { background: #3b4054; color: #fff; }
-
-/* ── Hamburger / mobile menu ── */
-.hamburger {
-  display: none; flex-direction: column; gap: 5px;
-  cursor: pointer; padding: 6px; border: none; background: transparent;
-}
-.hamburger span { display: block; width: 22px; height: 2px; background: #fff; border-radius: 2px; }
-.mobile-menu {
-  display: none; position: fixed; top: 64px; left: 0; right: 0;
-  background: #1a1d27; border-bottom: 1px solid #2a2d3a;
-  padding: 1rem; z-index: 999; flex-direction: column; gap: 0.5rem;
-}
-.mobile-menu.open { display: flex; }
-.mobile-menu a {
-  color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500;
-  padding: 0.65rem 1rem; border-radius: 8px; background: #2a2d3a;
-}
+.nav-select:hover, .nav-select:focus { background-color: #3b4054; border-color: #4b5063; }
+.nav-select option { background: #1a1d27; color: #fff; }
 
 /* ── Pages (SPA) ── */
 .page { display: none; }
@@ -56,8 +42,6 @@ footer { text-align: center; margin-top: 5rem; font-size: 0.75rem; color: #3a3d4
 /* ── Responsive ── */
 @media (max-width: 900px) {
   body { padding: 4.5rem 1rem 2rem; }
-  .navbar-menu { display: none; }
-  .hamburger { display: flex; }
   .dashboard-main-grid { grid-template-columns: 1fr; gap: 1.5rem; }
   .chart-container-double { gap: 1.5rem; }
   .chart-block { min-width: unset; width: 100%; }
