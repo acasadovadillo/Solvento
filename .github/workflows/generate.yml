@@ -36,6 +36,11 @@ jobs:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
+      - name: Preparar directorio de datos
+        run: |
+          mkdir -p data
+          echo '{"prices":{},"fx":{}}' > data/prices_cache.json
+
       - name: Descargar y validar movimientos.csv
         run: |
           curl -fsSL \
@@ -108,7 +113,7 @@ jobs:
           if [ -f index.html ]; then
             mkdir -p historic/$DATE
             # Copia todo el repo excepto historic/ y .git/ para que las rutas relativas funcionen igual
-            rsync -a --exclude='historic' --exclude='.git' . historic/$DATE/
+            rsync -a --exclude='historic' --exclude='.git' --exclude='data' . historic/$DATE/
             echo "✅ Archivado en historic/$DATE/ ($(du -sh historic/$DATE | cut -f1))"
           else
             echo "ℹ️  No existe index.html previo, se omite el archivado"
@@ -125,7 +130,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add data/movimientos.csv data/inversiones.csv data/fondos_manuales.csv data/prices_cache.json index.html historic/
+          git add index.html historic/
 
           if git diff --cached --quiet; then
             echo "No hay cambios"
