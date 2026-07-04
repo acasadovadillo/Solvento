@@ -115,7 +115,7 @@ jobs:
           fi
 
       - name: Instalar dependencias Python
-        run: pip install pandas
+        run: pip install "pandas>=2.2,<3"
 
       - name: Ejecutar generate.py
         run: python generate.py
