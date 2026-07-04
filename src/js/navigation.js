@@ -101,6 +101,70 @@ function explorarFiltrar() {
 }
 
 
+let _cotRangoActivo = '1M';
+
+function cotChip(btn) {
+  document.getElementById('cot-ticker').value = btn.dataset.tv;
+  cotizacionesBuscar();
+}
+
+function cotizacionesBuscar() {
+  const raw = (document.getElementById('cot-ticker')?.value || '').trim();
+  if (!raw) return;
+  _cotMostrarGrafico(raw.toUpperCase(), _cotRangoActivo);
+}
+
+function cotRango(btn, rango) {
+  _cotRangoActivo = rango;
+  document.querySelectorAll('.cot-range-tab').forEach(b => {
+    b.style.borderBottom = '2px solid transparent';
+    b.style.color = '#6b7280';
+    b.style.fontWeight = '400';
+  });
+  btn.style.borderBottom = '2px solid #ffffff';
+  btn.style.color = '#ffffff';
+  btn.style.fontWeight = '700';
+  const ticker = (document.getElementById('cot-ticker')?.value || '').trim().toUpperCase();
+  if (ticker) _cotMostrarGrafico(ticker, rango);
+}
+
+function _cotMostrarGrafico(symbol, range) {
+  const placeholder = document.getElementById('cot-placeholder');
+  const container = document.getElementById('cot-tv-container');
+  if (!container) return;
+  if (placeholder) placeholder.style.display = 'none';
+  container.style.display = '';
+  container.innerHTML = '';
+
+  const intervalMap = { '1M': 'D', '6M': 'D', '12M': 'W', '60M': 'W', 'ALL': 'M' };
+
+  function buildWidget() {
+    new TradingView.widget({
+      autosize: true,
+      symbol: symbol,
+      interval: intervalMap[range] || 'D',
+      range: range,
+      timezone: 'Europe/Madrid',
+      theme: 'dark',
+      style: '1',
+      locale: 'es',
+      enable_publishing: false,
+      allow_symbol_change: true,
+      hide_side_toolbar: false,
+      container_id: 'cot-tv-container',
+    });
+  }
+
+  if (typeof TradingView !== 'undefined') {
+    buildWidget();
+  } else {
+    const s = document.createElement('script');
+    s.src = 'https://s3.tradingview.com/tv.js';
+    s.onload = buildWidget;
+    document.head.appendChild(s);
+  }
+}
+
 document.querySelectorAll(".donut").forEach(donut => {
   const wrapper = donut.closest(".chart-wrapper");
   const label = wrapper ? wrapper.querySelector(".chart-label") : null;

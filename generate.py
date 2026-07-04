@@ -1371,6 +1371,7 @@ html_out = f"""<!DOCTYPE html>
     <option value="movimientos">Movimientos</option>
     <option value="inversiones">Inversiones</option>
     <option value="explorar">Explorar</option>
+    <option value="cotizaciones">Cotizaciones</option>
   </select>
 </nav>
 
@@ -1834,6 +1835,73 @@ html_out = f"""<!DOCTYPE html>
     <div id="explorar-empty" style="display:none;text-align:center;padding:4rem 2rem;">
       <div style="color:#4b5563;font-size:2rem;margin-bottom:0.75rem;">🔍</div>
       <div style="color:#6b7280;font-size:0.92rem;">No se encontraron activos que coincidan.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PÁGINA 5: COTIZACIONES ══ -->
+<div class="page" id="page-cotizaciones">
+  <div style="max-width:1400px;margin:0 auto 2rem;">
+    <div style="margin-top:1.5rem;margin-bottom:2rem;">
+      <h1 style="font-size:2.4rem;font-weight:800;color:#ffffff;line-height:1.1;margin:0 0 0.5rem 0;">
+        Cotizaciones
+      </h1>
+      <p style="color:#6b7280;font-size:0.92rem;margin:0;">
+        Busca cualquier activo y consulta su histórico de precio.
+      </p>
+    </div>
+    <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <div style="position:relative;flex:1;min-width:200px;max-width:500px;">
+        <svg style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:#6b7280;pointer-events:none;" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="cot-ticker" type="text" placeholder="Ej. AAPL · BTCUSD · EURONEXT:IWDA · SP500…"
+          onkeydown="if(event.key==='Enter') cotizacionesBuscar()"
+          style="width:100%;box-sizing:border-box;background:#1a1d27;border:1px solid #2a2d3a;border-radius:12px;
+                 padding:0.75rem 1rem 0.75rem 2.75rem;color:#e5e7eb;font-size:0.9rem;outline:none;
+                 transition:border-color 0.2s;font-family:inherit;"
+          onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#2a2d3a'">
+      </div>
+      <button onclick="cotizacionesBuscar()"
+        style="background:#3b82f6;border:none;border-radius:10px;color:#fff;font-size:0.88rem;font-weight:600;
+               padding:0.72rem 1.5rem;cursor:pointer;white-space:nowrap;transition:background 0.15s;font-family:inherit;"
+        onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+        Ver gráfico
+      </button>
+    </div>
+    <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.5rem;overflow-x:auto;">
+      <button class="cot-range-tab" onclick="cotRango(this,'1M')"
+        style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;
+               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">1M</button>
+      <button class="cot-range-tab" onclick="cotRango(this,'6M')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">6M</button>
+      <button class="cot-range-tab" onclick="cotRango(this,'12M')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">1A</button>
+      <button class="cot-range-tab" onclick="cotRango(this,'60M')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">5A</button>
+      <button class="cot-range-tab" onclick="cotRango(this,'ALL')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">Máx</button>
+    </div>
+    <div style="border-radius:16px;overflow:hidden;border:1px solid #2a2d3a;min-height:520px;
+                display:flex;align-items:center;justify-content:center;background:#13151f;">
+      <div id="cot-placeholder" style="text-align:center;color:#4b5563;padding:3rem;">
+        <div style="font-size:3rem;margin-bottom:1rem;opacity:0.5;">📈</div>
+        <div style="font-size:0.95rem;color:#6b7280;margin-bottom:0.35rem;">Introduce un ticker y pulsa <strong style="color:#9ca3af;">Ver gráfico</strong></div>
+        <div style="font-size:0.8rem;color:#374151;">Acciones · ETFs · Índices · Criptomonedas · Divisas</div>
+      </div>
+      <div id="cot-tv-container" style="display:none;width:100%;height:520px;"></div>
+    </div>
+    <div style="margin-top:0.9rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:0.75rem;color:#4b5563;margin-right:0.25rem;">Mi cartera:</span>
+      <button class="cot-chip" data-tv="EURONEXT:IWDA" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">MSCI World</button>
+      <button class="cot-chip" data-tv="EURONEXT:CSPX" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">S&amp;P 500</button>
+      <button class="cot-chip" data-tv="EURONEXT:EMIM" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">Emerging Markets</button>
+      <button class="cot-chip" data-tv="LSE:AGGG" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">US Aggregate Bond</button>
+      <button class="cot-chip" data-tv="EURONEXT:PHAU" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">Oro Físico</button>
+      <button class="cot-chip" data-tv="BITSTAMP:BTCUSD" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">Bitcoin</button>
+      <button class="cot-chip" data-tv="NASDAQ:AAPL" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">Apple</button>
     </div>
   </div>
 </div>
