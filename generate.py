@@ -1371,7 +1371,6 @@ html_out = f"""<!DOCTYPE html>
     <option value="movimientos">Movimientos</option>
     <option value="inversiones">Inversiones</option>
     <option value="explorar">Explorar</option>
-    <option value="cotizaciones">Cotizaciones</option>
   </select>
 </nav>
 
@@ -1836,19 +1835,12 @@ html_out = f"""<!DOCTYPE html>
       <div style="color:#4b5563;font-size:2rem;margin-bottom:0.75rem;">🔍</div>
       <div style="color:#6b7280;font-size:0.92rem;">No se encontraron activos que coincidan.</div>
     </div>
-  </div>
-</div>
 
-<!-- ══ PÁGINA 5: COTIZACIONES ══ -->
-<div class="page" id="page-cotizaciones">
-  <div style="max-width:1400px;margin:0 auto 2rem;">
-    <div style="margin-top:1.5rem;margin-bottom:2rem;">
-      <h1 style="font-size:2.4rem;font-weight:800;color:#ffffff;line-height:1.1;margin:0 0 0.5rem 0;">
-        Cotizaciones
-      </h1>
-      <p style="color:#6b7280;font-size:0.92rem;margin:0;">
-        Busca cualquier activo y consulta su histórico de precio.
-      </p>
+    <hr style="border:0;height:1px;background:linear-gradient(to right,transparent,#2a2d3a,transparent);margin:3rem 0;">
+
+    <div style="margin-bottom:1.5rem;">
+      <h2 style="font-size:1.5rem;font-weight:700;color:#ffffff;margin:0 0 0.35rem 0;">Cotizaciones</h2>
+      <p style="color:#6b7280;font-size:0.88rem;margin:0;">Busca cualquier activo y consulta su histórico de precio.</p>
     </div>
     <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;">
       <div style="position:relative;flex:1;min-width:200px;max-width:500px;">
