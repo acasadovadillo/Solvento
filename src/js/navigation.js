@@ -60,6 +60,18 @@ function filterCuentasMov(btn, cuenta) {
   });
 }
 
+function movFiltrar() {
+  const q = (document.getElementById('mov-search')?.value || '').toLowerCase().trim();
+  let visible = 0;
+  document.querySelectorAll('#mov-tbody tr').forEach(tr => {
+    const match = !q || (tr.dataset.search || '').includes(q);
+    tr.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  const empty = document.getElementById('mov-empty');
+  if (empty) empty.style.display = visible === 0 ? '' : 'none';
+}
+
 let explorarTipoActivo = '__all__';
 
 function explorarSetTipo(btn, tipo) {
