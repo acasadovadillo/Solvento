@@ -842,6 +842,12 @@ def tabla_movimientos_html():
                     str(r.get("tipo_ingreso", "")).strip().lower() == "ingreso de ajuste"
         detalle = (f'<span style="color:#6b7280;font-size:0.78rem;font-weight:600;margin-right:0.3rem;">Ajuste:</span>{det_txt}'
                    if es_ajuste else det_txt)
+        search_str = " ".join(filter(None, [
+            fecha_str, tipo.lower(),
+            str(det_raw).lower() if pd.notna(det_raw) else "",
+            co.lower(), cd.lower(),
+            str(round(imp, 2)),
+        ]))
         td_fecha    = f'<td style="{TD}color:#9ca3af;font-size:0.82rem;white-space:nowrap;">{fecha_str}</td>'
         td_concepto = (f'<td style="{TD}"><div style="display:flex;align-items:center;gap:0.6rem;">'
                        f'<span style="font-size:0.73rem;font-weight:600;color:{color};background:{bg};'
@@ -859,7 +865,7 @@ def tabla_movimientos_html():
                 account_running[cd] -= imp
             # Salida row: shown in origin tab and Todos (data-traspaso-dir="salida")
             rows.append(
-                f'    <tr class="table-row" data-cuentas="{html_escape(co)}" data-traspaso-dir="salida">\n'
+                f'    <tr class="table-row" data-cuentas="{html_escape(co)}" data-traspaso-dir="salida" data-search="{html_escape(search_str)}">\n'
                 f'      {td_fecha}\n      {td_concepto}\n'
                 f'      <td style="{TD}text-align:right;color:#ef4444;font-weight:600;font-family:ui-monospace,monospace;font-size:0.88rem;white-space:nowrap;">-{fmt_eur(imp)}</td>\n'
                 f'      <td style="{TD}text-align:right;color:#9ca3af;font-family:ui-monospace,monospace;font-size:0.85rem;white-space:nowrap;">{saldo_str_co}</td>\n'
@@ -867,7 +873,7 @@ def tabla_movimientos_html():
             )
             # Entrada row: shown only in destination tab (data-traspaso-dir="entrada")
             rows.append(
-                f'    <tr class="table-row" data-cuentas="{html_escape(cd)}" data-traspaso-dir="entrada">\n'
+                f'    <tr class="table-row" data-cuentas="{html_escape(cd)}" data-traspaso-dir="entrada" data-search="{html_escape(search_str)}">\n'
                 f'      {td_fecha}\n      {td_concepto}\n'
                 f'      <td style="{TD}text-align:right;color:#10b981;font-weight:600;font-family:ui-monospace,monospace;font-size:0.88rem;white-space:nowrap;">+{fmt_eur(imp)}</td>\n'
                 f'      <td style="{TD}text-align:right;color:#9ca3af;font-family:ui-monospace,monospace;font-size:0.85rem;white-space:nowrap;">{saldo_str_cd}</td>\n'
@@ -903,7 +909,7 @@ def tabla_movimientos_html():
             else:
                 imp_str, imp_color = fmt_eur(imp), "#9ca3af"
             rows.append(
-                f'    <tr class="table-row" data-cuentas="{html_escape(cuentas_involucradas)}">\n'
+                f'    <tr class="table-row" data-cuentas="{html_escape(cuentas_involucradas)}" data-search="{html_escape(search_str)}">\n'
                 f'      {td_fecha}\n      {td_concepto}\n'
                 f'      <td style="{TD}text-align:right;color:{imp_color};font-weight:600;font-family:ui-monospace,monospace;font-size:0.88rem;white-space:nowrap;">{imp_str}</td>\n'
                 f'      <td style="{TD}text-align:right;color:#9ca3af;font-family:ui-monospace,monospace;font-size:0.85rem;white-space:nowrap;">{saldo_str}</td>\n'
@@ -1475,6 +1481,11 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
   <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
+    <div style="margin-bottom:1rem;">
+      <input id="mov-search" type="search" placeholder="Buscar movimientos…" oninput="movFiltrar()"
+        style="width:100%;max-width:400px;background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;padding:0.5rem 0.85rem;outline:none;font-family:inherit;"
+        onfocus="this.style.borderColor='#6b7280'" onblur="this.style.borderColor='#3b4054'">
+    </div>
     <div class="dashboard-panel" style="padding:1.5rem 2rem;">
       <table class="minimal-table">
         <thead><tr>
@@ -1485,6 +1496,7 @@ html_out = f"""<!DOCTYPE html>
         </tr></thead>
         <tbody id="mov-tbody">{_mov_html}</tbody>
       </table>
+      <p id="mov-empty" style="display:none;text-align:center;color:#6b7280;padding:2rem 0;font-size:0.85rem;">Sin resultados</p>
     </div>
   </div>
 </div>
