@@ -1383,23 +1383,12 @@ html_out = f"""<!DOCTYPE html>
     <h1>💰 Solvento</h1>
     <span class="navbar-date">versión 2.1 · Precios del {fecha_actualizacion}</span>
   </div>
-  <div class="nav-dropdown" id="nav-dropdown" onmouseenter="document.getElementById('nav-dropdown-menu').style.display='block'" onmouseleave="document.getElementById('nav-dropdown-menu').style.display='none'">
-    <button class="nav-dropdown-btn" id="nav-dropdown-btn">
-      <span id="nav-dropdown-label">Patrimonio</span>
-      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5 5-5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
-    </button>
-    <ul class="nav-dropdown-menu" id="nav-dropdown-menu">
-      <li class="nav-has-sub" onmouseenter="document.getElementById('nav-sub-activos').style.display='block'" onmouseleave="document.getElementById('nav-sub-activos').style.display='none'" onclick="navSelect('activos','Activos')">
-        <span>Activos</span>
-        <svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <ul class="nav-sub-menu" id="nav-sub-activos">
-          <li onclick="event.stopPropagation();navSelect('cuentas','Liquidez')">Liquidez</li>
-          <li onclick="event.stopPropagation();navSelect('inversiones','Inversiones')">Inversiones</li>
-        </ul>
-      </li>
-      <li onclick="navSelect('pasivos','Pasivos')">Pasivos</li>
-    </ul>
-  </div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" id="nav-tab-patrimonio" onclick="navTab('patrimonio')">Patrimonio</button>
+    <button class="nav-tab" id="nav-tab-cuentas" onclick="navTab('cuentas')">Liquidez</button>
+    <button class="nav-tab" id="nav-tab-inversiones" onclick="navTab('inversiones')">Inversiones</button>
+    <button class="nav-tab" id="nav-tab-pasivos" onclick="navTab('pasivos')">Pasivos</button>
+  </nav>
 </nav>
 
 <!-- ══ PÁGINA 1: PATRIMONIO ══ -->
