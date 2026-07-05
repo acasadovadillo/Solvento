@@ -1452,18 +1452,6 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
 
-  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
-    <div class="dashboard-panel" style="padding:1.5rem 2rem;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Liquidez</div>
-        <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(patrimonio_liquido)}</div>
-      </div>
-      <div class="legend-box" style="border:none;padding:0;background:transparent;gap:0;">{lista_cuentas_simple()}</div>
-      <div style="text-align:right;padding-top:0.75rem;">
-        <button onclick="document.getElementById('mov-section').scrollIntoView({{behavior:'smooth'}})" style="background:none;border:none;color:#6b7280;font-size:0.82rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">Ver todos los movimientos →</button>
-      </div>
-    </div>
-  </div>
   <div class="table-container">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
       <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Inversiones</div>
@@ -1490,6 +1478,15 @@ html_out = f"""<!DOCTYPE html>
   <div class="header-block">
     <h2 class="section-title">Patrimonio líquido</h2>
     <div class="section-subtitle">{fmt_eur(patrimonio_liquido)}</div>
+  </div>
+  <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
+    <div class="dashboard-panel" style="padding:1.5rem 2rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Liquidez</div>
+        <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(patrimonio_liquido)}</div>
+      </div>
+      <div class="legend-box" style="border:none;padding:0;background:transparent;gap:0;">{lista_cuentas_simple()}</div>
+    </div>
   </div>
   <div class="dashboard-main-grid">
     <div class="dashboard-panel">
