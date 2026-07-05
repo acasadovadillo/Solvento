@@ -17,6 +17,34 @@
 .nav-tab:hover { background: #2a2d3a; color: #e5e7eb; }
 .nav-tab.active { background: #2a2d3a; color: #fff; font-weight: 600; }
 
+/* ── Hamburger (mobile only) ── */
+.nav-hamburger {
+  display: none; flex-direction: column; justify-content: center; gap: 5px;
+  background: none; border: none; cursor: pointer; padding: 0.4rem; outline: none;
+}
+.nav-hamburger span {
+  display: block; width: 22px; height: 2px; background: #e5e7eb; border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-hamburger.open span:nth-child(2) { opacity: 0; }
+.nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+#mobile-nav-panel {
+  display: none; position: fixed; top: 64px; left: 0; right: 0;
+  background: #1a1d27; border-bottom: 1px solid #2a2d3a;
+  flex-direction: column; z-index: 999; padding: 0.5rem;
+}
+#mobile-nav-panel.open { display: flex; }
+.mobile-nav-item {
+  background: none; border: none; color: #9ca3af; font-family: inherit;
+  font-size: 1rem; font-weight: 500; text-align: left;
+  padding: 0.85rem 1rem; border-radius: 8px; cursor: pointer; outline: none;
+  transition: background 0.15s, color 0.15s;
+}
+.mobile-nav-item:hover { background: #2a2d3a; color: #fff; }
+.mobile-nav-item.active { color: #fff; font-weight: 700; background: #2a2d3a; }
+
 /* ── Pages (SPA) ── */
 .page { display: none; }
 .page.active { display: block; }
@@ -38,6 +66,11 @@
 footer { text-align: center; margin-top: 5rem; font-size: 0.75rem; color: #3a3d4a; }
 
 /* ── Responsive ── */
+@media (max-width: 640px) {
+  .nav-tabs { display: none; }
+  .nav-hamburger { display: flex; }
+}
+
 @media (max-width: 900px) {
   body { padding: 4.5rem 1rem 2rem; }
   .dashboard-main-grid { grid-template-columns: 1fr; gap: 1.5rem; }

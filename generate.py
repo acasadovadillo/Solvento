@@ -1394,7 +1394,16 @@ html_out = f"""<!DOCTYPE html>
     <button class="nav-tab" id="nav-tab-inversiones" onclick="navTab('inversiones')">Inversiones</button>
     <button class="nav-tab" id="nav-tab-pasivos" onclick="navTab('pasivos')">Pasivos</button>
   </nav>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+<div id="mobile-nav-panel">
+  <button class="mobile-nav-item active" id="mnav-patrimonio" onclick="navTab('patrimonio');toggleMobileNav()">Patrimonio</button>
+  <button class="mobile-nav-item" id="mnav-cuentas" onclick="navTab('cuentas');toggleMobileNav()">Liquidez</button>
+  <button class="mobile-nav-item" id="mnav-inversiones" onclick="navTab('inversiones');toggleMobileNav()">Inversiones</button>
+  <button class="mobile-nav-item" id="mnav-pasivos" onclick="navTab('pasivos');toggleMobileNav()">Pasivos</button>
+</div>
 
 <!-- ══ PÁGINA 1: PATRIMONIO ══ -->
 <div class="page active" id="page-patrimonio">

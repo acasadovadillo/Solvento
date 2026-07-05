@@ -11,12 +11,25 @@ function showPage(id) {
   document.querySelectorAll(".nav-tab").forEach(b => b.classList.remove("active"));
   const tab = document.getElementById("nav-tab-" + id);
   if (tab) tab.classList.add("active");
+  document.querySelectorAll(".mobile-nav-item").forEach(b => b.classList.remove("active"));
+  const mb = document.getElementById("mnav-" + id);
+  if (mb) mb.classList.add("active");
   window.location.hash = id;
   if (alreadyActive) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function navTab(id) {
   showPage(id);
+  document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
+  const mb = document.getElementById('mnav-' + id);
+  if (mb) mb.classList.add('active');
+}
+
+function toggleMobileNav() {
+  const panel = document.getElementById('mobile-nav-panel');
+  const btn   = document.getElementById('nav-hamburger');
+  const open  = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
 }
 
 (function () {
