@@ -593,7 +593,8 @@ mov_con_fecha = mov.dropna(subset=["fecha"]).copy()
 
 ingresos_mes = (
     mov_con_fecha[
-        (mov_con_fecha["tipo"] == "Ingreso")
+        (mov_con_fecha["tipo"] == "Ingreso") &
+        ~mov_con_fecha["tipo_ingreso"].fillna("").str.contains("ajuste", case=False)
     ].copy()
 )
 ingresos_mes["mes"] = ingresos_mes["fecha"].apply(floor_month)
@@ -605,6 +606,7 @@ _es_inversion = mov_con_fecha["tipo_gasto"].fillna("").str.strip().str.lower() =
 gastos_mes = (
     mov_con_fecha[
         (mov_con_fecha["tipo"] == "Gasto") &
+        ~mov_con_fecha["tipo_gasto"].fillna("").str.contains("ajuste", case=False) &
         ~_es_inversion
     ].copy()
 )
