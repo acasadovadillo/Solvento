@@ -1439,25 +1439,9 @@ html_out = f"""<!DOCTYPE html>
 
 <!-- ══ PÁGINA 1: PATRIMONIO ══ -->
 <div class="page active" id="page-patrimonio">
-  <div class="hero-card" style="margin-top:1.5rem;">
-    <div class="hero-main">
-      <span class="hero-label">Patrimonio</span>
-      <span class="hero-value">{fmt_eur(patrimonio_neto)}</span>
-    </div>
-    <div class="hero-breakdown">
-      <div class="hero-item">
-        <span class="hero-item-label">Líquido</span>
-        <span class="hero-item-value">{fmt_eur(patrimonio_liquido)}</span>
-      </div>
-      <div class="hero-item">
-        <span class="hero-item-label">Inversiones</span>
-        <span class="hero-item-value">{fmt_eur(total_inversiones)}</span>
-      </div>
-      <div class="hero-item">
-        <span class="hero-item-label">Ratio inv/total</span>
-        <span class="hero-item-value">{fmt_pct(ratio_inv)}</span>
-      </div>
-    </div>
+  <div class="header-block">
+    <h2 class="section-title">Patrimonio</h2>
+    <div class="section-subtitle">{fmt_eur(patrimonio_neto)}</div>
   </div>
   <!-- ══ GRÁFICO PATRIMONIO NETO TOTAL ══ -->
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
@@ -1498,13 +1482,20 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- ══ BREAKDOWN CARDS ══ -->
-  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
+  <!-- ══ HUB CARDS ══ -->
+  <div style="max-width:1400px;margin:2rem auto 2rem;width:100%;">
     <div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;">
       <div style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
       <div style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
+
+      <div class="dashboard-panel" onclick="window.scrollTo({{top:0,behavior:'smooth'}})" style="cursor:pointer;border-left:3px solid #f59e0b;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
+        <div style="font-size:0.72rem;color:#f59e0b;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Patrimonio</div>
+        <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(patrimonio_neto)}</div>
+        <div style="font-size:0.82rem;color:{neto_color};font-weight:600;margin-bottom:0.75rem;">{fmt_neto_rend}</div>
+        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">Desde {fecha_ini_lbl} &nbsp;↑</div>
+      </div>
 
       <div class="dashboard-panel" onclick="navTab('cuentas')" style="cursor:pointer;border-left:3px solid #3b82f6;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
         <div style="font-size:0.72rem;color:#3b82f6;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Liquidez</div>
