@@ -1526,7 +1526,7 @@ html_out = f"""<!DOCTYPE html>
   <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
     <div class="dashboard-panel" style="padding:1.5rem 2rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Liquidez</div>
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cuentas de liquidez</div>
         <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(patrimonio_liquido)}</div>
       </div>
       <div class="legend-box" style="border:none;padding:0;background:transparent;gap:0;">{lista_cuentas_simple()}</div>
