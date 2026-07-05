@@ -1863,29 +1863,6 @@ html_out = f"""<!DOCTYPE html>
       </div>
     </div>
   </div>
-  <!-- ══ BENCHMARK MSCI WORLD ══ -->
-  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
-    <div class="dashboard-panel" style="padding:1.5rem 2rem;">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">Benchmark · MSCI World (mismo capital, mismas fechas)</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1.5rem;">
-        <div>
-          <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.3rem;">Tu cartera</div>
-          <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if total_rent_inv_pct >= 0 else '#ef4444'};">{'+'  if total_rent_inv_pct >= 0 else ''}{total_rent_inv_pct:.2f}%</div>
-          <div style="font-size:0.82rem;color:#9ca3af;margin-top:0.15rem;">{fmt_eur(total_inversiones)}</div>
-        </div>
-        <div>
-          <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.3rem;">MSCI World</div>
-          <div style="font-size:1.4rem;font-weight:700;color:{'#10b981' if not math.isnan(bench_rent_pct) and bench_rent_pct >= 0 else '#6b7280'};">{f'{bench_signo}{bench_rent_pct:.2f}%' if not math.isnan(bench_rent_pct) else '—'}</div>
-          <div style="font-size:0.82rem;color:#9ca3af;margin-top:0.15rem;">{fmt_eur(bench_valor) if not math.isnan(bench_rent_pct) else '—'}</div>
-        </div>
-        <div>
-          <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.3rem;">Tu alpha</div>
-          <div style="font-size:1.4rem;font-weight:700;color:{diff_color};">{f'{diff_signo}{diff_vs_bench:.2f}%' if not math.isnan(diff_vs_bench) else '—'}</div>
-          <div style="font-size:0.82rem;color:#9ca3af;margin-top:0.15rem;">{'sobre el índice' if not math.isnan(diff_vs_bench) else ''}</div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ══ EVOLUCIÓN DE LA CARTERA ══ -->
   <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
