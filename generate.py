@@ -574,6 +574,15 @@ rent_color      = "#10b981" if (not isinstance(total_rent_inv_pct, float) or tot
 rent_signo      = "+" if (not isinstance(total_rent_inv_pct, float) or total_rent_inv_pct >= 0) else ""
 rent_str        = f"{rent_signo}{total_rent_inv_pct:.2f}%" if hay_rentabilidad else "—"
 
+_inv_primera_fecha = inv_apor["_fecha"].min() if len(inv_apor) > 0 and "_fecha" in inv_apor.columns else None
+if _inv_primera_fecha is not None and pd.notna(_inv_primera_fecha) and total_coste_inv > 0:
+    _inv_anos_total = (_hoy - _inv_primera_fecha).days / 365.25
+    _portfolio_cagr = (math.pow(total_inversiones / total_coste_inv, 1.0 / _inv_anos_total) - 1) * 100 if _inv_anos_total >= 0.25 else float("nan")
+else:
+    _portfolio_cagr = float("nan")
+_portfolio_cagr_str = (f'{"+" if _portfolio_cagr >= 0 else ""}{_portfolio_cagr:.1f}% p.a.'
+                       if not math.isnan(_portfolio_cagr) else "")
+
 inv_raw["pct"] = (inv_raw["importe"] / total_inversiones * 100) if total_inversiones != 0 else 0.0
 
 inv_cat = inv_raw.dropna(subset=["importe"]).groupby("categoria")["importe"].sum().round(2).reset_index()
@@ -1105,7 +1114,7 @@ def tabla_aportaciones():
             unidades_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
             precio_td   = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
         rows.append(
-            f'<tr class="table-row" data-nombre="{html_escape(nombre)}">'
+            f'<tr class="table-row" data-nombre="{html_escape(nombre)}" data-coste="{coste:.2f}">'
             f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.82rem;font-family:ui-monospace,monospace;white-space:nowrap;">{fecha_s}</td>'
             f'<td style="{TD}text-align:left;">'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.88rem;">{html_escape(nombre)}</div>'
@@ -1836,8 +1845,8 @@ html_out = f"""<!DOCTYPE html>
         <th style="text-align:right;">Ingresos</th>
         <th style="text-align:right;">Gastos</th>
         <th style="text-align:right;">Invertido</th>
-        <th style="text-align:right;">Balance</th>
-        <th style="text-align:right;">Ahorro</th>
+        <th style="text-align:right;">Ahorro €</th>
+        <th style="text-align:right;">% Ahorro</th>
       </tr></thead>
       <tbody>{tabla_mensual_html(resumen_mensual)}</tbody>
     </table>
@@ -1914,7 +1923,7 @@ html_out = f"""<!DOCTYPE html>
       </div>
       <div class="hero-item">
         <span class="hero-item-label">Rentabilidad</span>
-        <span class="hero-item-value" style="color:{'#10b981' if total_rent_inv_pct >= 0 else '#ef4444'};">{('+' if total_rent_inv_pct >= 0 else '') + f'{total_rent_inv_pct:.2f}%' if hay_rentabilidad else '—'}</span>
+        <span class="hero-item-value" style="color:{'#10b981' if total_rent_inv_pct >= 0 else '#ef4444'};">{('+' if total_rent_inv_pct >= 0 else '') + f'{total_rent_inv_pct:.2f}%' if hay_rentabilidad else '—'}{'<span style="display:block;font-size:0.65rem;color:#9ca3af;font-weight:500;margin-top:0.15rem;">CAGR ' + _portfolio_cagr_str + '</span>' if _portfolio_cagr_str else ''}</span>
       </div>
       <div class="hero-item" title="Aportado en {_mes_nombre} ({_n_apor_mes} compras)">
         <span class="hero-item-label">{_mes_nombre}</span>
@@ -2102,9 +2111,16 @@ html_out = f"""<!DOCTYPE html>
       rows.forEach(function(row) {{
         const show = !val || row.dataset.nombre === val;
         row.style.display = show ? '' : 'none';
-        if (show) visible++;
+        if (show) {{ visible++; visibleCost += parseFloat(row.dataset.coste || 0); }}
       }});
-      if (cnt) cnt.textContent = val ? visible + ' compras' : totalTxt;
+      if (cnt) {{
+        if (val) {{
+          const c = visibleCost.toLocaleString('de-DE', {{minimumFractionDigits:2, maximumFractionDigits:2}});
+          cnt.textContent = visible + ' compras · ' + c + ' € invertido';
+        }} else {{
+          cnt.textContent = totalTxt;
+        }}
+      }}
     }});
   }})();
   </script>
@@ -2228,8 +2244,43 @@ html_out = f"""<!DOCTYPE html>
 
 <div class="page" id="page-pasivos">
   <div class="header-block">
-    <div class="section-title">Patrimonio</div>
-    <div class="section-subtitle">Pasivos</div>
+    <h2 class="section-title">Pasivos</h2>
+    <div class="section-subtitle">0,00 €</div>
+  </div>
+  <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
+    <div class="dashboard-panel" style="display:flex;align-items:center;gap:1.5rem;padding:1.75rem 2rem;border-left:3px solid #10b981;">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div>
+        <div style="font-size:1rem;font-weight:700;color:#10b981;margin-bottom:0.2rem;">Sin deudas registradas</div>
+        <div style="font-size:0.85rem;color:#6b7280;">Tu ratio deuda / patrimonio es <strong style="color:#e5e7eb;">0%</strong>. Todo tu patrimonio es capital propio.</div>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1400px;margin:0 auto 2rem;width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;">
+    <div class="dashboard-panel" style="text-align:center;padding:1.75rem 1.5rem;">
+      <div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Total pasivos</div>
+      <div style="font-size:2rem;font-weight:800;color:#ffffff;letter-spacing:-0.02em;margin-bottom:0.35rem;">0,00 €</div>
+      <div style="font-size:0.8rem;color:#10b981;font-weight:600;">Libre de deuda</div>
+    </div>
+    <div class="dashboard-panel" style="text-align:center;padding:1.75rem 1.5rem;">
+      <div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Ratio deuda</div>
+      <div style="font-size:2rem;font-weight:800;color:#ffffff;letter-spacing:-0.02em;margin-bottom:0.35rem;">0%</div>
+      <div style="font-size:0.8rem;color:#6b7280;">del patrimonio neto</div>
+    </div>
+    <div class="dashboard-panel" style="text-align:center;padding:1.75rem 1.5rem;">
+      <div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Patrimonio neto</div>
+      <div style="font-size:2rem;font-weight:800;color:#ffffff;letter-spacing:-0.02em;margin-bottom:0.35rem;">{fmt_eur(patrimonio_neto)}</div>
+      <div style="font-size:0.8rem;color:#6b7280;">100% capital propio</div>
+    </div>
+  </div>
+  <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
+    <div class="dashboard-panel" style="border:1px dashed #2a2d3a;background:transparent;text-align:center;padding:3rem 2rem;">
+      <div style="font-size:2rem;margin-bottom:1rem;opacity:0.4;">🏦</div>
+      <div style="font-size:1rem;font-weight:600;color:#4b5563;margin-bottom:0.4rem;">Aquí aparecerán tus deudas</div>
+      <div style="font-size:0.85rem;color:#374151;max-width:420px;margin:0 auto;">Hipotecas, préstamos, tarjetas de crédito... Añade pasivos en Google Sheets y se calcularán automáticamente frente a tu patrimonio.</div>
+    </div>
   </div>
 </div>
 
