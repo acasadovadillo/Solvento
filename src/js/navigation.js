@@ -2,7 +2,7 @@ function formatEur(val) {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(val);
 }
 
-const _navLabels = { patrimonio: "Patrimonio", cuentas: "Cashflow", movimientos: "Movimientos", inversiones: "Inversiones" };
+const _navLabels = { patrimonio: "Patrimonio", cuentas: "Cashflow", inversiones: "Inversiones" };
 
 function showPage(id) {
   const current = document.querySelector(".page.active");
@@ -28,7 +28,7 @@ function navSelect(id, label) {
 })();
 
 function showMovimientos(cuenta) {
-  showPage("movimientos");
+  showPage("cuentas");
   const badge = document.getElementById("mov-filter-badge");
   const label = document.getElementById("mov-filter-label");
   const saldoEl = document.getElementById("mov-filter-saldo");
@@ -47,6 +47,10 @@ function showMovimientos(cuenta) {
     if (badge) badge.style.display = "none";
     rows.forEach(tr => tr.style.display = "");
   }
+  setTimeout(() => {
+    const sec = document.getElementById("mov-section");
+    if (sec) sec.scrollIntoView({ behavior: "smooth" });
+  }, 50);
 }
 
 function filterCuentasMov(btn, cuenta) {
@@ -58,7 +62,7 @@ function filterCuentasMov(btn, cuenta) {
   btn.style.borderBottom = "2px solid #ffffff";
   btn.style.color = "#ffffff";
   btn.style.fontWeight = "700";
-  document.querySelectorAll("#cuentas-mov-tbody tr").forEach(tr => {
+  document.querySelectorAll("#mov-tbody tr").forEach(tr => {
     if (cuenta === "__all__") {
       // In Todos, hide the destination-side of traspasos to avoid double-counting
       tr.style.display = tr.dataset.traspasoDir === "entrada" ? "none" : "";

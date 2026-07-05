@@ -1391,7 +1391,6 @@ html_out = f"""<!DOCTYPE html>
     <ul class="nav-dropdown-menu" id="nav-dropdown-menu">
       <li onclick="navSelect('patrimonio','Patrimonio')">Patrimonio</li>
       <li onclick="navSelect('cuentas','Cashflow')">Cashflow</li>
-      <li onclick="navSelect('movimientos','Movimientos')">Movimientos</li>
       <li onclick="navSelect('inversiones','Inversiones')">Inversiones</li>
     </ul>
   </div>
@@ -1466,7 +1465,7 @@ html_out = f"""<!DOCTYPE html>
       </div>
       <div class="legend-box" style="border:none;padding:0;background:transparent;gap:0;">{lista_cuentas_simple()}</div>
       <div style="text-align:right;padding-top:0.75rem;">
-        <button onclick="showPage('movimientos')" style="background:none;border:none;color:#6b7280;font-size:0.82rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">Ver todos los movimientos →</button>
+        <button onclick="document.getElementById('mov-section').scrollIntoView({{behavior:'smooth'}})" style="background:none;border:none;color:#6b7280;font-size:0.82rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">Ver todos los movimientos →</button>
       </div>
     </div>
   </div>
@@ -1490,39 +1489,6 @@ html_out = f"""<!DOCTYPE html>
   </div>
 </div>
 
-<!-- ══ PÁGINA 1b: MOVIMIENTOS ══ -->
-<div class="page" id="page-movimientos">
-  <div class="header-block" style="margin-top:1.5rem;">
-    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-      <button onclick="showPage('patrimonio')" style="background:none;border:none;color:#6b7280;font-size:0.85rem;cursor:pointer;padding:0;transition:color 0.15s;" onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">← Volver</button>
-      <h2 class="section-title" style="margin:0;">Movimientos</h2>
-      <div id="mov-filter-badge" style="display:none;align-items:center;gap:0.4rem;background:#2a2d3a;border:1px solid #4b5563;border-radius:20px;padding:0.25rem 0.6rem 0.25rem 0.75rem;font-size:0.78rem;color:#e5e7eb;">
-        <span id="mov-filter-label"></span>
-        <span id="mov-filter-saldo" style="color:#9ca3af;font-weight:700;"></span>
-        <button onclick="showMovimientos(null)" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;line-height:1;font-size:1rem;" title="Limpiar filtro">×</button>
-      </div>
-    </div>
-  </div>
-  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
-    <div style="margin-bottom:1rem;">
-      <input id="mov-search" type="search" placeholder="Buscar movimientos…" oninput="movFiltrar()"
-        style="width:100%;max-width:400px;background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;padding:0.5rem 0.85rem;outline:none;font-family:inherit;"
-        onfocus="this.style.borderColor='#6b7280'" onblur="this.style.borderColor='#3b4054'">
-    </div>
-    <div class="dashboard-panel" style="padding:1.5rem 2rem;">
-      <table class="minimal-table">
-        <thead><tr>
-          <th style="text-align:left;">Fecha</th>
-          <th style="text-align:left;">Concepto</th>
-          <th style="text-align:right;">Importe</th>
-          <th style="text-align:right;">Saldo</th>
-        </tr></thead>
-        <tbody id="mov-tbody">{_mov_html}</tbody>
-      </table>
-      <p id="mov-empty" style="display:none;text-align:center;color:#6b7280;padding:2rem 0;font-size:0.85rem;">Sin resultados</p>
-    </div>
-  </div>
-</div>
 
 <!-- ══ PÁGINA 2: CUENTAS ══ -->
 <div class="page" id="page-cuentas">
@@ -1640,7 +1606,18 @@ html_out = f"""<!DOCTYPE html>
       </table>
     </div>
   </div>
-  <div class="table-container">
+  <div class="table-container" id="mov-section">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Movimientos</div>
+      <div id="mov-filter-badge" style="display:none;align-items:center;gap:0.4rem;background:#2a2d3a;border:1px solid #4b5563;border-radius:20px;padding:0.25rem 0.6rem 0.25rem 0.75rem;font-size:0.78rem;color:#e5e7eb;">
+        <span id="mov-filter-label"></span>
+        <span id="mov-filter-saldo" style="color:#9ca3af;font-weight:700;"></span>
+        <button onclick="showMovimientos(null)" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;line-height:1;font-size:1rem;" title="Limpiar filtro">×</button>
+      </div>
+      <input id="mov-search" type="search" placeholder="Buscar movimientos…" oninput="movFiltrar()"
+        style="margin-left:auto;background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;padding:0.5rem 0.85rem;outline:none;font-family:inherit;width:100%;max-width:300px;"
+        onfocus="this.style.borderColor='#6b7280'" onblur="this.style.borderColor='#3b4054'">
+    </div>
     <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.25rem;overflow-x:auto;">
       <button class="cmov-tab" onclick="filterCuentasMov(this,'__all__')" style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;margin-bottom:-1px;">Todos</button>
       {"".join(f'<button class="cmov-tab" onclick="filterCuentasMov(this,\'{html_escape(r["cuenta"]).replace(chr(39), chr(92)+chr(39))}\')" style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;margin-bottom:-1px;">{html_escape(r["cuenta"])}</button>' for _, r in saldos.iterrows())}
@@ -1652,8 +1629,9 @@ html_out = f"""<!DOCTYPE html>
         <th style="text-align:right;">Importe</th>
         <th style="text-align:right;">Saldo</th>
       </tr></thead>
-      <tbody id="cuentas-mov-tbody">{_mov_html}</tbody>
+      <tbody id="mov-tbody">{_mov_html}</tbody>
     </table>
+    <p id="mov-empty" style="display:none;text-align:center;color:#6b7280;padding:2rem 0;font-size:0.85rem;">Sin resultados</p>
   </div>
 </div>
 
