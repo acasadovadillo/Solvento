@@ -1256,6 +1256,21 @@ if _BK_NAV_PATH.exists():
         _bk_nav[str(_bisin)] = (list(_bgrp["fecha"]), list(_bgrp["nav"]))
     print(f"   Bankinter NAV: {len(_bk_nav)} fondos, {len(_bk_df)} puntos cargados")
 
+# Inject Bankinter NAV history into portfolio chart data (now that _bk_nav is available)
+for _bisin3, (_bkd3, _bkn3) in _bk_nav.items():
+    _bkname3 = next((a["Nombre"] for a in ACTIVOS_CONFIG if str(a.get("ISIN","")) == _bisin3), None)
+    if not _bkname3:
+        continue
+    _bk_pts3 = [[int(datetime(_d.year,_d.month,_d.day).timestamp()*1000), _n]
+                for _d, _n in zip(_bkd3, _bkn3)]
+    _bk_js3 = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in _bk_pts3) + "]"
+    pf_hist_parts.append(f'"{_bkname3}":{_bk_js3}')
+    pf_intra_parts.append(f'"{_bkname3}":[]')
+    pf_cur_parts.append(f'"{_bkname3}":"EUR"')
+portfolio_history_js  = "{" + ",".join(pf_hist_parts)  + "}"
+portfolio_intraday_js = "{" + ",".join(pf_intra_parts) + "}"
+portfolio_currency_js = "{" + ",".join(pf_cur_parts)   + "}"
+
 _isin2jk = {str(a["ISIN"]): _jk_v(a["Nombre"], a["ISIN"])
             for a in ACTIVOS_CONFIG
             if not a.get("yf_ticker") and str(a.get("ISIN", "-")).strip() not in ("-", "", "nan")}
@@ -1467,10 +1482,17 @@ else:
     inv_chart_area_d = "M 70 140 L 980 140 L 980 280 L 70 280 Z"
     inv_y_axis_svg_chart = ""; _inv_ref_y_v = 140.0; inv_hist_js = "[]"; bench_inv_hist_js = "[]"
 
+_bk_option_names = [
+    next((a["Nombre"] for a in ACTIVOS_CONFIG if str(a.get("ISIN","")) == isin), None)
+    for isin in _bk_nav
+]
 portfolio_options = "\n".join(
     f'            <option value="{a["nombre"]}">{a["nombre"]}</option>'
     for a in PORTFOLIO_ASSETS
-)
+) + ("\n" + "\n".join(
+    f'            <option value="{nm}">{nm}</option>'
+    for nm in _bk_option_names if nm
+) if any(_bk_option_names) else "")
 
 msci_history = fetch_msci_history()
 if msci_history:
