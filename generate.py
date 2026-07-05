@@ -1381,6 +1381,38 @@ html_out = f"""<!DOCTYPE html>
   <link rel="stylesheet" href="src/css/base.css?v={fecha_actualizacion}">
   <link rel="stylesheet" href="src/css/layout.css?v={fecha_actualizacion}">
   <link rel="stylesheet" href="src/css/components.css?v={fecha_actualizacion}">
+  <style>
+    /* Hamburger menu — inline to avoid external CSS caching issues */
+    .nav-hamburger {{
+      display: none; flex-direction: column; justify-content: center; gap: 5px;
+      background: none; border: none; cursor: pointer; padding: 0.4rem; outline: none;
+    }}
+    .nav-hamburger span {{
+      display: block; width: 22px; height: 2px; background: #e5e7eb; border-radius: 2px;
+      transition: transform 0.2s, opacity 0.2s;
+    }}
+    .nav-hamburger.open span:nth-child(1) {{ transform: translateY(7px) rotate(45deg); }}
+    .nav-hamburger.open span:nth-child(2) {{ opacity: 0; }}
+    .nav-hamburger.open span:nth-child(3) {{ transform: translateY(-7px) rotate(-45deg); }}
+    #mobile-nav-panel {{
+      display: none; position: fixed; top: 64px; left: 0; right: 0;
+      background: #1a1d27; border-bottom: 1px solid #2a2d3a;
+      flex-direction: column; z-index: 999; padding: 0.5rem;
+    }}
+    #mobile-nav-panel.open {{ display: flex !important; }}
+    .mobile-nav-item {{
+      background: none; border: none; color: #9ca3af; font-family: inherit;
+      font-size: 1rem; font-weight: 500; text-align: left;
+      padding: 0.85rem 1rem; border-radius: 8px; cursor: pointer; outline: none;
+      transition: background 0.15s, color 0.15s;
+    }}
+    .mobile-nav-item:hover {{ background: #2a2d3a; color: #fff; }}
+    .mobile-nav-item.active {{ color: #fff; font-weight: 700; background: #2a2d3a; }}
+    @media (max-width: 640px) {{
+      .nav-tabs {{ display: none !important; }}
+      .nav-hamburger {{ display: flex !important; }}
+    }}
+  </style>
 </head>
 <body>
 <nav class="navbar">
