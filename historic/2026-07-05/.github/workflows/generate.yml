@@ -107,6 +107,28 @@ jobs:
           fi
           echo "✅ fondos_manuales.csv válido ($FILAS filas, $BYTES bytes)"
 
+      - name: Descargar y validar bankinter_nav.csv
+        run: |
+          curl -fsSL \
+            "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=2139797029" \
+            -o data/bankinter_nav.csv
+          BYTES=$(wc -c < data/bankinter_nav.csv)
+          FILAS=$(wc -l < data/bankinter_nav.csv)
+          echo "bankinter_nav.csv — $FILAS filas, $BYTES bytes"
+          if head -1 data/bankinter_nav.csv | grep -qi "<!doctype\|<html"; then
+            echo "❌ Google Sheets devolvió HTML (error de acceso o sesión caducada)"
+            exit 1
+          fi
+          if [ "$BYTES" -lt 5000 ]; then
+            echo "❌ Archivo demasiado pequeño ($BYTES bytes) — descarga incompleta o vacía"
+            exit 1
+          fi
+          if [ "$FILAS" -lt 100 ]; then
+            echo "❌ Solo $FILAS filas — se esperaban ≥100 (posible truncado)"
+            exit 1
+          fi
+          echo "✅ bankinter_nav.csv válido ($FILAS filas, $BYTES bytes)"
+
       - name: Archivar repositorio completo del día en historic/
         run: |
           DATE=$(date +%Y-%m-%d)
