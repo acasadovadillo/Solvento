@@ -25,6 +25,9 @@
   min-width: 100%; z-index: 2000;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
+.nav-dropdown-menu::before {
+  content: ''; position: absolute; top: -8px; left: 0; right: 0; height: 8px;
+}
 .nav-dropdown-menu li {
   list-style: none; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 500; color: #e5e7eb;
   border-radius: 7px; cursor: pointer; white-space: nowrap;
