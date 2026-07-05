@@ -1389,21 +1389,15 @@ html_out = f"""<!DOCTYPE html>
       <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5 5-5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
     </button>
     <ul class="nav-dropdown-menu" id="nav-dropdown-menu">
-      <li class="nav-has-sub" onmouseenter="document.getElementById('nav-sub-patrimonio').style.display='block'" onmouseleave="document.getElementById('nav-sub-patrimonio').style.display='none'" onclick="navSelect('patrimonio','Patrimonio')">
-        <span>Patrimonio</span>
+      <li class="nav-has-sub" onmouseenter="document.getElementById('nav-sub-activos').style.display='block'" onmouseleave="document.getElementById('nav-sub-activos').style.display='none'" onclick="navSelect('activos','Activos')">
+        <span>Activos</span>
         <svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <ul class="nav-sub-menu" id="nav-sub-patrimonio">
-          <li class="nav-has-sub" onmouseenter="document.getElementById('nav-sub-activos').style.display='block'" onmouseleave="document.getElementById('nav-sub-activos').style.display='none'" onclick="event.stopPropagation();navSelect('activos','Activos')">
-            <span>Activos</span>
-            <svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <ul class="nav-sub-menu" id="nav-sub-activos">
-              <li onclick="event.stopPropagation();navSelect('cuentas','Liquidez')">Liquidez</li>
-              <li onclick="event.stopPropagation();navSelect('inversiones','Inversiones')">Inversiones</li>
-            </ul>
-          </li>
-          <li onclick="event.stopPropagation();navSelect('pasivos','Pasivos')">Pasivos</li>
+        <ul class="nav-sub-menu" id="nav-sub-activos">
+          <li onclick="event.stopPropagation();navSelect('cuentas','Liquidez')">Liquidez</li>
+          <li onclick="event.stopPropagation();navSelect('inversiones','Inversiones')">Inversiones</li>
         </ul>
       </li>
+      <li onclick="navSelect('pasivos','Pasivos')">Pasivos</li>
     </ul>
   </div>
 </nav>
