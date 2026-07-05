@@ -1520,7 +1520,7 @@ html_out = f"""<!DOCTYPE html>
 <!-- ══ PÁGINA 2: CUENTAS ══ -->
 <div class="page" id="page-cuentas">
   <div class="header-block">
-    <h2 class="section-title">Patrimonio líquido</h2>
+    <h2 class="section-title">Liquidez</h2>
     <div class="section-subtitle">{fmt_eur(patrimonio_liquido)}</div>
   </div>
   <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
