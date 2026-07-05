@@ -653,11 +653,14 @@ def build_monthly_chart(df):
     PAD_L, PAD_R, PAD_T, PAD_B = 60, 20, 20, 50
     chart_w = W - PAD_L - PAD_R
     chart_h = H - PAD_T - PAD_B
-    max_val = max(df["ingresos"].max(), df["gastos"].max(), 1)
+    inv_vals = df["invertido"].fillna(0) if "invertido" in df.columns else [0] * len(df)
+    max_val = max(df["ingresos"].max(), df["gastos"].max(), max(inv_vals), 1)
     n = len(df)
     bar_group_w = chart_w / n
-    bar_w = min(bar_group_w * 0.35, 28)
-    gap   = bar_group_w * 0.08
+    bar_w = min(bar_group_w * 0.25, 20)
+    gap   = bar_group_w * 0.06
+    # 3 bars centered: total span = 3*bar_w + 2*gap
+    span  = 3 * bar_w + 2 * gap
 
     parts = [f'<svg viewBox="0 0 {W} {H}" width="100%" style="overflow:visible;">']
     for i in range(5):
@@ -669,21 +672,32 @@ def build_monthly_chart(df):
             f'<text x="{PAD_L-6}" y="{y+4:.1f}" text-anchor="end" font-size="9" fill="#6b7280">{lbl}</text>'
         )
     for i, row in df.iterrows():
-        cx = PAD_L + (i + 0.5) * bar_group_w
+        cx   = PAD_L + (i + 0.5) * bar_group_w
+        x0   = cx - span / 2  # left edge of bar group
+
         h_i = chart_h * row["ingresos"] / max_val
-        x_i = cx - bar_w - gap / 2
-        y_i = PAD_T + chart_h - h_i
+        x_i = x0
         parts.append(
-            f'<rect x="{x_i:.1f}" y="{y_i:.1f}" width="{bar_w:.1f}" height="{h_i:.1f}" fill="#10b981" rx="3" opacity="0.9">'
+            f'<rect x="{x_i:.1f}" y="{PAD_T+chart_h-h_i:.1f}" width="{bar_w:.1f}" height="{h_i:.1f}" fill="#10b981" rx="3" opacity="0.9">'
             f'<title>Ingresos {row["mes_lbl"]}: {fmt_eur(row["ingresos"])}</title></rect>'
         )
+
         h_g = chart_h * row["gastos"] / max_val
-        x_g = cx + gap / 2
-        y_g = PAD_T + chart_h - h_g
+        x_g = x0 + bar_w + gap
         parts.append(
-            f'<rect x="{x_g:.1f}" y="{y_g:.1f}" width="{bar_w:.1f}" height="{h_g:.1f}" fill="#ef4444" rx="3" opacity="0.9">'
+            f'<rect x="{x_g:.1f}" y="{PAD_T+chart_h-h_g:.1f}" width="{bar_w:.1f}" height="{h_g:.1f}" fill="#ef4444" rx="3" opacity="0.9">'
             f'<title>Gastos {row["mes_lbl"]}: {fmt_eur(row["gastos"])}</title></rect>'
         )
+
+        inv = float(row["invertido"]) if "invertido" in row and pd.notna(row["invertido"]) else 0.0
+        if inv > 0:
+            h_v = chart_h * inv / max_val
+            x_v = x0 + 2 * (bar_w + gap)
+            parts.append(
+                f'<rect x="{x_v:.1f}" y="{PAD_T+chart_h-h_v:.1f}" width="{bar_w:.1f}" height="{h_v:.1f}" fill="#8b5cf6" rx="3" opacity="0.9">'
+                f'<title>Invertido {row["mes_lbl"]}: {fmt_eur(inv)}</title></rect>'
+            )
+
         parts.append(
             f'<text x="{cx:.1f}" y="{PAD_T+chart_h+16}" text-anchor="middle" font-size="9" fill="#6b7280">{row["mes_lbl"]}</text>'
         )
@@ -1603,6 +1617,7 @@ html_out = f"""<!DOCTYPE html>
       <div style="display:flex;gap:1rem;font-size:0.8rem;">
         <div style="display:flex;align-items:center;gap:0.4rem;"><span style="width:10px;height:10px;background:#10b981;border-radius:2px;display:inline-block;"></span><span style="color:#9ca3af;">Ingresos</span></div>
         <div style="display:flex;align-items:center;gap:0.4rem;"><span style="width:10px;height:10px;background:#ef4444;border-radius:2px;display:inline-block;"></span><span style="color:#9ca3af;">Gastos</span></div>
+        <div style="display:flex;align-items:center;gap:0.4rem;"><span style="width:10px;height:10px;background:#8b5cf6;border-radius:2px;display:inline-block;"></span><span style="color:#9ca3af;">Invertido</span></div>
       </div>
     </div>
     {monthly_chart_svg}
