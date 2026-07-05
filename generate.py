@@ -1389,7 +1389,14 @@ html_out = f"""<!DOCTYPE html>
       <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5 5-5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
     </button>
     <ul class="nav-dropdown-menu" id="nav-dropdown-menu">
-      <li onclick="navSelect('patrimonio','Patrimonio')">Patrimonio</li>
+      <li class="nav-has-sub" onmouseenter="document.getElementById('nav-sub-patrimonio').style.display='block'" onmouseleave="document.getElementById('nav-sub-patrimonio').style.display='none'" onclick="navSelect('patrimonio','Patrimonio')">
+        <span>Patrimonio</span>
+        <svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <ul class="nav-sub-menu" id="nav-sub-patrimonio">
+          <li onclick="event.stopPropagation();navSelect('activos','Activos')">Activos</li>
+          <li onclick="event.stopPropagation();navSelect('pasivos','Pasivos')">Pasivos</li>
+        </ul>
+      </li>
       <li onclick="navSelect('cuentas','Cashflow')">Cashflow</li>
       <li onclick="navSelect('inversiones','Inversiones')">Inversiones</li>
     </ul>
@@ -1898,6 +1905,20 @@ html_out = f"""<!DOCTYPE html>
   </div>
 </div>
 <!-- fin page-inversiones -->
+
+<div class="page" id="page-activos">
+  <div class="header-block">
+    <div class="section-title">Patrimonio</div>
+    <div class="section-subtitle">Activos</div>
+  </div>
+</div>
+
+<div class="page" id="page-pasivos">
+  <div class="header-block">
+    <div class="section-title">Patrimonio</div>
+    <div class="section-subtitle">Pasivos</div>
+  </div>
+</div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
   <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};
