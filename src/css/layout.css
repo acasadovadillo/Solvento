@@ -42,13 +42,15 @@
   min-width: 130px; z-index: 2001;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
+.nav-sub-menu .nav-sub-menu { z-index: 2002; }
 .nav-sub-menu::before {
   content: ''; position: absolute; top: 0; right: -8px; width: 8px; height: 100%;
 }
 .nav-sub-menu li {
-  list-style: none; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 500; color: #e5e7eb;
+  list-style: none; list-style-type: none; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 500; color: #e5e7eb;
   border-radius: 7px; cursor: pointer; white-space: nowrap; transition: background 0.15s;
 }
+.nav-sub-menu li::marker { display: none; content: ''; }
 .nav-sub-menu li:hover { background: #2a2d3a; color: #fff; }
 
 /* ── Pages (SPA) ── */

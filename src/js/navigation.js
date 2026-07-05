@@ -2,7 +2,7 @@ function formatEur(val) {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(val);
 }
 
-const _navLabels = { patrimonio: "Patrimonio", cuentas: "Cashflow", inversiones: "Inversiones", activos: "Activos", pasivos: "Pasivos" };
+const _navLabels = { patrimonio: "Patrimonio", cuentas: "Liquidez", inversiones: "Inversiones", activos: "Activos", pasivos: "Pasivos" };
 
 function showPage(id) {
   const current = document.querySelector(".page.active");

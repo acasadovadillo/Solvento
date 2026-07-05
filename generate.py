@@ -1373,9 +1373,9 @@ html_out = f"""<!DOCTYPE html>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Solvento</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
-  <link rel="stylesheet" href="src/css/base.css">
-  <link rel="stylesheet" href="src/css/layout.css">
-  <link rel="stylesheet" href="src/css/components.css">
+  <link rel="stylesheet" href="src/css/base.css?v={fecha_actualizacion}">
+  <link rel="stylesheet" href="src/css/layout.css?v={fecha_actualizacion}">
+  <link rel="stylesheet" href="src/css/components.css?v={fecha_actualizacion}">
 </head>
 <body>
 <nav class="navbar">
@@ -1393,12 +1393,17 @@ html_out = f"""<!DOCTYPE html>
         <span>Patrimonio</span>
         <svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
         <ul class="nav-sub-menu" id="nav-sub-patrimonio">
-          <li onclick="event.stopPropagation();navSelect('activos','Activos')">Activos</li>
+          <li class="nav-has-sub" onmouseenter="document.getElementById('nav-sub-activos').style.display='block'" onmouseleave="document.getElementById('nav-sub-activos').style.display='none'" onclick="event.stopPropagation();navSelect('activos','Activos')">
+            <span>Activos</span>
+            <svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <ul class="nav-sub-menu" id="nav-sub-activos">
+              <li onclick="event.stopPropagation();navSelect('cuentas','Liquidez')">Liquidez</li>
+              <li onclick="event.stopPropagation();navSelect('inversiones','Inversiones')">Inversiones</li>
+            </ul>
+          </li>
           <li onclick="event.stopPropagation();navSelect('pasivos','Pasivos')">Pasivos</li>
         </ul>
       </li>
-      <li onclick="navSelect('cuentas','Cashflow')">Cashflow</li>
-      <li onclick="navSelect('inversiones','Inversiones')">Inversiones</li>
     </ul>
   </div>
 </nav>
@@ -1467,7 +1472,7 @@ html_out = f"""<!DOCTYPE html>
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
     <div class="dashboard-panel" style="padding:1.5rem 2rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cashflow</div>
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Liquidez</div>
         <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(patrimonio_liquido)}</div>
       </div>
       <div class="legend-box" style="border:none;padding:0;background:transparent;gap:0;">{lista_cuentas_simple()}</div>
