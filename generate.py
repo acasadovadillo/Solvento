@@ -558,6 +558,11 @@ hay_rentabilidad   = total_coste_inv > 0
 
 patrimonio_neto = round(patrimonio_liquido + total_inversiones, 2)
 ratio_inv       = (total_inversiones / patrimonio_neto * 100) if patrimonio_neto != 0 else 0.0
+pct_liquidez_num = 100.0 - ratio_inv
+n_cuentas       = len(saldos)
+rent_color      = "#10b981" if (not isinstance(total_rent_inv_pct, float) or total_rent_inv_pct >= 0) else "#ef4444"
+rent_signo      = "+" if (not isinstance(total_rent_inv_pct, float) or total_rent_inv_pct >= 0) else ""
+rent_str        = f"{rent_signo}{total_rent_inv_pct:.2f}%" if hay_rentabilidad else "—"
 
 inv_raw["pct"] = (inv_raw["importe"] / total_inversiones * 100) if total_inversiones != 0 else 0.0
 
@@ -1449,6 +1454,38 @@ html_out = f"""<!DOCTYPE html>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
         <span>{fecha_ini_lbl}</span><span>{fecha_fin_lbl}</span>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ BREAKDOWN CARDS ══ -->
+  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
+    <div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;">
+      <div style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
+      <div style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;">
+
+      <div class="dashboard-panel" onclick="navTab('cuentas')" style="cursor:pointer;border-left:3px solid #3b82f6;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
+        <div style="font-size:0.72rem;color:#3b82f6;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Liquidez</div>
+        <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(patrimonio_liquido)}</div>
+        <div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem;">{n_cuentas} cuentas</div>
+        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{pct_liquidez_num:.1f}% del patrimonio &nbsp;→</div>
+      </div>
+
+      <div class="dashboard-panel" onclick="navTab('inversiones')" style="cursor:pointer;border-left:3px solid #10b981;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
+        <div style="font-size:0.72rem;color:#10b981;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Inversiones</div>
+        <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(total_inversiones)}</div>
+        <div style="font-size:0.82rem;color:{rent_color};font-weight:600;margin-bottom:0.75rem;">{rent_str}</div>
+        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{ratio_inv:.1f}% del patrimonio &nbsp;→</div>
+      </div>
+
+      <div class="dashboard-panel" onclick="navTab('pasivos')" style="cursor:pointer;border-left:3px solid #6b7280;padding-left:1.25rem;transition:background 0.2s;opacity:0.7;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
+        <div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Pasivos</div>
+        <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">0,00 €</div>
+        <div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem;">Sin deudas registradas</div>
+        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">0% del patrimonio &nbsp;→</div>
+      </div>
+
     </div>
   </div>
 
