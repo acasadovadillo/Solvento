@@ -6,8 +6,8 @@ const valorDisplay = document.getElementById("evo-valor-display");
 const dateDisplay = document.getElementById("evo-date-display");
 const rendDisplay = document.getElementById("evo-rendimiento-display");
 
-function renderChartAxes(data, minY, maxY) {
-  const g = document.getElementById("chart-axes");
+function renderChartAxes(data, minY, maxY, gid) {
+  const g = document.getElementById(gid || "chart-axes");
   if (!g) return;
   const ry = maxY === minY ? 1 : maxY - minY;
   let html = "";
@@ -62,9 +62,9 @@ function changeTimeframe(period, btnEl) {
   dd.textContent = period === "MAX" ? `Desde el inicio (${filtered[0].f})` : `${filtered[0].f} — ${filtered[filtered.length - 1].f}`;
   window.evoDefaultDateText = dd.textContent;
   const diff = filtered[filtered.length - 1].v - filtered[0].v;
-  const pct = filtered[0].v ? (diff / Math.abs(filtered[0].v) * 100) : 0;
   const signo = diff >= 0 ? "+" : "", color = diff >= 0 ? "#10b981" : "#ef4444";
-  rendDisplay.textContent = `${signo}${formatEur(diff)} (${signo}${pct.toFixed(2).replace(".", ",")}%)`;
+  // Solo delta en €: el % no es informativo en cuentas de liquidez (saldo inicial ~0)
+  rendDisplay.textContent = `${signo}${formatEur(diff)}`;
   rendDisplay.style.color = color;
   rendDisplay.style.background = diff >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
   document.getElementById("chart-line").setAttribute("stroke", color);
@@ -76,6 +76,54 @@ function changeTimeframe(period, btnEl) {
 document.querySelectorAll(".tf-btn").forEach(b => b.addEventListener("click", e => changeTimeframe(e.target.dataset.period, e.target)));
 window.activeEvoData = evoData;
 window.evoDefaultDateText = dateDisplay ? dateDisplay.textContent : "";
+
+// ── Gráfica de patrimonio neto (página Patrimonio): selector de periodo ──
+function changeNetoTimeframe(period, btnEl) {
+  if (typeof netoHistData === "undefined" || !netoHistData.length) return;
+  document.querySelectorAll(".tf-btn-neto").forEach(b => b.classList.remove("active"));
+  if (btnEl) btnEl.classList.add("active");
+  const maxT = Math.max(...netoHistData.map(d => d.t)), day = 86400000;
+  let cutoff = 0;
+  if (period === "1W") cutoff = maxT - 7 * day;
+  else if (period === "1M") cutoff = maxT - 30 * day;
+  else if (period === "YTD") { const y = new Date(maxT).getFullYear(); cutoff = new Date(y, 0, 1).getTime(); }
+  else if (period === "1Y") cutoff = maxT - 365 * day;
+  const filtered = netoHistData.filter(d => d.t >= cutoff).map(d => Object.assign({}, d));
+  if (!filtered.length) return;
+  const minX = Math.min(...filtered.map(d => d.t)), maxX = Math.max(...filtered.map(d => d.t));
+  const minY = Math.min(...filtered.map(d => d.v)), maxY = Math.max(...filtered.map(d => d.v));
+  const rx = maxX === minX ? 1 : maxX - minX, ry = maxY === minY ? 1 : maxY - minY;
+  filtered.forEach(d => { d.x = 70 + (d.t - minX) / rx * 910; d.y = 260 - (d.v - minY) / ry * 220; });
+  let pl = `M ${filtered[0].x} ${filtered[0].y}`;
+  for (let i = 1; i < filtered.length; i++) pl += ` L ${filtered[i].x} ${filtered[i].y}`;
+  document.getElementById("neto-chart-line").setAttribute("d", pl);
+  document.getElementById("neto-chart-area").setAttribute("d", pl + ` L ${filtered[filtered.length - 1].x} 280 L ${filtered[0].x} 280 Z`);
+  renderChartAxes(filtered, minY, maxY, "neto-chart-axes");
+  const s0 = document.getElementById("neto-lbl-start"), s1 = document.getElementById("neto-lbl-end");
+  if (s0) s0.textContent = filtered[0].f;
+  if (s1) s1.textContent = filtered[filtered.length - 1].f;
+  const diff = filtered[filtered.length - 1].v - filtered[0].v;
+  const pct = filtered[0].v ? (diff / Math.abs(filtered[0].v) * 100) : 0;
+  const signo = diff >= 0 ? "+" : "", color = diff >= 0 ? "#10b981" : "#ef4444";
+  const rd = document.getElementById("neto-rend-display");
+  if (rd) {
+    rd.textContent = `${signo}${formatEur(diff)} (${signo}${pct.toFixed(2).replace(".", ",")}%)`;
+    rd.style.color = color;
+    rd.style.background = diff >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
+  }
+  document.getElementById("neto-chart-line").setAttribute("stroke", color);
+  document.querySelectorAll("#neto-area-grad stop").forEach(s => s.setAttribute("stop-color", color));
+  const netoDot = document.getElementById("neto-dot");
+  if (netoDot) netoDot.style.background = color;
+  const dd = document.getElementById("neto-date-display");
+  if (dd) {
+    dd.textContent = period === "MAX" ? `Desde el inicio (${filtered[0].f})` : `${filtered[0].f} — ${filtered[filtered.length - 1].f}`;
+    window.netoDefaultDateText = dd.textContent;
+  }
+  window.activeNetoData = filtered;
+}
+document.querySelectorAll(".tf-btn-neto").forEach(b => b.addEventListener("click", e => changeNetoTimeframe(e.target.dataset.period, e.target)));
+if (typeof netoHistData !== "undefined") window.activeNetoData = netoHistData;
 
 if (svgChart && evoData.length) {
   svgChart.addEventListener("mousemove", e => {

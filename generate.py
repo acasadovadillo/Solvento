@@ -348,7 +348,8 @@ if n_puntos > 0:
     signo_rend  = "+" if diff_abs >= 0 else ""
     color_trend = "#10b981" if diff_abs >= 0 else "#ef4444"
     color_bg_grad = "rgba(16,185,129,0.15)" if diff_abs >= 0 else "rgba(239,68,68,0.15)"
-    fmt_rend    = f"{signo_rend}{fmt_eur(diff_abs)} ({signo_rend}{fmt_pct(diff_pct)})"
+    # Solo delta en €: el % no es informativo en cuentas de liquidez (saldo inicial ~0)
+    fmt_rend    = f"{signo_rend}{fmt_eur(diff_abs)}"
     fecha_ini_lbl = evo["fecha"].iloc[0].strftime("%d/%m/%Y")
     fecha_fin_lbl = evo["fecha"].iloc[-1].strftime("%d/%m/%Y")
 
@@ -411,7 +412,7 @@ if n_puntos > 0:
     evo_ref_y = f"{evo['y_svg'].iloc[0]:.2f}"
 else:
     color_trend = "#6b7280"; color_bg_grad = "rgba(107,114,128,0.1)"
-    fmt_rend = "0,00 € (0,00%)"
+    fmt_rend = "0,00 €"
     fecha_ini_lbl = fecha_fin_lbl = date.today().strftime("%d/%m/%Y")
     path_linea = "M 70 120 L 980 120"
     path_area  = "M 70 120 L 980 120 L 980 280 L 70 280 Z"
@@ -668,6 +669,10 @@ resumen_mensual["mes_lbl"] = resumen_mensual["mes_lbl"].apply(
 def build_monthly_chart(df):
     if len(df) == 0:
         return '<svg viewBox="0 0 700 220" width="100%"><text x="350" y="110" text-anchor="middle" fill="#6b7280">Sin datos</text></svg>'
+    # Empezar en el primer mes con ingresos o gastos reales (los previos solo tienen roundups)
+    _activos = df[(df["ingresos"] > 0) | (df["gastos"] > 0)]
+    if len(_activos) > 0:
+        df = df[df["mes"] >= _activos["mes"].iloc[0]].reset_index(drop=True)
     W, H = 700, 220
     PAD_L, PAD_R, PAD_T, PAD_B = 60, 20, 20, 50
     chart_w = W - PAD_L - PAD_R
@@ -743,8 +748,9 @@ def tabla_mensual_html(df):
                   if inv_mes > 0 else
                   f'<td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;'
                   f'color:#4b5563;">—</td>')
+        _dim = ' style="opacity:0.45;"' if (row["ingresos"] == 0 and row["gastos"] == 0) else ""
         rows.append(f"""
-    <tr class="table-row">
+    <tr class="table-row"{_dim}>
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;color:#ffffff;font-weight:600;">{row["mes_lbl"]}</td>
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#10b981;font-weight:600;">{fmt_eur(row["ingresos"])}</td>
       <td style="padding:0.75rem 1rem;border-bottom:1px solid #2a2d3a;text-align:right;color:#ef4444;font-weight:600;">{fmt_eur(row["gastos"])}</td>
@@ -780,6 +786,25 @@ cat_gastos["pct_rest"] = 100.0 - cat_gastos["pct"]
 cat_gastos["pct_acum"] = cat_gastos["pct"].cumsum().shift(1).fillna(0.0)
 cat_gastos["rotacion"] = cat_gastos["pct_acum"] * 3.6
 
+# ── Gastos por mes + categoría (para el filtro client-side del desglose) ──
+_MES_ABR_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
+gastos_df["mes_g"] = gastos_df["fecha"].apply(floor_month)
+_gm_entries, _gm_opts = [], []
+for _mes_g in sorted(gastos_df["mes_g"].unique(), reverse=True):
+    _gr_g  = gastos_df[gastos_df["mes_g"] == _mes_g]
+    _cats_g = _gr_g.groupby("cat_top")["importe"].sum().round(2).sort_values(ascending=False)
+    _key_g  = _mes_g.strftime("%Y-%m")
+    _lbl_g  = f"{_MES_ABR_ES[_mes_g.month - 1]} {_mes_g.year}"
+    _pares_g = ",".join(f'[{json.dumps(str(c), ensure_ascii=False)},{v:.2f}]' for c, v in _cats_g.items())
+    _gm_entries.append(f'"{_key_g}":[{_pares_g}]')
+    _gm_opts.append(f'<option value="{_key_g}">{_lbl_g}</option>')
+_all_pares_g = ",".join(f'[{json.dumps(str(r["cat_top"]), ensure_ascii=False)},{r["importe"]:.2f}]'
+                        for _, r in cat_gastos.iterrows())
+gastos_mensuales_js  = "{" + ",".join([f'"__all__":[{_all_pares_g}]'] + _gm_entries) + "}"
+gastos_cat_colors_js = "{" + ",".join(f'{json.dumps(str(r["cat_top"]), ensure_ascii=False)}:"{r["accent"]}"'
+                                      for _, r in cat_gastos.iterrows()) + "}"
+gastos_mes_options   = '<option value="__all__">Todo el histórico</option>' + "".join(_gm_opts)
+
 # ════════════════════════════════════════════════════
 # 7) GENERADORES SVG / HTML
 # ════════════════════════════════════════════════════
@@ -813,13 +838,16 @@ def legend_donut(df, label_col, targets=None):
         else:
             target_badge = ""
         parts.append(f"""
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.85rem;width:100%;max-width:260px;margin:0.2rem 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.85rem;width:100%;max-width:260px;margin:0.3rem 0;">
       <div style="display:flex;align-items:center;gap:0.5rem;">
         <span style="width:9px;height:9px;background:{r["accent"]};border-radius:50%;flex-shrink:0;"></span>
         <span style="color:#9ca3af;font-weight:500;">{html_escape(lbl)}</span>
         {target_badge}
       </div>
-      <span style="color:#ffffff;font-weight:600;">{fmt_pct(pct_actual)}</span>
+      <span style="text-align:right;">
+        <span style="color:#ffffff;font-weight:600;display:block;line-height:1.2;">{fmt_pct(pct_actual)}</span>
+        <span style="color:#6b7280;font-size:0.72rem;display:block;line-height:1.2;">{fmt_eur(r["importe"])}</span>
+      </span>
     </div>""")
     return "\n".join(parts)
 
@@ -1193,8 +1221,11 @@ def tarjetas_activos_html():
         else:
             rent_html = ""
         search_str = f"{nombre.lower()} {isin_val.lower()} {banco.lower()} {tipo.lower()}"
+        # Nombre del activo en la gráfica de cartera (portfolio-select usa los nombres de PORTFOLIO_ASSETS)
+        _tk_card = str(r.get("ticker_yf", "") or "").strip()
+        _chart_nombre = next((pa["nombre"] for pa in PORTFOLIO_ASSETS if pa["ticker"] == _tk_card), nombre)
         cards.append(
-            f'<div class="asset-card" data-tipo="{slug}" data-search="{html_escape(search_str)}"'
+            f'<div class="asset-card" data-tipo="{slug}" data-nombre="{html_escape(_chart_nombre)}" data-search="{html_escape(search_str)}"'
             f' style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:16px;padding:1.25rem 1.5rem;'
             f'transition:border-color 0.2s,box-shadow 0.2s;"'
             f' onmouseover="this.style.borderColor=\'#3b4257\';this.style.boxShadow=\'0 4px 20px rgba(0,0,0,0.4)\'"'
@@ -1596,11 +1627,12 @@ html_out = f"""<!DOCTYPE html>
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
   <title>Solvento</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
-  <link rel="stylesheet" href="src/css/base.css?v={fecha_actualizacion}">
-  <link rel="stylesheet" href="src/css/layout.css?v={fecha_actualizacion}">
-  <link rel="stylesheet" href="src/css/components.css?v={fecha_actualizacion}">
+  <link rel="stylesheet" href="src/css/base.css?v={build_ts}">
+  <link rel="stylesheet" href="src/css/layout.css?v={build_ts}">
+  <link rel="stylesheet" href="src/css/components.css?v={build_ts}">
   <style>
     /* Hamburger menu — inline to avoid external CSS caching issues */
     .nav-hamburger {{
@@ -1680,9 +1712,13 @@ html_out = f"""<!DOCTYPE html>
   </div>
   <!-- ══ HUB CARDS ══ -->
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
+    <div style="display:flex;justify-content:space-between;font-size:0.72rem;font-weight:600;margin-bottom:0.4rem;">
+      <span style="color:#3b82f6;">Liquidez · {pct_liquidez_num:.1f}%</span>
+      <span style="color:#10b981;">Inversiones · {ratio_inv:.1f}%</span>
+    </div>
     <div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;">
-      <div style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
-      <div style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
+      <div title="Liquidez: {pct_liquidez_num:.1f}%" style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
+      <div title="Inversiones: {ratio_inv:.1f}%" style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
 
@@ -1725,6 +1761,13 @@ html_out = f"""<!DOCTYPE html>
           <div id="neto-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
         </div>
       </div>
+      <div class="timeframe-selector">
+        <button class="tf-btn-neto" data-period="1W">1W</button>
+        <button class="tf-btn-neto" data-period="1M">1M</button>
+        <button class="tf-btn-neto" data-period="YTD">1YTD</button>
+        <button class="tf-btn-neto" data-period="1Y">1Y</button>
+        <button class="tf-btn-neto active" data-period="MAX">MAX</button>
+      </div>
       <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
         <svg id="neto-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
           <defs>
@@ -1742,7 +1785,7 @@ html_out = f"""<!DOCTYPE html>
         <div id="neto-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{neto_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
-        <span>{fecha_ini_lbl}</span><span>{fecha_fin_lbl}</span>
+        <span id="neto-lbl-start">{fecha_ini_lbl}</span><span id="neto-lbl-end">{fecha_fin_lbl}</span>
       </div>
     </div>
   </div>
@@ -1852,15 +1895,20 @@ html_out = f"""<!DOCTYPE html>
     </table>
   </div>
   <div class="table-container">
-    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.5rem;">Desglose por categoría</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:0.75rem;">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Desglose por categoría</div>
+      <select id="gastos-mes-filter" onchange="gastosRender(this.value)" style="background:#12141f;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:6px;padding:0.3rem 0.65rem;font-size:0.8rem;cursor:pointer;outline:none;">
+        {gastos_mes_options}
+      </select>
+    </div>
     <div class="gastos-layout">
       <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;">
         <div class="chart-wrapper">
-          <svg class="donut" viewBox="0 0 42 42">
+          <svg class="donut" id="gastos-donut" viewBox="0 0 42 42">
             {sectors_gastos()}
           </svg>
           <div class="donut-center">
-            <span style="font-size:0.9rem;font-weight:700;color:#fff;line-height:1.2;word-wrap:break-word;max-width:100px;">{fmt_eur(total_gastos)}</span>
+            <span id="gastos-total-center" style="font-size:0.9rem;font-weight:700;color:#fff;line-height:1.2;word-wrap:break-word;max-width:100px;">{fmt_eur(total_gastos)}</span>
             <span style="font-size:0.52rem;color:#6b7280;text-transform:uppercase;margin-top:0.2rem;">Total</span>
           </div>
           <div id="gastos-label" class="chart-label"></div>
@@ -1872,7 +1920,7 @@ html_out = f"""<!DOCTYPE html>
           <th style="text-align:right;">Importe</th>
           <th style="text-align:right;">%</th>
         </tr></thead>
-        <tbody>{tabla_gastos()}</tbody>
+        <tbody id="gastos-tbody">{tabla_gastos()}</tbody>
       </table>
     </div>
   </div>
@@ -1902,6 +1950,13 @@ html_out = f"""<!DOCTYPE html>
       <tbody id="mov-tbody">{_mov_html}</tbody>
     </table>
     <p id="mov-empty" style="display:none;text-align:center;color:#6b7280;padding:2rem 0;font-size:0.85rem;">Sin resultados</p>
+    <div id="mov-more-wrap" style="display:none;text-align:center;margin-top:1.25rem;">
+      <button onclick="movMostrarMas()"
+        style="background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;font-weight:600;padding:0.55rem 1.5rem;cursor:pointer;font-family:inherit;transition:border-color 0.15s;"
+        onmouseover="this.style.borderColor='#6b7280'" onmouseout="this.style.borderColor='#3b4054'">
+        Mostrar 50 más&nbsp;·&nbsp;<span id="mov-more-count" style="color:#6b7280;font-weight:500;"></span>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1927,7 +1982,7 @@ html_out = f"""<!DOCTYPE html>
       </div>
       <div class="hero-item" title="Aportado en {_mes_nombre} ({_n_apor_mes} compras)">
         <span class="hero-item-label">{_mes_nombre}</span>
-        <span class="hero-item-value" style="color:#e5e7eb;">{fmt_eur(_total_mes) if _n_apor_mes > 0 else '—'}{'<span style="display:block;font-size:0.68rem;color:' + ('#10b981' if _delta_mes >= 0 else '#ef4444') + ';font-weight:600;margin-top:0.1rem;">' + ('+' if _delta_mes >= 0 else '') + fmt_eur(_delta_mes).replace(' €','') + ' vs mes ant.</span>' if _total_mes_ant > 0 else ''}</span>
+        <span class="hero-item-value" style="color:#e5e7eb;">{fmt_eur(_total_mes) if _n_apor_mes > 0 else '—'}{'<span style="display:block;font-size:0.68rem;color:' + ('#10b981' if _delta_mes >= 0 else '#ef4444') + ';font-weight:600;margin-top:0.1rem;">' + ('+' if _delta_mes >= 0 else '') + fmt_eur(_delta_mes).replace(' €','') + ' vs mes ant.</span>' if _n_apor_mes > 0 and _total_mes_ant > 0 else ''}</span>
       </div>
     </div>
   </div>
@@ -2235,13 +2290,6 @@ html_out = f"""<!DOCTYPE html>
 </div>
 <!-- fin page-inversiones -->
 
-<div class="page" id="page-activos">
-  <div class="header-block">
-    <div class="section-title">Patrimonio</div>
-    <div class="section-subtitle">Activos</div>
-  </div>
-</div>
-
 <div class="page" id="page-pasivos">
   <div class="header-block">
     <h2 class="section-title">Pasivos</h2>
@@ -2285,7 +2333,7 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const invHistData = {inv_hist_js};const benchInvHistData = {bench_inv_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};
+  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const invHistData = {inv_hist_js};const benchInvHistData = {bench_inv_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};const gastosMensuales={gastos_mensuales_js};const gastosCatColors={gastos_cat_colors_js};
   (function(){{
     const svg = document.getElementById('neto-svg-chart');
     if (!svg || !netoHistData.length) return;
@@ -2295,12 +2343,14 @@ html_out = f"""<!DOCTYPE html>
     const vdis  = document.getElementById('neto-valor-display');
     const ddis  = document.getElementById('neto-date-display');
     function onMove(e) {{
+      const data = window.activeNetoData || netoHistData;
+      if (!data.length) return;
       const rect = svg.getBoundingClientRect();
       const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
       const pct = Math.max(0, Math.min(1, cx / rect.width));
       const vbW = 1000, svgX = 70 + pct * (980 - 70);
-      let best = netoHistData[0], bd = Infinity;
-      for (const p of netoHistData) {{ const d = Math.abs(p.x - svgX); if (d < bd) {{ bd = d; best = p; }} }}
+      let best = data[0], bd = Infinity;
+      for (const p of data) {{ const d = Math.abs(p.x - svgX); if (d < bd) {{ bd = d; best = p; }} }}
       const bx = best.x / vbW * rect.width, by = best.y / 300 * rect.height;
       vline.setAttribute('x1', best.x); vline.setAttribute('x2', best.x); vline.style.display = '';
       dot.style.left = bx + 'px'; dot.style.top = by + 'px'; dot.style.display = '';
@@ -2311,7 +2361,7 @@ html_out = f"""<!DOCTYPE html>
     function onLeave() {{
       vline.style.display = 'none'; dot.style.display = 'none';
       rdis.style.display = ''; vdis.style.display = 'none';
-      ddis.textContent = 'Desde el inicio';
+      ddis.textContent = window.netoDefaultDateText || 'Desde el inicio ({fecha_ini_lbl})';
     }}
     svg.addEventListener('mousemove', onMove);
     svg.addEventListener('mouseleave', onLeave);

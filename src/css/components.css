@@ -36,13 +36,13 @@
   border-radius: 10px; border: 1px solid #2a2d3a;
   margin-bottom: 1.5rem; align-self: flex-start; flex-wrap: wrap;
 }
-.tf-btn, .tf-btn-btc, .tf-btn-msci, .tf-btn-pf, .tf-btn-inv {
+.tf-btn, .tf-btn-btc, .tf-btn-msci, .tf-btn-pf, .tf-btn-inv, .tf-btn-neto {
   background: transparent; border: none; color: #6b7280;
   padding: 0.4rem 0.8rem; font-size: 0.76rem; font-weight: 700;
   border-radius: 7px; cursor: pointer; transition: all 0.15s;
 }
-.tf-btn:hover, .tf-btn-btc:hover, .tf-btn-msci:hover, .tf-btn-pf:hover, .tf-btn-inv:hover { color: #fff; background: #222533; }
-.tf-btn.active, .tf-btn-btc.active, .tf-btn-msci.active, .tf-btn-pf.active, .tf-btn-inv.active {
+.tf-btn:hover, .tf-btn-btc:hover, .tf-btn-msci:hover, .tf-btn-pf:hover, .tf-btn-inv:hover, .tf-btn-neto:hover { color: #fff; background: #222533; }
+.tf-btn.active, .tf-btn-btc.active, .tf-btn-msci.active, .tf-btn-pf.active, .tf-btn-inv.active, .tf-btn-neto.active {
   color: #fff; background: #2a2d3a; border: 1px solid #4b5563;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
@@ -94,6 +94,7 @@
 .table-container {
   max-width: 1400px; width: 100%; margin: 2rem auto 0;
   background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 20px; padding: 2rem;
+  overflow-x: auto;
 }
 .minimal-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
 .minimal-table th {
