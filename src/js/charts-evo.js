@@ -101,6 +101,10 @@ if (svgChart && evoData.length) {
 (function () {
   if (typeof invHistData === "undefined" || !invHistData.length) return;
 
+  let invCompareActive = false;
+  let activePeriod = "MAX";
+  const hasBench = typeof benchInvHistData !== "undefined" && benchInvHistData.length > 0;
+
   function renderInvAxes(data, minY, maxY) {
     const g = document.getElementById("inv-chart-axes");
     if (!g) return;
@@ -121,6 +125,7 @@ if (svgChart && evoData.length) {
   }
 
   function changeInvTimeframe(period, btnEl) {
+    activePeriod = period;
     document.querySelectorAll(".tf-btn-inv").forEach(b => b.classList.remove("active"));
     if (btnEl) btnEl.classList.add("active");
     const maxT = Math.max(...invHistData.map(d => d.t)), day = 86400000;
@@ -130,24 +135,55 @@ if (svgChart && evoData.length) {
     else if (period === "1M") cutoff = maxT - 30 * day;
     else if (period === "YTD") { const y = new Date(maxT).getFullYear(); cutoff = new Date(y, 0, 1).getTime(); }
     else if (period === "1Y") cutoff = maxT - 365 * day;
+
     const filtered = invHistData.filter(d => d.t >= cutoff);
     if (!filtered.length) return;
+
+    const benchFiltered = (invCompareActive && hasBench)
+      ? benchInvHistData.filter(d => d.t >= cutoff) : [];
+
     const minX = Math.min(...filtered.map(d => d.t)), maxX = Math.max(...filtered.map(d => d.t));
-    const minY = Math.min(...filtered.map(d => d.v)), maxY = Math.max(...filtered.map(d => d.v));
-    const rx = maxX === minX ? 1 : maxX - minX, ry = maxY === minY ? 1 : maxY - minY;
+    const rx = maxX === minX ? 1 : maxX - minX;
+
+    let minY, maxY;
+    if (benchFiltered.length) {
+      const allV = [...filtered.map(d => d.v), ...benchFiltered.map(d => d.v)];
+      minY = Math.min(...allV); maxY = Math.max(...allV);
+    } else {
+      minY = Math.min(...filtered.map(d => d.v)); maxY = Math.max(...filtered.map(d => d.v));
+    }
+    const ry = maxY === minY ? 1 : maxY - minY;
+
     filtered.forEach(d => { d.x = 70 + (d.t - minX) / rx * 910; d.y = 260 - (d.v - minY) / ry * 220; });
     let pl = `M ${filtered[0].x} ${filtered[0].y}`;
     for (let i = 1; i < filtered.length; i++) pl += ` L ${filtered[i].x} ${filtered[i].y}`;
     document.getElementById("inv-chart-line").setAttribute("d", pl);
     document.getElementById("inv-chart-area").setAttribute("d", pl + ` L ${filtered[filtered.length - 1].x} 280 L ${filtered[0].x} 280 Z`);
+
+    const benchLine = document.getElementById("inv-bench-line");
+    if (benchLine) {
+      if (benchFiltered.length) {
+        benchFiltered.forEach(d => { d.x = 70 + (d.t - minX) / rx * 910; d.y = 260 - (d.v - minY) / ry * 220; });
+        let bp = `M ${benchFiltered[0].x} ${benchFiltered[0].y}`;
+        for (let i = 1; i < benchFiltered.length; i++) bp += ` L ${benchFiltered[i].x} ${benchFiltered[i].y}`;
+        benchLine.setAttribute("d", bp);
+        benchLine.style.display = "block";
+      } else {
+        benchLine.style.display = "none";
+      }
+    }
+    window.activeBenchInvData = benchFiltered;
+
     const refLine = document.getElementById("inv-ref-line");
     if (refLine) { refLine.setAttribute("y1", filtered[0].y); refLine.setAttribute("y2", filtered[0].y); }
     document.getElementById("inv-lbl-start").textContent = filtered[0].f;
     document.getElementById("inv-lbl-end").textContent = filtered[filtered.length - 1].f;
     renderInvAxes(filtered, minY, maxY);
+
     const dd = document.getElementById("inv-date-display");
     dd.textContent = period === "MAX" ? `Desde el inicio (${filtered[0].f})` : `${filtered[0].f} — ${filtered[filtered.length - 1].f}`;
     window.invDefaultDateText = dd.textContent;
+
     const diff = filtered[filtered.length - 1].v - filtered[0].v;
     const pct = filtered[0].v ? (diff / Math.abs(filtered[0].v) * 100) : 0;
     const signo = diff >= 0 ? "+" : "", color = diff >= 0 ? "#10b981" : "#ef4444";
@@ -160,11 +196,40 @@ if (svgChart && evoData.length) {
     document.getElementById("inv-area-grad-stop0").setAttribute("stop-color", color);
     const dot = document.getElementById("inv-dot");
     if (dot) dot.style.background = color;
+
+    // Benchmark return badge
+    const brd = document.getElementById("inv-bench-rend-display");
+    if (brd) {
+      if (benchFiltered.length) {
+        const bdiff = benchFiltered[benchFiltered.length - 1].v - benchFiltered[0].v;
+        const bpct = benchFiltered[0].v ? (bdiff / Math.abs(benchFiltered[0].v) * 100) : 0;
+        const bsigno = bdiff >= 0 ? "+" : "";
+        brd.textContent = `MSCI ${bsigno}${formatEur(bdiff)} (${bsigno}${bpct.toFixed(2).replace(".", ",")}%)`;
+        brd.style.display = "inline-block";
+      } else {
+        brd.style.display = "none";
+      }
+    }
+
     window.activeInvData = filtered;
   }
 
   document.querySelectorAll(".tf-btn-inv").forEach(b => b.addEventListener("click", e => changeInvTimeframe(e.target.dataset.period, e.target)));
+
+  const compareBtn = document.getElementById("inv-compare-btn");
+  if (compareBtn && hasBench) {
+    compareBtn.addEventListener("click", () => {
+      invCompareActive = !invCompareActive;
+      compareBtn.classList.toggle("active", invCompareActive);
+      const activeBtn = document.querySelector(".tf-btn-inv.active");
+      changeInvTimeframe(activePeriod, activeBtn);
+    });
+  } else if (compareBtn) {
+    compareBtn.style.display = "none";
+  }
+
   window.activeInvData = invHistData;
+  window.activeBenchInvData = [];
   const invSvg = document.getElementById("inv-svg-chart");
   const invVLine = document.getElementById("inv-v-line");
   const invDot = document.getElementById("inv-dot");
@@ -184,12 +249,16 @@ if (svgChart && evoData.length) {
       if (invValor) { invValor.textContent = cl.vf + " €"; invValor.style.display = "inline-block"; }
       if (invDate) invDate.textContent = cl.f;
       if (invRend) invRend.style.display = "none";
+      const brd = document.getElementById("inv-bench-rend-display");
+      if (brd && invCompareActive) brd.style.display = "none";
     });
     invSvg.addEventListener("mouseleave", () => {
       invVLine.style.display = "none"; invDot.style.display = "none";
       if (invValor) { invValor.textContent = ""; invValor.style.display = "none"; }
       if (invDate) invDate.textContent = window.invDefaultDateText;
       if (invRend) invRend.style.display = "inline-block";
+      const brd = document.getElementById("inv-bench-rend-display");
+      if (brd && invCompareActive && (window.activeBenchInvData || []).length) brd.style.display = "inline-block";
     });
   }
 })();

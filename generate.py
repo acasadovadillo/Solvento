@@ -1285,6 +1285,7 @@ if n_puntos > 0:
         return None
 
     _bench_vals = []
+    _bench_inv_only = []
     for _, _er in evo.iterrows():
         _bv = _bankinter_fix
         for _, _ar in inv_apor.iterrows():
@@ -1295,6 +1296,7 @@ if n_puntos > 0:
             if str(_ar.get("Banco", "")).strip() == "Bankinter": continue
             _pb = _msci_p(_afd.date()); _pn = _msci_p(_er["fecha"])
             _bv += _ac * (_pn / _pb) if (_pb and _pb > 0 and _pn) else _ac
+        _bench_inv_only.append(round(_bv, 2))
         _bench_vals.append(round(_bv + _er["patrimonio_acum"], 2))
 
     # Benchmark stats
@@ -1347,6 +1349,18 @@ if n_puntos > 0:
             f'vf:\'{fmt_eur(_nv2).replace(" €","")}\',x:{_xs[_ni2]:.2f},y:{_inv_y_v[_ni2]:.2f}}}'
         )
     inv_hist_js = "[" + ",".join(_inv_js) + "]"
+
+    _bench_inv_js = []
+    for _ni3 in range(n_puntos):
+        _nd3 = evo["fecha"].iloc[_ni3]
+        _nv3 = _bench_inv_only[_ni3]
+        _ts3 = int(datetime(_nd3.year, _nd3.month, _nd3.day).timestamp() * 1000)
+        _bench_inv_js.append(
+            f'{{t:{_ts3},v:{_nv3:.2f},'
+            f'f:\'{_nd3.strftime("%d/%m/%Y")}\','
+            f'vf:\'{fmt_eur(_nv3).replace(" €","")}\'}}'
+        )
+    bench_inv_hist_js = "[" + ",".join(_bench_inv_js) + "]"
 
     # Y-axis escala combinada (neto + benchmark)
     _all_vals = _neto_vals + _bench_vals
@@ -1406,7 +1420,7 @@ else:
     inv_chart_color = "#10b981"; inv_chart_bg = "rgba(16,185,129,0.15)"
     fmt_inv_rend_chart = "—"; inv_chart_path_d = "M 70 140 L 980 140"
     inv_chart_area_d = "M 70 140 L 980 140 L 980 280 L 70 280 Z"
-    inv_y_axis_svg_chart = ""; _inv_ref_y_v = 140.0; inv_hist_js = "[]"
+    inv_y_axis_svg_chart = ""; _inv_ref_y_v = 140.0; inv_hist_js = "[]"; bench_inv_hist_js = "[]"
 
 portfolio_options = "\n".join(
     f'            <option value="{a["nombre"]}">{a["nombre"]}</option>'
@@ -1487,6 +1501,14 @@ html_out = f"""<!DOCTYPE html>
     }}
     .tf-btn-inv:hover {{ color: #fff; background: #222533; }}
     .tf-btn-inv.active {{ color: #fff; background: #2a2d3a; border: 1px solid #4b5563; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }}
+    #inv-compare-btn {{
+      display: flex; align-items: center; gap: 0.4rem;
+      background: transparent; border: 1px solid #2a2d3a; color: #6b7280;
+      padding: 0.38rem 0.8rem; font-size: 0.76rem; font-weight: 700;
+      border-radius: 8px; cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }}
+    #inv-compare-btn:hover {{ color: #fff; background: rgba(99,102,241,0.1); border-color: #6366f1; }}
+    #inv-compare-btn.active {{ color: #a5b4fc; background: rgba(99,102,241,0.15); border-color: #6366f1; }}
   </style>
 </head>
 <body>
@@ -1797,8 +1819,9 @@ html_out = f"""<!DOCTYPE html>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
         <div>
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución de la cartera</div>
-          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
+          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;flex-wrap:wrap;">
             <div id="inv-rend-display" style="font-size:1.05rem;font-weight:600;color:{inv_chart_color};background:{inv_chart_bg};padding:0.3rem 0.75rem;border-radius:6px;display:inline-block;">{fmt_inv_rend_chart}</div>
+            <div id="inv-bench-rend-display" style="font-size:1.05rem;font-weight:600;color:#a5b4fc;background:rgba(99,102,241,0.13);padding:0.3rem 0.75rem;border-radius:6px;display:none;"></div>
             <div id="inv-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
           </div>
         </div>
@@ -1806,13 +1829,19 @@ html_out = f"""<!DOCTYPE html>
           <div id="inv-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
         </div>
       </div>
-      <div class="timeframe-selector">
-        <button class="tf-btn-inv" data-period="1D">1D</button>
-        <button class="tf-btn-inv" data-period="1W">1W</button>
-        <button class="tf-btn-inv" data-period="1M">1M</button>
-        <button class="tf-btn-inv" data-period="YTD">1YTD</button>
-        <button class="tf-btn-inv" data-period="1Y">1Y</button>
-        <button class="tf-btn-inv active" data-period="MAX">MAX</button>
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+        <div class="timeframe-selector" style="margin-bottom:0;">
+          <button class="tf-btn-inv" data-period="1D">1D</button>
+          <button class="tf-btn-inv" data-period="1W">1W</button>
+          <button class="tf-btn-inv" data-period="1M">1M</button>
+          <button class="tf-btn-inv" data-period="YTD">1YTD</button>
+          <button class="tf-btn-inv" data-period="1Y">1Y</button>
+          <button class="tf-btn-inv active" data-period="MAX">MAX</button>
+        </div>
+        <button id="inv-compare-btn" title="Comparar con MSCI World">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#6366f1;flex-shrink:0;"></span>
+          MSCI World
+        </button>
       </div>
       <div style="position:relative;width:100%;min-height:220px;">
         <svg id="inv-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
@@ -1828,6 +1857,7 @@ html_out = f"""<!DOCTYPE html>
           <line id="inv-ref-line" x1="70" y1="{_inv_ref_y_v:.1f}" x2="980" y2="{_inv_ref_y_v:.1f}" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.7"/>
           <path id="inv-chart-area" d="{inv_chart_area_d}" fill="url(#inv-area-grad)"/>
           <path id="inv-chart-line" d="{inv_chart_path_d}" fill="none" stroke="{inv_chart_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path id="inv-bench-line" d="M 70 140 L 980 140" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 3" opacity="0.9" style="display:none;"/>
           <line id="inv-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
         </svg>
         <div id="inv-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{inv_chart_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
@@ -2071,7 +2101,7 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const invHistData = {inv_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};
+  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const invHistData = {inv_hist_js};const benchInvHistData = {bench_inv_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};
   (function(){{
     const svg = document.getElementById('neto-svg-chart');
     if (!svg || !netoHistData.length) return;
