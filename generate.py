@@ -1486,7 +1486,6 @@ html_out = f"""<!DOCTYPE html>
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del patrimonio neto</div>
           <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
             <div id="neto-rend-display" style="font-size:1.05rem;font-weight:600;color:{neto_color};background:{neto_bg};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_neto_rend}</div>
-            <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:#6b7280;"><span style="display:inline-block;width:18px;height:2px;background:#6b7280;border-top:2px dashed #6b7280;"></span>MSCI World</div>
             <div id="neto-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
           </div>
         </div>
@@ -1505,7 +1504,6 @@ html_out = f"""<!DOCTYPE html>
           <g id="neto-chart-axes">{neto_y_axis_svg}{x_axis_svg}</g>
           <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
           <path id="neto-chart-area" d="{neto_area_d}" fill="url(#neto-area-grad)"/>
-          <path id="bench-chart-line" d="{bench_path_d}" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
           <path id="neto-chart-line" d="{neto_path_d}" fill="none" stroke="{neto_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           <line id="neto-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
         </svg>
