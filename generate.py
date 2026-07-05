@@ -1329,6 +1329,18 @@ if n_puntos > 0:
             f'<text x="984" y="{_nyp+4:.1f}" text-anchor="start" font-size="10" fill="#6b7280">{_nlbl}</text>'
         )
     inv_y_axis_svg_chart = "\n".join(_iy_parts)
+    _inv_js = []
+    for _ni2 in range(n_puntos):
+        _nd2 = evo["fecha"].iloc[_ni2]
+        _nv2 = _inv_vals_raw[_ni2]
+        _nf2 = _nd2.strftime("%d/%m/%Y")
+        _ts_inv = int(datetime(_nd2.year, _nd2.month, _nd2.day).timestamp() * 1000)
+        _inv_js.append(
+            f'{{t:{_ts_inv},v:{_nv2:.2f},'
+            f'f:\'{_nf2}\','
+            f'vf:\'{fmt_eur(_nv2).replace(" €","")}\',x:{_xs[_ni2]:.2f},y:{_inv_y_v[_ni2]:.2f}}}'
+        )
+    inv_hist_js = "[" + ",".join(_inv_js) + "]"
 
     # Y-axis escala combinada (neto + benchmark)
     _all_vals = _neto_vals + _bench_vals
@@ -1388,7 +1400,7 @@ else:
     inv_chart_color = "#10b981"; inv_chart_bg = "rgba(16,185,129,0.15)"
     fmt_inv_rend_chart = "—"; inv_chart_path_d = "M 70 140 L 980 140"
     inv_chart_area_d = "M 70 140 L 980 140 L 980 280 L 70 280 Z"
-    inv_y_axis_svg_chart = ""; _inv_ref_y_v = 140.0
+    inv_y_axis_svg_chart = ""; _inv_ref_y_v = 140.0; inv_hist_js = "[]"
 
 portfolio_options = "\n".join(
     f'            <option value="{a["nombre"]}">{a["nombre"]}</option>'
@@ -1462,6 +1474,13 @@ html_out = f"""<!DOCTYPE html>
       .nav-tabs {{ display: none !important; }}
       .nav-hamburger {{ display: flex !important; }}
     }}
+    .tf-btn-inv {{
+      background: transparent; border: none; color: #6b7280;
+      padding: 0.4rem 0.8rem; font-size: 0.76rem; font-weight: 700;
+      border-radius: 7px; cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }}
+    .tf-btn-inv:hover {{ color: #fff; background: #222533; }}
+    .tf-btn-inv.active {{ color: #fff; background: #2a2d3a; border: 1px solid #4b5563; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }}
   </style>
 </head>
 <body>
@@ -1772,30 +1791,43 @@ html_out = f"""<!DOCTYPE html>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
         <div>
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución de la cartera</div>
-          <div style="font-size:1.05rem;font-weight:600;color:{inv_chart_color};background:{inv_chart_bg};padding:0.3rem 0.75rem;border-radius:6px;display:inline-block;">{fmt_inv_rend_chart}</div>
+          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
+            <div id="inv-rend-display" style="font-size:1.05rem;font-weight:600;color:{inv_chart_color};background:{inv_chart_bg};padding:0.3rem 0.75rem;border-radius:6px;display:inline-block;">{fmt_inv_rend_chart}</div>
+            <div id="inv-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
+          </div>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
+          <div id="inv-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
         </div>
       </div>
+      <div class="timeframe-selector">
+        <button class="tf-btn-inv" data-period="1D">1D</button>
+        <button class="tf-btn-inv" data-period="1W">1W</button>
+        <button class="tf-btn-inv" data-period="1M">1M</button>
+        <button class="tf-btn-inv" data-period="YTD">1YTD</button>
+        <button class="tf-btn-inv" data-period="1Y">1Y</button>
+        <button class="tf-btn-inv active" data-period="MAX">MAX</button>
+      </div>
       <div style="position:relative;width:100%;min-height:220px;">
-        <svg viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;">
+        <svg id="inv-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
           <defs>
             <linearGradient id="inv-area-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="{inv_chart_color}" stop-opacity="0.22"/>
-              <stop offset="100%" stop-color="{inv_chart_color}" stop-opacity="0.0"/>
+              <stop id="inv-area-grad-stop0" offset="0%" stop-color="{inv_chart_color}" stop-opacity="0.22"/>
+              <stop id="inv-area-grad-stop1" offset="100%" stop-color="{inv_chart_color}" stop-opacity="0.0"/>
             </linearGradient>
           </defs>
-          <g>{inv_y_axis_svg_chart}
+          <g id="inv-chart-axes">{inv_y_axis_svg_chart}
 {x_axis_svg}</g>
           <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
-          <line x1="70" y1="{_inv_ref_y_v:.1f}" x2="980" y2="{_inv_ref_y_v:.1f}" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.7"/>
-          <path d="{inv_chart_area_d}" fill="url(#inv-area-grad)"/>
-          <path d="{inv_chart_path_d}" fill="none" stroke="{inv_chart_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line id="inv-ref-line" x1="70" y1="{_inv_ref_y_v:.1f}" x2="980" y2="{_inv_ref_y_v:.1f}" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.7"/>
+          <path id="inv-chart-area" d="{inv_chart_area_d}" fill="url(#inv-area-grad)"/>
+          <path id="inv-chart-line" d="{inv_chart_path_d}" fill="none" stroke="{inv_chart_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line id="inv-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
         </svg>
+        <div id="inv-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{inv_chart_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
-        <span>{fecha_ini_lbl}</span><span>{fecha_fin_lbl}</span>
+        <span id="inv-lbl-start">{fecha_ini_lbl}</span><span id="inv-lbl-end">{fecha_fin_lbl}</span>
       </div>
     </div>
   </div>
@@ -2033,7 +2065,7 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};
+  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const invHistData = {inv_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};
   (function(){{
     const svg = document.getElementById('neto-svg-chart');
     if (!svg || !netoHistData.length) return;
