@@ -796,6 +796,10 @@ def legend_patrimonio():
         extra = ""
         if is_first:
             extra += "margin-top:-1.25rem;padding-top:1.25rem;"
+        else:
+            # CSS .legend-item has padding-bottom:0.8rem but no padding-top, so
+            # without this the content sticks to the top edge of its row.
+            extra += "padding-top:0.8rem;"
         if is_last:
             extra += "margin-bottom:-1.25rem;padding-bottom:1.25rem;"
         br_t = "13px" if is_first else "8px"
