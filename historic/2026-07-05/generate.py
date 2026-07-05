@@ -1069,7 +1069,7 @@ def tabla_aportaciones():
             unidades_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
             precio_td   = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
         rows.append(
-            f'<tr class="table-row">'
+            f'<tr class="table-row" data-nombre="{html_escape(nombre)}">'
             f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.82rem;font-family:ui-monospace,monospace;white-space:nowrap;">{fecha_s}</td>'
             f'<td style="{TD}text-align:left;">'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.88rem;">{html_escape(nombre)}</div>'
@@ -1519,6 +1519,13 @@ else:
     print("   BTC histórico MAX:   no disponible (se usarán los 365d de CoinGecko)")
 
 _mov_html = tabla_movimientos_html()
+
+# Opciones únicas para el filtro del historial de aportaciones
+_apor_nombres = sorted({str(r.get("Nombre","")) for _, r in inv_apor.iterrows() if str(r.get("Nombre","")).strip()})
+apor_filter_options = '<option value="">Todos los activos</option>\n' + "\n".join(
+    f'<option value="{html_escape(n)}">{html_escape(n)}</option>'
+    for n in _apor_nombres
+)
 
 html_out = f"""<!DOCTYPE html>
 <html lang="es">
@@ -2025,11 +2032,16 @@ html_out = f"""<!DOCTYPE html>
   <!-- ══ HISTORIAL DE APORTACIONES ══ -->
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;padding-bottom:2rem;">
     <div class="table-container">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
         <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Historial de aportaciones</div>
-        <div style="font-size:0.82rem;color:#9ca3af;">{len(inv_apor)} compras · {fmt_eur(total_coste_inv) if hay_rentabilidad else "—"} invertido</div>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <select id="apor-filter" style="background:#12141f;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:6px;padding:0.3rem 0.65rem;font-size:0.8rem;cursor:pointer;outline:none;">
+            {apor_filter_options}
+          </select>
+          <span id="apor-count" style="font-size:0.82rem;color:#9ca3af;">{len(inv_apor)} compras · {fmt_eur(total_coste_inv) if hay_rentabilidad else "—"} invertido</span>
+        </div>
       </div>
-      <table class="minimal-table">
+      <table class="minimal-table" id="apor-table">
         <thead><tr>
           <th style="text-align:left;">Fecha</th>
           <th style="text-align:left;">Activo</th>
@@ -2042,6 +2054,25 @@ html_out = f"""<!DOCTYPE html>
       </table>
     </div>
   </div>
+  <script>
+  (function() {{
+    const flt = document.getElementById('apor-filter');
+    const cnt = document.getElementById('apor-count');
+    const totalTxt = cnt ? cnt.textContent : '';
+    if (!flt) return;
+    flt.addEventListener('change', function() {{
+      const val = this.value;
+      const rows = document.querySelectorAll('#apor-table tbody tr[data-nombre]');
+      let visible = 0, visibleCost = 0;
+      rows.forEach(function(row) {{
+        const show = !val || row.dataset.nombre === val;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+      }});
+      if (cnt) cnt.textContent = val ? visible + ' compras' : totalTxt;
+    }});
+  }})();
+  </script>
 
   <hr style="border:0;height:1px;background:linear-gradient(to right,transparent,#2a2d3a,transparent);margin:3rem 0;">
 
