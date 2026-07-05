@@ -1452,24 +1452,6 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
 
-  <div class="table-container">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Inversiones</div>
-      <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(total_inversiones)}</div>
-    </div>
-    <table class="minimal-table">
-      <thead><tr>
-        <th style="text-align:left;">Activo</th>
-        <th style="text-align:left;">ISIN</th>
-        <th style="text-align:right;">Valor actual</th>
-        <th style="text-align:right;">Invertido</th>
-        <th style="text-align:right;">Rentabilidad</th>
-        <th style="text-align:right;">Peso</th>
-        <th style="text-align:right;">Mercado</th>
-      </tr></thead>
-      <tbody>{tabla_activos()}</tbody>
-    </table>
-  </div>
 </div>
 
 
