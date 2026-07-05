@@ -1443,47 +1443,8 @@ html_out = f"""<!DOCTYPE html>
     <h2 class="section-title">Patrimonio</h2>
     <div class="section-subtitle">{fmt_eur(patrimonio_neto)}</div>
   </div>
-  <!-- ══ GRÁFICO PATRIMONIO NETO TOTAL ══ -->
-  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
-    <div class="dashboard-panel">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
-        <div>
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del patrimonio neto</div>
-          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
-            <div id="neto-rend-display" style="font-size:1.05rem;font-weight:600;color:{neto_color};background:{neto_bg};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_neto_rend}</div>
-            <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:#6b7280;"><span style="display:inline-block;width:18px;height:2px;background:#6b7280;border-top:2px dashed #6b7280;"></span>MSCI World</div>
-            <div id="neto-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div id="neto-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
-        </div>
-      </div>
-      <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
-        <svg id="neto-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
-          <defs>
-            <linearGradient id="neto-area-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="{neto_color}" stop-opacity="0.2"/>
-              <stop offset="100%" stop-color="{neto_color}" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <g id="neto-chart-axes">{neto_y_axis_svg}{x_axis_svg}</g>
-          <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
-          <path id="neto-chart-area" d="{neto_area_d}" fill="url(#neto-area-grad)"/>
-          <path id="bench-chart-line" d="{bench_path_d}" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
-          <path id="neto-chart-line" d="{neto_path_d}" fill="none" stroke="{neto_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <line id="neto-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
-        </svg>
-        <div id="neto-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{neto_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
-        <span>{fecha_ini_lbl}</span><span>{fecha_fin_lbl}</span>
-      </div>
-    </div>
-  </div>
-
   <!-- ══ HUB CARDS ══ -->
-  <div style="max-width:1400px;margin:2rem auto 2rem;width:100%;">
+  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
     <div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;">
       <div style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
       <div style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
@@ -1518,6 +1479,45 @@ html_out = f"""<!DOCTYPE html>
         <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">0% del patrimonio &nbsp;→</div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ══ GRÁFICO PATRIMONIO NETO TOTAL ══ -->
+  <div style="max-width:1400px;margin:2rem auto 2rem;width:100%;">
+    <div class="dashboard-panel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del patrimonio neto</div>
+          <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
+            <div id="neto-rend-display" style="font-size:1.05rem;font-weight:600;color:{neto_color};background:{neto_bg};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_neto_rend}</div>
+            <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:#6b7280;"><span style="display:inline-block;width:18px;height:2px;background:#6b7280;border-top:2px dashed #6b7280;"></span>MSCI World</div>
+            <div id="neto-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div id="neto-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
+        </div>
+      </div>
+      <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
+        <svg id="neto-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
+          <defs>
+            <linearGradient id="neto-area-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="{neto_color}" stop-opacity="0.2"/>
+              <stop offset="100%" stop-color="{neto_color}" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <g id="neto-chart-axes">{neto_y_axis_svg}{x_axis_svg}</g>
+          <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
+          <path id="neto-chart-area" d="{neto_area_d}" fill="url(#neto-area-grad)"/>
+          <path id="bench-chart-line" d="{bench_path_d}" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+          <path id="neto-chart-line" d="{neto_path_d}" fill="none" stroke="{neto_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line id="neto-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+        </svg>
+        <div id="neto-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{neto_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
+        <span>{fecha_ini_lbl}</span><span>{fecha_fin_lbl}</span>
+      </div>
     </div>
   </div>
 
