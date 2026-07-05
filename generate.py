@@ -786,8 +786,9 @@ def sectors_patrimonio():
 def legend_patrimonio():
     parts = []
     for _, r in saldos.iterrows():
+        cuenta_js = html_escape(r["cuenta"]).replace("'", "\\'")
         parts.append(f"""
-<div class="legend-item">
+<div class="legend-item" onclick="showMovimientos('{cuenta_js}')" style="cursor:pointer;border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background='#ffffff0d'" onmouseout="this.style.background='transparent'">
   <div style="display:flex;align-items:center;justify-content:center;width:30px;">{r["icono"]}</div>
   <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;">
     <div style="display:flex;align-items:center;gap:0.5rem;">
