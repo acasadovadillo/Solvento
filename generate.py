@@ -1262,10 +1262,16 @@ def _inv_en(d):
         if _units2 <= 0:
             continue
         _dpd, _dpp = _tdp.get(_tk2, ([], []))
+        _pfound = False
         for _i3 in range(len(_dpd) - 1, -1, -1):
             if _dpd[_i3] <= d:
                 total += _units2 * _dpp[_i3]
+                _pfound = True
                 break
+        # Fallback: if Yahoo only returned recent data (e.g. 1 point) and date d
+        # predates it, use the earliest known price to avoid a spike in the chart.
+        if not _pfound and _dpp:
+            total += _units2 * _dpp[0]
     return total
 
 if n_puntos > 0:
