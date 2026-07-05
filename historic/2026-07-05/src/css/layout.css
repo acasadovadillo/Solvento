@@ -1,0 +1,61 @@
+/* ── Navbar ── */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 64px;
+  background: #1a1d27; border-bottom: 1px solid #2a2d3a;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5rem; z-index: 1000;
+}
+.navbar-brand h1 { font-size: 1.1rem; font-weight: 700; color: #fff; }
+.navbar-brand .navbar-date { color: #6b7280; font-size: 0.72rem; }
+.nav-select {
+  appearance: none; -webkit-appearance: none;
+  background: #2a2d3a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
+  color: #fff; border: 1px solid #3b4054; border-radius: 8px;
+  font-size: 0.82rem; font-weight: 600; font-family: inherit;
+  padding: 0.45rem 2.2rem 0.45rem 0.9rem;
+  cursor: pointer; outline: none; transition: background 0.2s, border-color 0.2s;
+  min-width: 140px;
+}
+.nav-select:hover, .nav-select:focus { background-color: #3b4054; border-color: #4b5063; }
+.nav-select option { background: #1a1d27; color: #fff; }
+
+/* ── Pages (SPA) ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── Section headers ── */
+.header-block { max-width: 1400px; width: 100%; margin: 3rem auto 2rem; text-align: left; }
+.section-title {
+  font-size: 0.95rem; font-weight: 600; color: #fff;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 0.4rem; opacity: 0.9;
+}
+.section-subtitle { font-size: 2.2rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.section-divider {
+  border: 0; height: 1px;
+  background: linear-gradient(to right, transparent, #2a2d3a, transparent);
+  margin: 3rem 0;
+}
+
+footer { text-align: center; margin-top: 5rem; font-size: 0.75rem; color: #3a3d4a; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  body { padding: 4.5rem 1rem 2rem; }
+  .dashboard-main-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+  .chart-container-double { gap: 1.5rem; }
+  .chart-block { min-width: unset; width: 100%; }
+  .hero-card { padding: 1.5rem; }
+  .hero-value { font-size: 2.2rem; }
+  .hero-breakdown { gap: 1rem; }
+  .hero-item { min-width: 130px; padding: 0.75rem 1rem; }
+  .gastos-layout { grid-template-columns: 1fr; }
+  .table-container { padding: 1.25rem; }
+  .minimal-table th, .minimal-table td { padding: 0.6rem 0.6rem; font-size: 0.82rem; }
+}
+@media (max-width: 500px) {
+  .hero-value { font-size: 1.8rem; }
+  .section-subtitle { font-size: 1.6rem; }
+  .hero-breakdown { flex-direction: column; }
+  .hero-item { width: 100%; }
+}
