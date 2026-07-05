@@ -1300,6 +1300,36 @@ if n_puntos > 0:
     diff_signo      = "+" if diff_vs_bench >= 0 else ""
     diff_color      = "#10b981" if diff_vs_bench >= 0 else "#ef4444"
 
+    _xs = evo["x_svg"].tolist()
+
+    # ── Evolución de la cartera de inversiones ──
+    _inv_vals_raw = [round(_inv_en(row["fecha"]), 2) for _, row in evo.iterrows()]
+    _inv_min_v = min(_inv_vals_raw)
+    _inv_max_v = max(_inv_vals_raw)
+    _inv_rng_v = (_inv_max_v - _inv_min_v) if _inv_max_v != _inv_min_v else 1.0
+    _inv_y_v   = [260 - (v - _inv_min_v) / _inv_rng_v * 220 for v in _inv_vals_raw]
+    inv_chart_color = "#10b981" if total_rent_inv_pct >= 0 else "#ef4444"
+    inv_chart_bg    = "rgba(16,185,129,0.15)" if total_rent_inv_pct >= 0 else "rgba(239,68,68,0.15)"
+    inv_rent_signo  = "+" if total_rent_inv_pct >= 0 else ""
+    inv_gan_signo   = "+" if total_ganancia_inv >= 0 else ""
+    fmt_inv_rend_chart = f"{inv_rent_signo}{total_rent_inv_pct:.2f}% ({inv_gan_signo}{fmt_eur(total_ganancia_inv)})" if total_coste_inv > 0 else "—"
+    _inv_ref_y_v = max(20.0, min(260.0, 260 - (total_coste_inv - _inv_min_v) / _inv_rng_v * 220))
+    _inv_pts = [f"M {_xs[0]:.2f} {_inv_y_v[0]:.2f}"] + \
+               [f"L {_xs[i]:.2f} {_inv_y_v[i]:.2f}" for i in range(1, len(_inv_vals_raw))]
+    inv_chart_path_d = " ".join(_inv_pts)
+    inv_chart_area_d = f"{inv_chart_path_d} L {_xs[-1]:.2f} 280 L {_xs[0]:.2f} 280 Z"
+    _iy_parts = []
+    for _ni in range(5):
+        _nf = _ni / 4
+        _nv = _inv_min_v + (_inv_max_v - _inv_min_v) * _nf
+        _nyp = 260 - _nf * 220
+        _nlbl = (f"{_nv/1000:.1f}".replace(".", ",") + "k") if abs(_nv) >= 1000 else str(round(_nv))
+        _iy_parts.append(
+            f'<line x1="70" y1="{_nyp:.1f}" x2="980" y2="{_nyp:.1f}" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="3 3"/>'
+            f'<text x="984" y="{_nyp+4:.1f}" text-anchor="start" font-size="10" fill="#6b7280">{_nlbl}</text>'
+        )
+    inv_y_axis_svg_chart = "\n".join(_iy_parts)
+
     # Y-axis escala combinada (neto + benchmark)
     _all_vals = _neto_vals + _bench_vals
     _neto_min  = min(_all_vals)
@@ -1308,7 +1338,6 @@ if n_puntos > 0:
     _neto_y    = [260 - (v - _neto_min) / _neto_rng * 220 for v in _neto_vals]
     _bench_y   = [260 - (v - _neto_min) / _neto_rng * 220 for v in _bench_vals]
 
-    _xs = evo["x_svg"].tolist()
     _neto_pts_svg = [f"M {_xs[0]:.2f} {_neto_y[0]:.2f}"] + \
                     [f"L {_xs[i]:.2f} {_neto_y[i]:.2f}" for i in range(1, len(_neto_vals))]
     neto_path_d = " ".join(_neto_pts_svg)
@@ -1356,6 +1385,10 @@ else:
     neto_hist_js = "[]"
     bench_rent_pct = float("nan"); diff_vs_bench = float("nan")
     bench_valor = 0.0; bench_signo = "+"; diff_signo = "+"; diff_color = "#6b7280"
+    inv_chart_color = "#10b981"; inv_chart_bg = "rgba(16,185,129,0.15)"
+    fmt_inv_rend_chart = "—"; inv_chart_path_d = "M 70 140 L 980 140"
+    inv_chart_area_d = "M 70 140 L 980 140 L 980 280 L 70 280 Z"
+    inv_y_axis_svg_chart = ""; _inv_ref_y_v = 140.0
 
 portfolio_options = "\n".join(
     f'            <option value="{a["nombre"]}">{a["nombre"]}</option>'
@@ -1729,6 +1762,40 @@ html_out = f"""<!DOCTYPE html>
           <div style="font-size:1.4rem;font-weight:700;color:{diff_color};">{f'{diff_signo}{diff_vs_bench:.2f}%' if not math.isnan(diff_vs_bench) else '—'}</div>
           <div style="font-size:0.82rem;color:#9ca3af;margin-top:0.15rem;">{'sobre el índice' if not math.isnan(diff_vs_bench) else ''}</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EVOLUCIÓN DE LA CARTERA ══ -->
+  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
+    <div class="dashboard-panel" style="padding:1.5rem 2rem 1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+        <div>
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución de la cartera</div>
+          <div style="font-size:1.05rem;font-weight:600;color:{inv_chart_color};background:{inv_chart_bg};padding:0.3rem 0.75rem;border-radius:6px;display:inline-block;">{fmt_inv_rend_chart}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
+        </div>
+      </div>
+      <div style="position:relative;width:100%;min-height:220px;">
+        <svg viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;">
+          <defs>
+            <linearGradient id="inv-area-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="{inv_chart_color}" stop-opacity="0.22"/>
+              <stop offset="100%" stop-color="{inv_chart_color}" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <g>{inv_y_axis_svg_chart}
+{x_axis_svg}</g>
+          <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="70" y1="{_inv_ref_y_v:.1f}" x2="980" y2="{_inv_ref_y_v:.1f}" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.7"/>
+          <path d="{inv_chart_area_d}" fill="url(#inv-area-grad)"/>
+          <path d="{inv_chart_path_d}" fill="none" stroke="{inv_chart_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
+        <span>{fecha_ini_lbl}</span><span>{fecha_fin_lbl}</span>
       </div>
     </div>
   </div>
