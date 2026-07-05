@@ -54,6 +54,12 @@ ISIN_YF_MAP = {
 }
 
 CAT_COLORES_INV  = {"Renta variable": "#3b82f6", "Renta fija": "#10b981"}
+
+# Objetivo de asignación por categoría (%) — editar aquí para ajustar el target
+OBJETIVO_ASIGNACION = {
+    "Renta variable": 60.0,
+    "Renta fija":     40.0,
+}
 TIPO_COLORES_INV = {"ETF": "#8b5cf6", "Criptoactivo": "#f59e0b",
                     "Acciones": "#ec4899", "Fondo de inversión": "#14b8a6"}
 
@@ -781,16 +787,30 @@ def sectors_donut(df, label_col, valor_col):
         )
     return "\n".join(parts)
 
-def legend_donut(df, label_col):
+def legend_donut(df, label_col, targets=None):
     parts = []
     for _, r in df.iterrows():
+        lbl = str(r[label_col])
+        pct_actual = r["pct"]
+        target = (targets or {}).get(lbl)
+        if target is not None:
+            dev = pct_actual - target
+            dev_color = "#10b981" if dev >= 0 else "#ef4444"
+            dev_str = f'{"+" if dev >= 0 else ""}{dev:.1f}pp'
+            target_badge = (f'<span style="font-size:0.68rem;color:{dev_color};'
+                            f'background:{dev_color}22;padding:0.1rem 0.4rem;'
+                            f'border-radius:4px;font-weight:600;margin-left:0.3rem;" '
+                            f'title="Objetivo: {target:.0f}%">{dev_str}</span>')
+        else:
+            target_badge = ""
         parts.append(f"""
     <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.85rem;width:100%;max-width:260px;margin:0.2rem 0;">
       <div style="display:flex;align-items:center;gap:0.5rem;">
         <span style="width:9px;height:9px;background:{r["accent"]};border-radius:50%;flex-shrink:0;"></span>
-        <span style="color:#9ca3af;font-weight:500;">{html_escape(str(r[label_col]))}</span>
+        <span style="color:#9ca3af;font-weight:500;">{html_escape(lbl)}</span>
+        {target_badge}
       </div>
-      <span style="color:#ffffff;font-weight:600;">{fmt_pct(r["pct"])}</span>
+      <span style="color:#ffffff;font-weight:600;">{fmt_pct(pct_actual)}</span>
     </div>""")
     return "\n".join(parts)
 
@@ -1036,13 +1056,15 @@ def tabla_activos():
                        f'</td>')
         else:
             _val_td = f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;">{fmt_eur(r["importe"])}</td>'
+        _isin_display = html_escape(str(r["ISIN"])) if str(r.get("ISIN","")).strip() not in ("-","","nan") else ""
         rows.append(
             f'<tr class="table-row">'
             f'<td style="{TD}text-align:left;">'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.9rem;">{html_escape(str(r["Nombre"]))}</div>'
-            f'<div style="font-size:0.75rem;color:#6b7280;margin-top:0.15rem;">{html_escape(str(r["tipo"]))}</div>'
+            f'<div style="font-size:0.75rem;color:#6b7280;margin-top:0.15rem;">{html_escape(str(r["tipo"]))}'
+            + (f'<span style="font-family:ui-monospace,monospace;margin-left:0.5rem;color:#4b5563;">{_isin_display}</span>' if _isin_display else '') +
+            f'</div>'
             f'</td>'
-            f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.85rem;font-family:ui-monospace,monospace;">{html_escape(str(r["ISIN"]))}</td>'
             f'{_val_td}'
             f'{coste_td}{rent_td}'
             f'<td style="{TD}text-align:right;color:#3b82f6;font-weight:600;font-size:0.9rem;">{fmt_pct(r["pct"])}</td>'
@@ -1513,6 +1535,20 @@ portfolio_options = "\n".join(
     for nm in _bk_option_names if nm
 ) if any(_bk_option_names) else "")
 
+# Aportaciones del mes actual
+_hoy_date = date.today()
+_mes_inicio = date(_hoy_date.year, _hoy_date.month, 1)
+_mes_ant_inicio = date(_hoy_date.year, _hoy_date.month - 1, 1) if _hoy_date.month > 1 else date(_hoy_date.year - 1, 12, 1)
+_apor_mes = inv_apor[inv_apor["_fecha"].dt.date >= _mes_inicio] if len(inv_apor) > 0 else inv_apor
+_apor_mes_ant = inv_apor[(inv_apor["_fecha"].dt.date >= _mes_ant_inicio) & (inv_apor["_fecha"].dt.date < _mes_inicio)] if len(inv_apor) > 0 else inv_apor
+_total_mes = round(_apor_mes["_coste_n"].sum(), 2) if len(_apor_mes) > 0 else 0.0
+_total_mes_ant = round(_apor_mes_ant["_coste_n"].sum(), 2) if len(_apor_mes_ant) > 0 else 0.0
+_n_apor_mes = len(_apor_mes)
+_MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+             "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+_mes_nombre = _MESES_ES[_hoy_date.month - 1]
+_delta_mes = _total_mes - _total_mes_ant
+
 msci_history = fetch_msci_history()
 if msci_history:
     msci_history_js = "[" + ",".join(f"[{p[0]},{p[1]}]" for p in msci_history) + "]"
@@ -1880,6 +1916,10 @@ html_out = f"""<!DOCTYPE html>
         <span class="hero-item-label">Rentabilidad</span>
         <span class="hero-item-value" style="color:{'#10b981' if total_rent_inv_pct >= 0 else '#ef4444'};">{('+' if total_rent_inv_pct >= 0 else '') + f'{total_rent_inv_pct:.2f}%' if hay_rentabilidad else '—'}</span>
       </div>
+      <div class="hero-item" title="Aportado en {_mes_nombre} ({_n_apor_mes} compras)">
+        <span class="hero-item-label">{_mes_nombre}</span>
+        <span class="hero-item-value" style="color:#e5e7eb;">{fmt_eur(_total_mes) if _n_apor_mes > 0 else '—'}{'<span style="display:block;font-size:0.68rem;color:' + ('#10b981' if _delta_mes >= 0 else '#ef4444') + ';font-weight:600;margin-top:0.1rem;">' + ('+' if _delta_mes >= 0 else '') + fmt_eur(_delta_mes).replace(' €','') + ' vs mes ant.</span>' if _total_mes_ant > 0 else ''}</span>
+      </div>
     </div>
   </div>
 
@@ -1948,7 +1988,7 @@ html_out = f"""<!DOCTYPE html>
           <span style="font-size:0.55rem;color:#6b7280;text-transform:uppercase;margin-top:0.2rem;">Total</span>
         </div>
       </div>
-      <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:0.5rem;">{legend_donut(inv_cat, "categoria")}</div>
+      <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:0.5rem;">{legend_donut(inv_cat, "categoria", targets=OBJETIVO_ASIGNACION)}</div>
     </div>
     <div class="chart-block">
       <div class="chart-block-title">Distribución por activos</div>
@@ -1967,7 +2007,6 @@ html_out = f"""<!DOCTYPE html>
     <table class="minimal-table">
       <thead><tr>
         <th style="text-align:left;">Activo</th>
-        <th style="text-align:left;">ISIN</th>
         <th style="text-align:right;">Valor actual</th>
         <th style="text-align:right;">Invertido</th>
         <th style="text-align:right;">Rentabilidad</th>
