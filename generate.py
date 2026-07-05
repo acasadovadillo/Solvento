@@ -1393,7 +1393,6 @@ html_out = f"""<!DOCTYPE html>
       <li onclick="navSelect('cuentas','Cashflow')">Cashflow</li>
       <li onclick="navSelect('movimientos','Movimientos')">Movimientos</li>
       <li onclick="navSelect('inversiones','Inversiones')">Inversiones</li>
-      <li onclick="navSelect('explorar','Explorar')">Explorar</li>
     </ul>
   </div>
 </nav>
@@ -1811,15 +1810,14 @@ html_out = f"""<!DOCTYPE html>
       </table>
     </div>
   </div>
-</div>
 
-<!-- ══ PÁGINA 4: EXPLORAR ACTIVOS ══ -->
-<div class="page" id="page-explorar">
+  <hr style="border:0;height:1px;background:linear-gradient(to right,transparent,#2a2d3a,transparent);margin:3rem 0;">
+
   <div style="max-width:1400px;margin:0 auto 2rem;">
     <div style="margin-top:1.5rem;margin-bottom:2rem;">
-      <h1 style="font-size:2.4rem;font-weight:800;color:#ffffff;line-height:1.1;margin:0 0 0.5rem 0;">
+      <h2 style="font-size:2rem;font-weight:800;color:#ffffff;line-height:1.1;margin:0 0 0.5rem 0;">
         Explorar <span style="font-style:italic;color:#3b82f6;">activos</span>
-      </h1>
+      </h2>
       <p style="color:#6b7280;font-size:0.92rem;margin:0;">
         Los {len(inv_raw)} activos de tu portafolio. Busca o filtra para explorarlos.
       </p>
@@ -1921,6 +1919,7 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
 </div>
+<!-- fin page-inversiones -->
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
   <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};
