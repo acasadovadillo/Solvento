@@ -547,6 +547,10 @@ def _cagr(r):
     return (math.pow(r["importe"] / r["coste_total"], 1.0 / anos) - 1) * 100 if anos >= 0.01 else float("nan")
 
 inv_raw["cagr"] = inv_raw.apply(_cagr, axis=1)
+inv_raw["_anos"] = inv_raw.apply(
+    lambda r: ((_hoy - pd.Timestamp(r["fecha_primera"])).days / 365.25)
+              if pd.notna(r.get("fecha_primera")) else 0.0, axis=1
+)
 
 # ── Totales ──
 total_inversiones  = round(inv_raw["importe"].dropna().sum(), 2)
@@ -990,17 +994,27 @@ def tabla_activos():
     rows = []
     for _, r in inv_raw.sort_values("importe", ascending=False).iterrows():
         ticker = r.get("ticker_yf")
+        _isin_r = str(r.get("ISIN", "")).strip()
         if pd.notna(ticker) and ticker:
             elem_id = "mkt-" + re.sub(r"[^A-Za-z0-9]", "_", str(ticker))
             price_td = (f'<td id="{elem_id}" style="{TD}text-align:right;color:#f59e0b;font-weight:600;'
                         f'font-size:0.9rem;font-family:ui-monospace,monospace;" data-ticker="{ticker}">—</td>')
+        elif _isin_r in _bk_last_nav:
+            _bk_d, _bk_v = _bk_last_nav[_isin_r]
+            _bk_d_str = _bk_d.strftime("%d/%m/%Y") if hasattr(_bk_d, "strftime") else str(_bk_d)
+            price_td = (f'<td style="{TD}text-align:right;">'
+                        f'<span style="color:#9ca3af;font-weight:600;font-size:0.9rem;font-family:ui-monospace,monospace;">{_bk_v:.5f}</span>'
+                        f'<span style="display:block;font-size:0.68rem;color:#4b5563;">{_bk_d_str}</span>'
+                        f'</td>')
         else:
             price_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">N/D</td>'
         coste_val  = r.get("coste_total")
         ganancia   = r.get("ganancia")
         rent_pct   = r.get("rent_pct")
         cagr_val   = r.get("cagr")
+        _anos_r    = r.get("_anos", 0.0)
         has_coste  = pd.notna(coste_val) and coste_val > 0
+        _show_cagr = pd.notna(cagr_val) and _anos_r >= 1.0 and coste_val >= 100
         if has_coste:
             g_color = "#10b981" if ganancia >= 0 else "#ef4444"
             g_signo = "+" if ganancia >= 0 else ""
@@ -1008,7 +1022,7 @@ def tabla_activos():
             rent_td  = (f'<td style="{TD}text-align:right;">'
                         f'<div style="color:{g_color};font-weight:600;font-size:0.88rem;">{g_signo}{fmt_eur(ganancia)}</div>'
                         f'<div style="color:{g_color};font-size:0.75rem;opacity:0.85;">{g_signo}{rent_pct:.2f}%'
-                        + (f' · CAGR {cagr_val:.1f}%' if pd.notna(cagr_val) else '') +
+                        + (f' · CAGR {cagr_val:.1f}%' if _show_cagr else '') +
                         f'</div></td>')
         else:
             coste_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
@@ -1134,7 +1148,9 @@ def tarjetas_activos_html():
         if has_coste:
             g_color  = "#10b981" if float(ganancia) >= 0 else "#ef4444"
             g_signo  = "+" if float(ganancia) >= 0 else ""
-            cagr_txt = f" · CAGR {cagr_val:.1f}%" if pd.notna(cagr_val) else ""
+            _anos_r2 = r.get("_anos", 0.0)
+            _show_cagr2 = pd.notna(cagr_val) and _anos_r2 >= 1.0 and float(coste_val) >= 100
+            cagr_txt = f" · CAGR {cagr_val:.1f}%" if _show_cagr2 else ""
             rent_html = (
                 f'  <div style="border-top:1px solid #2a2d3a;padding-top:0.6rem;margin-top:0.6rem;'
                 f'display:flex;justify-content:space-between;align-items:center;">\n'
@@ -1255,6 +1271,9 @@ if _BK_NAV_PATH.exists():
     for _bisin, _bgrp in _bk_df.groupby("isin"):
         _bk_nav[str(_bisin)] = (list(_bgrp["fecha"]), list(_bgrp["nav"]))
     print(f"   Bankinter NAV: {len(_bk_nav)} fondos, {len(_bk_df)} puntos cargados")
+
+# Last known NAV per ISIN for display in the tabla_activos Mercado column
+_bk_last_nav = {isin: (_bkd[-1], _bkn[-1]) for isin, (_bkd, _bkn) in _bk_nav.items() if _bkd}
 
 # Inject Bankinter NAV history into portfolio chart data (now that _bk_nav is available)
 for _bisin3, (_bkd3, _bkn3) in _bk_nav.items():
