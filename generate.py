@@ -785,10 +785,13 @@ def sectors_patrimonio():
 
 def legend_patrimonio():
     parts = []
-    for _, r in saldos.iterrows():
+    rows = list(saldos.iterrows())
+    for i, (_, r) in enumerate(rows):
         cuenta_js = html_escape(r["cuenta"]).replace("'", "\\'")
+        top    = "margin-top:-1.25rem;padding-top:1.25rem;border-radius:13px 13px 8px 8px;" if i == 0 else ""
+        bottom = "margin-bottom:-1.25rem;padding-bottom:1.25rem;border-radius:8px 8px 13px 13px;" if i == len(rows)-1 else "border-radius:8px;"
         parts.append(f"""
-<div class="legend-item" onclick="showMovimientos('{cuenta_js}')" style="cursor:pointer;border-radius:8px;transition:background 0.15s;margin-left:-1.25rem;margin-right:-1.25rem;padding-left:1.25rem;padding-right:1.25rem;" onmouseover="this.style.background='#ffffff0d'" onmouseout="this.style.background='transparent'">
+<div class="legend-item" onclick="showMovimientos('{cuenta_js}')" style="cursor:pointer;transition:background 0.15s;margin-left:-1.25rem;margin-right:-1.25rem;padding-left:1.25rem;padding-right:1.25rem;{top}{bottom}" onmouseover="this.style.background='#ffffff0d'" onmouseout="this.style.background='transparent'">
   <div style="display:flex;align-items:center;justify-content:center;width:30px;">{r["icono"]}</div>
   <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;">
     <div style="display:flex;align-items:center;gap:0.5rem;">
