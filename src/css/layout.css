@@ -16,7 +16,7 @@
   transition: background 0.2s, border-color 0.2s; min-width: 140px;
   justify-content: space-between;
 }
-.nav-dropdown:hover .nav-dropdown-btn,
+.nav-dropdown-btn:hover,
 .nav-dropdown-btn:focus { background: #3b4054; border-color: #4b5063; }
 .nav-dropdown-menu {
   display: none; position: absolute; top: calc(100% + 6px); right: 0;
@@ -25,9 +25,8 @@
   min-width: 100%; z-index: 2000;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
-.nav-dropdown:hover .nav-dropdown-menu { display: block; }
 .nav-dropdown-menu li {
-  padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 500; color: #e5e7eb;
+  list-style: none; padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 500; color: #e5e7eb;
   border-radius: 7px; cursor: pointer; white-space: nowrap;
   transition: background 0.15s;
 }
