@@ -828,8 +828,9 @@ def lista_cuentas_simple():
     rows = list(saldos.iterrows())
     for i, (_, r) in enumerate(rows):
         cuenta_js = html_escape(r["cuenta"]).replace("'", "\\'")
-        border = "" if i == len(rows) - 1 else "border-bottom:1px solid #2a2d3a;"
-        parts.append(f"""<div onclick="showMovimientos('{cuenta_js}')" style="display:flex;align-items:center;gap:1rem;padding:0.7rem 2rem;margin:0 -2rem;border-radius:0;cursor:pointer;transition:background 0.15s;{border}" onmouseover="this.style.background='#ffffff08'" onmouseout="this.style.background='transparent'">
+        border_top = "border-top:1px solid #2a2d3a;" if i == 0 else ""
+        border_bot = "" if i == len(rows) - 1 else "border-bottom:1px solid #2a2d3a;"
+        parts.append(f"""<div onclick="showMovimientos('{cuenta_js}')" style="display:flex;align-items:center;gap:1rem;padding:0.7rem 2rem;margin:0 -2rem;border-radius:0;cursor:pointer;transition:background 0.15s;{border_top}{border_bot}" onmouseover="this.style.background='#ffffff08'" onmouseout="this.style.background='transparent'">
   <div style="display:flex;align-items:center;justify-content:center;width:30px;">{r["icono"]}</div>
   <div style="flex-grow:1;">
     <span style="color:#ffffff;font-weight:600;font-size:0.95rem;">{html_escape(r["cuenta"])}</span>
