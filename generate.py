@@ -1243,11 +1243,56 @@ if len(inv_apor) > 0:
 
 _yft2jk = {a["yf_ticker"]: _jk_v(a["Nombre"], a["ISIN"])
            for a in ACTIVOS_CONFIG if a.get("yf_ticker")}
+
+# ── Historial NAV de fondos Bankinter (valor liquidativo diario) ──
+_BK_NAV_PATH = Path("data/bankinter_nav.csv")
+_bk_nav = {}  # {isin: ([dates], [navs])}
+if _BK_NAV_PATH.exists():
+    _bk_df = pd.read_csv(_BK_NAV_PATH, dtype=str)
+    _bk_df["fecha"] = pd.to_datetime(_bk_df["fecha"], dayfirst=True, errors="coerce").dt.date
+    _bk_df["nav"] = pd.to_numeric(_bk_df["nav"], errors="coerce")
+    _bk_df = _bk_df.dropna(subset=["fecha", "nav"]).sort_values("fecha")
+    for _bisin, _bgrp in _bk_df.groupby("isin"):
+        _bk_nav[str(_bisin)] = (list(_bgrp["fecha"]), list(_bgrp["nav"]))
+    print(f"   Bankinter NAV: {len(_bk_nav)} fondos, {len(_bk_df)} puntos cargados")
+
+_isin2jk = {str(a["ISIN"]): _jk_v(a["Nombre"], a["ISIN"])
+            for a in ACTIVOS_CONFIG
+            if not a.get("yf_ticker") and str(a.get("ISIN", "-")).strip() not in ("-", "", "nan")}
+
+# Constant fallback for Bankinter funds not covered by _bk_nav history
 _bankinter_fix = sum(float(a.get("valor_manual", 0) or 0)
-                     for a in ACTIVOS_CONFIG if not a.get("yf_ticker"))
+                     for a in ACTIVOS_CONFIG
+                     if not a.get("yf_ticker") and str(a.get("ISIN", "-")).strip() not in _bk_nav)
+# Benchmark uses valor_manual as static baseline (Bankinter stays out of MSCI World comparison)
+_bankinter_fix_bench = sum(float(a.get("valor_manual", 0) or 0)
+                           for a in ACTIVOS_CONFIG if not a.get("yf_ticker"))
 
 def _inv_en(d):
     total = _bankinter_fix
+    # Dynamic NAV × units for Bankinter funds with history
+    for _bisin2, (_bkd, _bkn) in _bk_nav.items():
+        _bjk = _isin2jk.get(_bisin2)
+        if not _bjk:
+            continue
+        _btld, _btlu = _utl.get(_bjk, ([], []))
+        _bunits = 0.0
+        for _bi2 in range(len(_btld) - 1, -1, -1):
+            if _btld[_bi2] <= d:
+                _bunits = _btlu[_bi2]
+                break
+        if _bunits <= 0:
+            continue
+        _bnav = None
+        for _bi3 in range(len(_bkd) - 1, -1, -1):
+            if _bkd[_bi3] <= d:
+                _bnav = _bkn[_bi3]
+                break
+        if _bnav is None and _bkn:
+            _bnav = _bkn[0]  # fallback to earliest known NAV
+        if _bnav:
+            total += _bunits * _bnav
+    # yf_ticker ETFs / stocks / crypto
     for _pa2 in PORTFOLIO_ASSETS:
         _tk2 = _pa2["ticker"]
         _jk3 = _yft2jk.get(_tk2)
@@ -1287,7 +1332,7 @@ if n_puntos > 0:
     _bench_vals = []
     _bench_inv_only = []
     for _, _er in evo.iterrows():
-        _bv = _bankinter_fix
+        _bv = _bankinter_fix_bench
         for _, _ar in inv_apor.iterrows():
             _afd = _ar.get("_fecha")
             if pd.isna(_afd) or _afd.date() > _er["fecha"]: continue
