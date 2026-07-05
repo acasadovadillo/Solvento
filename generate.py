@@ -1383,13 +1383,19 @@ html_out = f"""<!DOCTYPE html>
     <h1>💰 Solvento</h1>
     <span class="navbar-date">versión 2.1 · Precios del {fecha_actualizacion}</span>
   </div>
-  <select class="nav-select" onchange="showPage(this.value)" aria-label="Sección">
-    <option value="patrimonio">Patrimonio</option>
-    <option value="cuentas">Cashflow</option>
-    <option value="movimientos">Movimientos</option>
-    <option value="inversiones">Inversiones</option>
-    <option value="explorar">Explorar</option>
-  </select>
+  <div class="nav-dropdown" id="nav-dropdown">
+    <button class="nav-dropdown-btn" id="nav-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span id="nav-dropdown-label">Patrimonio</span>
+      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 1l5 5 5-5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <ul class="nav-dropdown-menu" role="listbox">
+      <li role="option" onclick="navSelect('patrimonio','Patrimonio')">Patrimonio</li>
+      <li role="option" onclick="navSelect('cuentas','Cashflow')">Cashflow</li>
+      <li role="option" onclick="navSelect('movimientos','Movimientos')">Movimientos</li>
+      <li role="option" onclick="navSelect('inversiones','Inversiones')">Inversiones</li>
+      <li role="option" onclick="navSelect('explorar','Explorar')">Explorar</li>
+    </ul>
+  </div>
 </nav>
 
 <!-- ══ PÁGINA 1: PATRIMONIO ══ -->

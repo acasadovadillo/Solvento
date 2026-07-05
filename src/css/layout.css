@@ -7,17 +7,31 @@
 }
 .navbar-brand h1 { font-size: 1.1rem; font-weight: 700; color: #fff; }
 .navbar-brand .navbar-date { color: #6b7280; font-size: 0.72rem; }
-.nav-select {
-  appearance: none; -webkit-appearance: none;
-  background: #2a2d3a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
-  color: #fff; border: 1px solid #3b4054; border-radius: 8px;
+.nav-dropdown { position: relative; }
+.nav-dropdown-btn {
+  display: flex; align-items: center; gap: 0.6rem;
+  background: #2a2d3a; color: #fff; border: 1px solid #3b4054; border-radius: 8px;
   font-size: 0.82rem; font-weight: 600; font-family: inherit;
-  padding: 0.45rem 2.2rem 0.45rem 0.9rem;
-  cursor: pointer; outline: none; transition: background 0.2s, border-color 0.2s;
-  min-width: 140px;
+  padding: 0.45rem 0.9rem; cursor: pointer; outline: none;
+  transition: background 0.2s, border-color 0.2s; min-width: 140px;
+  justify-content: space-between;
 }
-.nav-select:hover, .nav-select:focus { background-color: #3b4054; border-color: #4b5063; }
-.nav-select option { background: #1a1d27; color: #fff; }
+.nav-dropdown:hover .nav-dropdown-btn,
+.nav-dropdown-btn:focus { background: #3b4054; border-color: #4b5063; }
+.nav-dropdown-menu {
+  display: none; position: absolute; top: calc(100% + 6px); right: 0;
+  background: #1e2130; border: 1px solid #2a2d3a; border-radius: 10px;
+  padding: 0.3rem; list-style: none; margin: 0;
+  min-width: 100%; z-index: 2000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.nav-dropdown:hover .nav-dropdown-menu { display: block; }
+.nav-dropdown-menu li {
+  padding: 0.5rem 0.85rem; font-size: 0.82rem; font-weight: 500; color: #e5e7eb;
+  border-radius: 7px; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s;
+}
+.nav-dropdown-menu li:hover { background: #2a2d3a; color: #fff; }
 
 /* ── Pages (SPA) ── */
 .page { display: none; }

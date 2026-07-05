@@ -2,16 +2,24 @@ function formatEur(val) {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(val);
 }
 
+const _navLabels = { patrimonio: "Patrimonio", cuentas: "Cashflow", movimientos: "Movimientos", inversiones: "Inversiones", explorar: "Explorar" };
+
 function showPage(id) {
   const current = document.querySelector(".page.active");
   const alreadyActive = current && current.id === "page-" + id;
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   const pg = document.getElementById("page-" + id);
   if (pg) pg.classList.add("active");
-  const sel = document.querySelector(".nav-select");
-  if (sel) sel.value = id;
+  const lbl = document.getElementById("nav-dropdown-label");
+  if (lbl && _navLabels[id]) lbl.textContent = _navLabels[id];
   window.location.hash = id;
   if (alreadyActive) window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function navSelect(id, label) {
+  const lbl = document.getElementById("nav-dropdown-label");
+  if (lbl) lbl.textContent = label;
+  showPage(id);
 }
 
 (function () {
