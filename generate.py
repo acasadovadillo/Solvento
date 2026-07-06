@@ -899,21 +899,36 @@ def legend_patrimonio():
 </div>""")
     return "\n".join(parts)
 
-def lista_cuentas_simple():
-    parts = []
-    rows = list(saldos.iterrows())
-    for i, (_, r) in enumerate(rows):
-        cuenta_js = html_escape(r["cuenta"]).replace("'", "\\'")
-        border_top = "border-top:1px solid #2a2d3a;" if i == 0 else ""
-        border_bot = "" if i == len(rows) - 1 else "border-bottom:1px solid #2a2d3a;"
-        parts.append(f"""<div onclick="showMovimientos('{cuenta_js}')" style="display:flex;align-items:center;gap:1rem;padding:0.7rem 2rem;margin:0 -2rem;border-radius:0;cursor:pointer;transition:background 0.15s;{border_top}{border_bot}" onmouseover="this.style.background='#ffffff08'" onmouseout="this.style.background='transparent'">
-  <div style="display:flex;align-items:center;justify-content:center;width:30px;">{r["icono"]}</div>
-  <div style="flex-grow:1;">
-    <span style="color:#ffffff;font-weight:600;font-size:0.95rem;">{html_escape(r["cuenta"])}</span>
-  </div>
-  <div style="text-align:right;color:#9ca3af;font-weight:600;font-size:0.85rem;">{fmt_eur(r["saldo"])}</div>
-</div>""")
-    return "\n".join(parts)
+def tarjetas_cuentas_html():
+    """Barra de proporción por colores + tarjetas por cuenta (estilo hub de Patrimonio)."""
+    labels, segs, cards = [], [], []
+    for _, r in saldos.iterrows():
+        cuenta   = html_escape(str(r["cuenta"]))
+        cuenta_js = html_escape(str(r["cuenta"])).replace("'", "\\'")
+        accent   = r["accent"]
+        pct      = max(0.0, float(r["pct"]))
+        labels.append(f'<span style="color:{accent};">{cuenta} · {pct:.1f}%</span>')
+        segs.append(
+            f'<div title="{cuenta}: {fmt_eur(r["saldo"])} ({pct:.1f}%)" '
+            f'style="width:{pct:.2f}%;background:{accent};transition:width 0.4s;"></div>'
+        )
+        cards.append(f"""
+      <div class="dashboard-panel" onclick="showMovimientos('{cuenta_js}')" style="cursor:pointer;border-left:3px solid {accent};padding:1.5rem 1.5rem 1.5rem 1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
+        <div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.75rem;">
+          {r["icono"]}
+          <span style="font-size:0.72rem;color:{accent};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">{cuenta}</span>
+        </div>
+        <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(r["saldo"])}</div>
+        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{pct:.1f}% de la liquidez &nbsp;→</div>
+      </div>""")
+    return (
+        '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.3rem 1.25rem;font-size:0.72rem;font-weight:600;margin-bottom:0.4rem;">'
+        + "".join(labels) + '</div>\n'
+        '<div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;background:#1a1d27;">'
+        + "".join(segs) + '</div>\n'
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem;">'
+        + "".join(cards) + '</div>'
+    )
 
 def tabla_movimientos_html():
     df = mov.dropna(subset=["fecha"]).copy()
@@ -2002,14 +2017,8 @@ html_out = f"""<!DOCTYPE html>
     <h2 class="section-title">Liquidez</h2>
     <div class="section-subtitle">{fmt_eur(patrimonio_liquido)}</div>
   </div>
-  <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
-    <div class="dashboard-panel" style="padding:1.5rem 2rem 0;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cuentas de liquidez</div>
-        <div style="font-size:1.25rem;color:#ffffff;font-weight:700;letter-spacing:-0.01em;">{fmt_eur(patrimonio_liquido)}</div>
-      </div>
-      <div class="legend-box" style="border:none;padding:0;background:transparent;gap:0;">{lista_cuentas_simple()}</div>
-    </div>
+  <div style="max-width:1400px;margin:2rem auto 2rem;width:100%;">
+    {tarjetas_cuentas_html()}
   </div>
   <div class="dashboard-main-grid">
     <div class="dashboard-panel">
