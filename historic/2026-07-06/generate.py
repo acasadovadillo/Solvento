@@ -1154,6 +1154,208 @@ def tabla_aportaciones():
         )
     return "\n".join(rows)
 
+# ════════════════════════════════════════════════════
+# CATÁLOGO DE MERCADO (Explorar activos: populares por categoría)
+# Formato: (nombre, símbolo TradingView, tipo, mercado)
+# ════════════════════════════════════════════════════
+CATALOGO_MERCADO = [
+    # ── Índices ──
+    ("S&P 500",             "SP:SPX",        "indice", "Índice EEUU"),
+    ("Nasdaq 100",          "NASDAQ:NDX",    "indice", "Índice EEUU"),
+    ("Dow Jones",           "DJ:DJI",        "indice", "Índice EEUU"),
+    ("Russell 2000",        "TVC:RUT",       "indice", "Índice EEUU"),
+    ("VIX (Volatilidad)",   "TVC:VIX",       "indice", "Índice EEUU"),
+    ("IBEX 35",             "TVC:IBEX35",    "indice", "Índice España"),
+    ("EURO STOXX 50",       "TVC:SX5E",      "indice", "Índice Europa"),
+    ("DAX",                 "XETR:DAX",      "indice", "Índice Alemania"),
+    ("CAC 40",              "TVC:CAC40",     "indice", "Índice Francia"),
+    ("FTSE 100",            "TVC:UKX",       "indice", "Índice R. Unido"),
+    ("Nikkei 225",          "TVC:NI225",     "indice", "Índice Japón"),
+    ("Hang Seng",           "TVC:HSI",       "indice", "Índice Hong Kong"),
+    # ── Acciones EEUU ──
+    ("Apple",               "NASDAQ:AAPL",   "accion", "NASDAQ"),
+    ("Microsoft",           "NASDAQ:MSFT",   "accion", "NASDAQ"),
+    ("NVIDIA",              "NASDAQ:NVDA",   "accion", "NASDAQ"),
+    ("Alphabet (Google)",   "NASDAQ:GOOGL",  "accion", "NASDAQ"),
+    ("Amazon",              "NASDAQ:AMZN",   "accion", "NASDAQ"),
+    ("Meta Platforms",      "NASDAQ:META",   "accion", "NASDAQ"),
+    ("Tesla",               "NASDAQ:TSLA",   "accion", "NASDAQ"),
+    ("Broadcom",            "NASDAQ:AVGO",   "accion", "NASDAQ"),
+    ("Netflix",             "NASDAQ:NFLX",   "accion", "NASDAQ"),
+    ("AMD",                 "NASDAQ:AMD",    "accion", "NASDAQ"),
+    ("Berkshire Hathaway",  "NYSE:BRK.B",    "accion", "NYSE"),
+    ("Eli Lilly",           "NYSE:LLY",      "accion", "NYSE"),
+    ("JPMorgan Chase",      "NYSE:JPM",      "accion", "NYSE"),
+    ("Visa",                "NYSE:V",        "accion", "NYSE"),
+    ("Mastercard",          "NYSE:MA",       "accion", "NYSE"),
+    ("UnitedHealth",        "NYSE:UNH",      "accion", "NYSE"),
+    ("Exxon Mobil",         "NYSE:XOM",      "accion", "NYSE"),
+    ("Procter & Gamble",    "NYSE:PG",       "accion", "NYSE"),
+    ("Johnson & Johnson",   "NYSE:JNJ",      "accion", "NYSE"),
+    ("Home Depot",          "NYSE:HD",       "accion", "NYSE"),
+    ("Oracle",              "NYSE:ORCL",     "accion", "NYSE"),
+    ("AbbVie",              "NYSE:ABBV",     "accion", "NYSE"),
+    ("Coca-Cola",           "NYSE:KO",       "accion", "NYSE"),
+    ("PepsiCo",             "NASDAQ:PEP",    "accion", "NASDAQ"),
+    ("Costco",              "NASDAQ:COST",   "accion", "NASDAQ"),
+    ("Bank of America",     "NYSE:BAC",      "accion", "NYSE"),
+    ("Salesforce",          "NYSE:CRM",      "accion", "NYSE"),
+    ("Walmart",             "NYSE:WMT",      "accion", "NYSE"),
+    ("Disney",              "NYSE:DIS",      "accion", "NYSE"),
+    ("McDonald's",          "NYSE:MCD",      "accion", "NYSE"),
+    ("Adobe",               "NASDAQ:ADBE",   "accion", "NASDAQ"),
+    ("Cisco",               "NASDAQ:CSCO",   "accion", "NASDAQ"),
+    ("Intel",               "NASDAQ:INTC",   "accion", "NASDAQ"),
+    ("Qualcomm",            "NASDAQ:QCOM",   "accion", "NASDAQ"),
+    ("IBM",                 "NYSE:IBM",      "accion", "NYSE"),
+    ("General Electric",    "NYSE:GE",       "accion", "NYSE"),
+    ("Caterpillar",         "NYSE:CAT",      "accion", "NYSE"),
+    ("Nike",                "NYSE:NKE",      "accion", "NYSE"),
+    ("American Express",    "NYSE:AXP",      "accion", "NYSE"),
+    ("Goldman Sachs",       "NYSE:GS",       "accion", "NYSE"),
+    ("Morgan Stanley",      "NYSE:MS",       "accion", "NYSE"),
+    ("Boeing",              "NYSE:BA",       "accion", "NYSE"),
+    ("Pfizer",              "NYSE:PFE",      "accion", "NYSE"),
+    ("Merck",               "NYSE:MRK",      "accion", "NYSE"),
+    ("Verizon",             "NYSE:VZ",       "accion", "NYSE"),
+    ("AT&T",                "NYSE:T",        "accion", "NYSE"),
+    ("Starbucks",           "NASDAQ:SBUX",   "accion", "NASDAQ"),
+    ("Uber",                "NYSE:UBER",     "accion", "NYSE"),
+    ("PayPal",              "NASDAQ:PYPL",   "accion", "NASDAQ"),
+    ("Airbnb",              "NASDAQ:ABNB",   "accion", "NASDAQ"),
+    ("Coinbase",            "NASDAQ:COIN",   "accion", "NASDAQ"),
+    ("Palantir",            "NASDAQ:PLTR",   "accion", "NASDAQ"),
+    ("Booking",             "NASDAQ:BKNG",   "accion", "NASDAQ"),
+    ("BlackRock",           "NYSE:BLK",      "accion", "NYSE"),
+    # ── Acciones España ──
+    ("Banco Santander",     "BME:SAN",       "accion", "BME"),
+    ("BBVA",                "BME:BBVA",      "accion", "BME"),
+    ("Iberdrola",           "BME:IBE",       "accion", "BME"),
+    ("Inditex",             "BME:ITX",       "accion", "BME"),
+    ("CaixaBank",           "BME:CABK",      "accion", "BME"),
+    ("Telefónica",          "BME:TEF",       "accion", "BME"),
+    ("Repsol",              "BME:REP",       "accion", "BME"),
+    ("Amadeus",             "BME:AMS",       "accion", "BME"),
+    ("Aena",                "BME:AENA",      "accion", "BME"),
+    ("Ferrovial",           "BME:FER",       "accion", "BME"),
+    ("ACS",                 "BME:ACS",       "accion", "BME"),
+    ("Banco Sabadell",      "BME:SAB",       "accion", "BME"),
+    ("Mapfre",              "BME:MAP",       "accion", "BME"),
+    ("Endesa",              "BME:ELE",       "accion", "BME"),
+    ("IAG (Iberia)",        "BME:IAG",       "accion", "BME"),
+    ("Cellnex",             "BME:CLNX",      "accion", "BME"),
+    # ── Acciones Europa ──
+    ("ASML",                "EURONEXT:ASML", "accion", "Euronext"),
+    ("LVMH",                "EURONEXT:MC",   "accion", "Euronext"),
+    ("L'Oréal",             "EURONEXT:OR",   "accion", "Euronext"),
+    ("Hermès",              "EURONEXT:RMS",  "accion", "Euronext"),
+    ("TotalEnergies",       "EURONEXT:TTE",  "accion", "Euronext"),
+    ("Airbus",              "EURONEXT:AIR",  "accion", "Euronext"),
+    ("Schneider Electric",  "EURONEXT:SU",   "accion", "Euronext"),
+    ("Air Liquide",         "EURONEXT:AI",   "accion", "Euronext"),
+    ("BNP Paribas",         "EURONEXT:BNP",  "accion", "Euronext"),
+    ("Adyen",               "EURONEXT:ADYEN","accion", "Euronext"),
+    ("ING",                 "EURONEXT:INGA", "accion", "Euronext"),
+    ("Ferrari",             "MIL:RACE",      "accion", "Milán"),
+    ("Stellantis",          "MIL:STLAM",     "accion", "Milán"),
+    ("Intesa Sanpaolo",     "MIL:ISP",       "accion", "Milán"),
+    ("SAP",                 "XETR:SAP",      "accion", "Xetra"),
+    ("Siemens",             "XETR:SIE",      "accion", "Xetra"),
+    ("Allianz",             "XETR:ALV",      "accion", "Xetra"),
+    ("BMW",                 "XETR:BMW",      "accion", "Xetra"),
+    ("Mercedes-Benz",       "XETR:MBG",      "accion", "Xetra"),
+    ("Volkswagen",          "XETR:VOW3",     "accion", "Xetra"),
+    ("Adidas",              "XETR:ADS",      "accion", "Xetra"),
+    ("Nestlé",              "SIX:NESN",      "accion", "SIX Suiza"),
+    ("Roche",               "SIX:ROG",       "accion", "SIX Suiza"),
+    ("Novartis",            "SIX:NOVN",      "accion", "SIX Suiza"),
+    ("UBS",                 "SIX:UBSG",      "accion", "SIX Suiza"),
+    ("Novo Nordisk",        "OMXCOP:NOVO_B", "accion", "Copenhague"),
+    ("Shell",               "LSE:SHEL",      "accion", "Londres"),
+    ("AstraZeneca",         "LSE:AZN",       "accion", "Londres"),
+    ("HSBC",                "LSE:HSBA",      "accion", "Londres"),
+    ("Unilever",            "LSE:ULVR",      "accion", "Londres"),
+    # ── ETFs UCITS ──
+    ("iShares Core MSCI World (IWDA)",        "EURONEXT:IWDA", "etf", "UCITS · Acc"),
+    ("Vanguard FTSE All-World (VWCE)",        "XETR:VWCE",     "etf", "UCITS · Acc"),
+    ("iShares Core S&P 500 (CSPX)",           "EURONEXT:CSPX", "etf", "UCITS · Acc"),
+    ("Vanguard S&P 500 (VUAA)",               "XETR:VUAA",     "etf", "UCITS · Acc"),
+    ("iShares Core S&P 500 (SXR8)",           "XETR:SXR8",     "etf", "UCITS · Acc"),
+    ("iShares Core MSCI World (EUNL)",        "XETR:EUNL",     "etf", "UCITS · Acc"),
+    ("iShares MSCI EM IMI (EMIM)",            "EURONEXT:EMIM", "etf", "UCITS · Acc"),
+    ("iShares Global Agg Bond (AGGG)",        "LSE:AGGG",      "etf", "UCITS · Bonos"),
+    ("WisdomTree Physical Gold (PHAU)",       "EURONEXT:PHAU", "etf", "Oro físico"),
+    ("iShares Physical Gold (SGLN)",          "LSE:SGLN",      "etf", "Oro físico"),
+    ("iShares MSCI World Small Cap (IUSN)",   "XETR:IUSN",     "etf", "UCITS · Small Cap"),
+    ("iShares Nasdaq 100 (CNDX)",             "LSE:CNDX",      "etf", "UCITS · Acc"),
+    ("Invesco Nasdaq 100 (EQQQ)",             "EURONEXT:EQQQ", "etf", "UCITS"),
+    ("Vanguard S&P 500 Dist (VUSA)",          "EURONEXT:VUSA", "etf", "UCITS · Dist"),
+    ("Vanguard All-World High Div (VHYL)",    "LSE:VHYL",      "etf", "UCITS · Dist"),
+    ("iShares Global Clean Energy (INRG)",    "LSE:INRG",      "etf", "UCITS"),
+    # ── ETFs EEUU ──
+    ("SPDR S&P 500 (SPY)",                    "AMEX:SPY",      "etf", "EEUU"),
+    ("Invesco QQQ (Nasdaq 100)",              "NASDAQ:QQQ",    "etf", "EEUU"),
+    ("Vanguard S&P 500 (VOO)",                "AMEX:VOO",      "etf", "EEUU"),
+    ("Vanguard Total Market (VTI)",           "AMEX:VTI",      "etf", "EEUU"),
+    ("SPDR Gold Shares (GLD)",                "AMEX:GLD",      "etf", "EEUU"),
+    ("iShares 20+ Treasury (TLT)",            "NASDAQ:TLT",    "etf", "EEUU · Bonos"),
+    ("ARK Innovation (ARKK)",                 "AMEX:ARKK",     "etf", "EEUU"),
+    ("Schwab US Dividend (SCHD)",             "AMEX:SCHD",     "etf", "EEUU · Div"),
+    # ── Criptoactivos ──
+    ("Bitcoin",             "BITSTAMP:BTCUSD",   "cripto", "BTC"),
+    ("Ethereum",            "BITSTAMP:ETHUSD",   "cripto", "ETH"),
+    ("Solana",              "BINANCE:SOLUSDT",   "cripto", "SOL"),
+    ("BNB",                 "BINANCE:BNBUSDT",   "cripto", "BNB"),
+    ("XRP",                 "BINANCE:XRPUSDT",   "cripto", "XRP"),
+    ("Cardano",             "BINANCE:ADAUSDT",   "cripto", "ADA"),
+    ("Dogecoin",            "BINANCE:DOGEUSDT",  "cripto", "DOGE"),
+    ("Polkadot",            "BINANCE:DOTUSDT",   "cripto", "DOT"),
+    ("Avalanche",           "BINANCE:AVAXUSDT",  "cripto", "AVAX"),
+    ("Chainlink",           "BINANCE:LINKUSDT",  "cripto", "LINK"),
+    ("Litecoin",            "BINANCE:LTCUSDT",   "cripto", "LTC"),
+    ("Uniswap",             "BINANCE:UNIUSDT",   "cripto", "UNI"),
+    ("Cosmos",              "BINANCE:ATOMUSDT",  "cripto", "ATOM"),
+    ("Shiba Inu",           "BINANCE:SHIBUSDT",  "cripto", "SHIB"),
+]
+
+MERCADO_TIPO_CONF = {
+    "indice": ("#f59e0b", "rgba(245,158,11,0.15)",  "Índice"),
+    "accion": ("#ec4899", "rgba(236,72,153,0.15)",  "Acción"),
+    "etf":    ("#8b5cf6", "rgba(139,92,246,0.15)",  "ETF"),
+    "cripto": ("#f59e0b", "rgba(245,158,11,0.15)",  "Cripto"),
+}
+
+def tarjetas_mercado_html():
+    cards = []
+    for nombre_m, tv_m, tipo_m, mercado_m in CATALOGO_MERCADO:
+        color_m, bg_m, tipo_lbl = MERCADO_TIPO_CONF.get(tipo_m, ("#6b7280", "rgba(107,114,128,0.15)", tipo_m))
+        sym_m = tv_m.split(":", 1)[1] if ":" in tv_m else tv_m
+        lbl_m = sym_m
+        if tipo_m == "cripto":
+            lbl_m = mercado_m  # para cripto el "mercado" es el símbolo corto (BTC, ETH…)
+        lbl_m = re.sub(r"[^A-Za-z0-9]", "", lbl_m)[:4].upper() or "?"
+        search_m = f"{nombre_m.lower()} {sym_m.lower()} {mercado_m.lower()} {tipo_lbl.lower()}"
+        cards.append(
+            f'<div class="mercado-card" data-tipo="{tipo_m}" data-tv="{html_escape(tv_m)}" data-search="{html_escape(search_m)}"'
+            f' onclick="mercadoVerGrafica(this.dataset.tv)"'
+            f' style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:16px;padding:1.1rem 1.3rem;cursor:pointer;'
+            f'display:none;align-items:center;gap:0.9rem;transition:border-color 0.2s,box-shadow 0.2s;"'
+            f' onmouseover="this.style.borderColor=\'#3b4257\';this.style.boxShadow=\'0 4px 20px rgba(0,0,0,0.4)\'"'
+            f' onmouseout="this.style.borderColor=\'#2a2d3a\';this.style.boxShadow=\'none\'">'
+            f'<div style="width:42px;height:42px;border-radius:10px;background:{bg_m};border:1px solid {color_m}40;'
+            f'display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;'
+            f'color:{color_m};font-family:ui-monospace,monospace;flex-shrink:0;">{html_escape(lbl_m)}</div>'
+            f'<div style="min-width:0;flex-grow:1;">'
+            f'<div style="color:#ffffff;font-weight:700;font-size:0.88rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{html_escape(nombre_m)}</div>'
+            f'<div style="color:#6b7280;font-size:0.72rem;margin-top:0.15rem;">{html_escape(mercado_m)} · <span style="font-family:ui-monospace,monospace;">{html_escape(sym_m)}</span></div>'
+            f'</div>'
+            f'<span style="font-size:0.68rem;font-weight:700;color:{color_m};background:{bg_m};'
+            f'padding:0.2rem 0.55rem;border-radius:20px;white-space:nowrap;flex-shrink:0;'
+            f'border:1px solid {color_m}35;">{tipo_lbl}</span>'
+            f'</div>'
+        )
+    return "\n".join(cards)
+
 def tarjetas_activos_html():
     TIPO_SLUG = {
         "ETF":                "etf",
@@ -2188,14 +2390,14 @@ html_out = f"""<!DOCTYPE html>
         Explorar <span style="font-style:italic;color:#3b82f6;">activos</span>
       </h2>
       <p style="color:#6b7280;font-size:0.92rem;margin:0;">
-        Los {len(inv_raw)} activos de tu portafolio. Busca o filtra para explorarlos.
+        Tu cartera ({len(inv_raw)}) y {len(CATALOGO_MERCADO)} activos populares. Busca cualquier activo del mercado por nombre o ticker.
       </p>
     </div>
     <div style="position:relative;margin-bottom:1.25rem;">
       <svg style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:#6b7280;pointer-events:none;" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
-      <input id="explorar-search" type="text" placeholder="Buscar por nombre o ISIN..."
+      <input id="explorar-search" type="text" placeholder="Buscar cualquier activo: Ferrari, VWCE, oro, Nvidia…"
         oninput="explorarFiltrar()"
         style="width:100%;box-sizing:border-box;background:#1a1d27;border:1px solid #2a2d3a;border-radius:12px;
                padding:0.75rem 1rem 0.75rem 2.75rem;color:#e5e7eb;font-size:0.9rem;outline:none;
@@ -2203,29 +2405,46 @@ html_out = f"""<!DOCTYPE html>
         onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#2a2d3a'">
     </div>
     <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.5rem;overflow-x:auto;">
-      <button class="explorar-tab" onclick="explorarSetTipo(this,'__all__')"
+      <button class="explorar-tab" data-tipo="cartera" onclick="explorarSetTipo(this,'cartera')"
         style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;
-               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Todos</button>
-      <button class="explorar-tab" onclick="explorarSetTipo(this,'acciones')"
+               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Mi cartera</button>
+      <button class="explorar-tab" data-tipo="indice" onclick="explorarSetTipo(this,'indice')"
+        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Índices</button>
+      <button class="explorar-tab" data-tipo="accion" onclick="explorarSetTipo(this,'accion')"
         style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
                padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Acciones</button>
-      <button class="explorar-tab" onclick="explorarSetTipo(this,'etf')"
+      <button class="explorar-tab" data-tipo="etf" onclick="explorarSetTipo(this,'etf')"
         style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
                padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">ETFs</button>
-      <button class="explorar-tab" onclick="explorarSetTipo(this,'cripto')"
+      <button class="explorar-tab" data-tipo="cripto" onclick="explorarSetTipo(this,'cripto')"
         style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
                padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Criptoactivos</button>
-      <button class="explorar-tab" onclick="explorarSetTipo(this,'fondo')"
-        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
-               padding:0.6rem 1.1rem;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Fondos</button>
     </div>
     <div id="explorar-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem;">
       {tarjetas_activos_html()}
     </div>
+    <div id="mercado-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;margin-top:1.25rem;">
+      {tarjetas_mercado_html()}
+    </div>
+    <div id="yahoo-results" style="display:none;margin-top:1.5rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.9rem;">
+        <span style="font-size:0.78rem;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Resultados de Yahoo Finance</span>
+        <span id="yahoo-spinner" style="display:none;width:12px;height:12px;border:2px solid #2a2d3a;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></span>
+      </div>
+      <div id="yahoo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;"></div>
+    </div>
     <div id="explorar-empty" style="display:none;text-align:center;padding:4rem 2rem;">
       <div style="color:#4b5563;font-size:2rem;margin-bottom:0.75rem;">🔍</div>
-      <div style="color:#6b7280;font-size:0.92rem;">No se encontraron activos que coincidan.</div>
+      <div style="color:#6b7280;font-size:0.92rem;margin-bottom:1.25rem;">No se encontraron activos que coincidan.</div>
+      <button id="explorar-tv-fallback" onclick="mercadoVerGrafica(document.getElementById('explorar-search').value.trim().toUpperCase())"
+        style="background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;font-weight:600;
+               padding:0.55rem 1.4rem;cursor:pointer;font-family:inherit;transition:border-color 0.15s;"
+        onmouseover="this.style.borderColor='#6b7280'" onmouseout="this.style.borderColor='#3b4054'">
+        Buscar en TradingView →
+      </button>
     </div>
+    <style>@keyframes spin {{ to {{ transform: rotate(360deg); }} }}</style>
 
     <hr style="border:0;height:1px;background:linear-gradient(to right,transparent,#2a2d3a,transparent);margin:3rem 0;">
 
@@ -2267,7 +2486,7 @@ html_out = f"""<!DOCTYPE html>
         style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
                padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">Máx</button>
     </div>
-    <div style="border-radius:16px;overflow:hidden;border:1px solid #2a2d3a;min-height:520px;
+    <div id="cot-chart-box" style="border-radius:16px;overflow:hidden;border:1px solid #2a2d3a;min-height:520px;
                 display:flex;align-items:center;justify-content:center;background:#13151f;">
       <div id="cot-placeholder" style="text-align:center;color:#4b5563;padding:3rem;">
         <div style="font-size:3rem;margin-bottom:1rem;opacity:0.5;">📈</div>

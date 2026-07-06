@@ -128,10 +128,15 @@ function movFiltrar() {
 // Estado inicial: oculta la cara "entrada" de los traspasos y aplica paginación
 aplicarFiltrosMov(true);
 
-let explorarTipoActivo = '__all__';
+// ── Explorar activos: cartera + catálogo de mercado + búsqueda global Yahoo ──
+let explorarTipoActivo = 'cartera';
+let _yahooTimer = null;
+let _yahooCtrl = null;
 
 function explorarSetTipo(btn, tipo) {
   explorarTipoActivo = tipo;
+  const search = document.getElementById('explorar-search');
+  if (search) search.value = '';
   document.querySelectorAll('.explorar-tab').forEach(b => {
     b.style.borderBottom = '2px solid transparent';
     b.style.color = '#6b7280';
@@ -144,17 +149,123 @@ function explorarSetTipo(btn, tipo) {
 }
 
 function explorarFiltrar() {
-  const q = (document.getElementById('explorar-search')?.value || '').toLowerCase();
+  const q = (document.getElementById('explorar-search')?.value || '').toLowerCase().trim();
   let visible = 0;
+  // Tarjetas de la cartera: visibles en su pestaña, o en cualquier pestaña si hay búsqueda
   document.querySelectorAll('.asset-card').forEach(card => {
-    const matchTipo   = explorarTipoActivo === '__all__' || card.dataset.tipo === explorarTipoActivo;
-    const matchSearch = !q || (card.dataset.search || '').includes(q);
-    card.style.display = matchTipo && matchSearch ? '' : 'none';
-    if (matchTipo && matchSearch) visible++;
+    const show = q
+      ? (card.dataset.search || '').includes(q)
+      : explorarTipoActivo === 'cartera';
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
   });
+  // Tarjetas del catálogo de mercado (display flex, no block)
+  document.querySelectorAll('.mercado-card').forEach(card => {
+    const show = q
+      ? (card.dataset.search || '').includes(q)
+      : card.dataset.tipo === explorarTipoActivo;
+    card.style.display = show ? 'flex' : 'none';
+    if (show) visible++;
+  });
+  // Búsqueda en vivo en Yahoo Finance (debounce 450 ms)
+  const yWrap = document.getElementById('yahoo-results');
+  if (_yahooTimer) clearTimeout(_yahooTimer);
+  if (q.length >= 2) {
+    _yahooTimer = setTimeout(() => _yahooBuscar(q), 450);
+  } else if (yWrap) {
+    yWrap.style.display = 'none';
+    const yg = document.getElementById('yahoo-grid');
+    if (yg) yg.innerHTML = '';
+  }
   const empty = document.getElementById('explorar-empty');
   if (empty) empty.style.display = visible === 0 ? '' : 'none';
 }
+
+const _YAHOO_SUFIJO_TV = {
+  MC: 'BME', AS: 'EURONEXT', PA: 'EURONEXT', BR: 'EURONEXT', LS: 'EURONEXT',
+  L: 'LSE', DE: 'XETR', F: 'XETR', MI: 'MIL', SW: 'SIX',
+  CO: 'OMXCOP', ST: 'OMXSTO', HE: 'OMXHEX', TO: 'TSX', HK: 'HKEX', T: 'TSE',
+};
+const _YAHOO_INDICE_TV = {
+  '^GSPC': 'SP:SPX', '^NDX': 'NASDAQ:NDX', '^IXIC': 'NASDAQ:IXIC', '^DJI': 'DJ:DJI',
+  '^RUT': 'TVC:RUT', '^VIX': 'TVC:VIX', '^IBEX': 'TVC:IBEX35', '^STOXX50E': 'TVC:SX5E',
+  '^GDAXI': 'XETR:DAX', '^FCHI': 'TVC:CAC40', '^FTSE': 'TVC:UKX', '^N225': 'TVC:NI225', '^HSI': 'TVC:HSI',
+};
+
+function _yahooATV(symbol, quoteType) {
+  if (_YAHOO_INDICE_TV[symbol]) return _YAHOO_INDICE_TV[symbol];
+  if (quoteType === 'CRYPTOCURRENCY') {
+    const base = symbol.replace(/-USD$/, '').replace(/-EUR$/, '');
+    return 'CRYPTO:' + base + 'USD';
+  }
+  const m = symbol.match(/^(.+)\.([A-Z]+)$/);
+  if (m && _YAHOO_SUFIJO_TV[m[2]]) return _YAHOO_SUFIJO_TV[m[2]] + ':' + m[1].replace(/-/g, '_');
+  return symbol.replace(/\^/, '');
+}
+
+async function _yahooBuscar(q) {
+  const wrap = document.getElementById('yahoo-results');
+  const grid = document.getElementById('yahoo-grid');
+  const spinner = document.getElementById('yahoo-spinner');
+  if (!wrap || !grid) return;
+  if (_yahooCtrl) _yahooCtrl.abort();
+  _yahooCtrl = new AbortController();
+  wrap.style.display = '';
+  if (spinner) spinner.style.display = 'inline-block';
+  try {
+    const url = 'https://corsproxy.io/?url=' + encodeURIComponent(
+      'https://query1.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(q) +
+      '&quotesCount=8&newsCount=0&listsCount=0'
+    );
+    const r = await fetch(url, { signal: _yahooCtrl.signal });
+    const j = await r.json();
+    const quotes = (j.quotes || []).filter(x => x.symbol && (x.shortname || x.longname));
+    // Evitar duplicar lo que ya está visible del catálogo
+    const enCatalogo = new Set();
+    document.querySelectorAll('.mercado-card').forEach(c => {
+      if (c.style.display !== 'none') {
+        const sym = (c.dataset.tv || '').split(':')[1];
+        if (sym) enCatalogo.add(sym.toUpperCase());
+      }
+    });
+    const TYPE_ES = { EQUITY: 'Acción', ETF: 'ETF', INDEX: 'Índice', CRYPTOCURRENCY: 'Cripto', MUTUALFUND: 'Fondo', CURRENCY: 'Divisa', FUTURE: 'Futuro' };
+    grid.innerHTML = quotes
+      .filter(x => !enCatalogo.has(x.symbol.split('.')[0].toUpperCase()))
+      .map(x => {
+        const nombre = x.shortname || x.longname;
+        const tipo = TYPE_ES[x.quoteType] || x.quoteType || '';
+        const tv = _yahooATV(x.symbol, x.quoteType);
+        const lbl = x.symbol.replace(/[^A-Za-z0-9]/g, '').substring(0, 4).toUpperCase() || '?';
+        return `<div onclick="mercadoVerGrafica('${tv.replace(/'/g, '')}')"` +
+          ` style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:16px;padding:1.1rem 1.3rem;cursor:pointer;display:flex;align-items:center;gap:0.9rem;transition:border-color 0.2s;"` +
+          ` onmouseover="this.style.borderColor='#3b4257'" onmouseout="this.style.borderColor='#2a2d3a'">` +
+          `<div style="width:42px;height:42px;border-radius:10px;background:rgba(59,130,246,0.15);border:1px solid #3b82f640;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:#3b82f6;font-family:ui-monospace,monospace;flex-shrink:0;">${lbl}</div>` +
+          `<div style="min-width:0;flex-grow:1;">` +
+          `<div style="color:#fff;font-weight:700;font-size:0.88rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${nombre.replace(/</g, '&lt;')}</div>` +
+          `<div style="color:#6b7280;font-size:0.72rem;margin-top:0.15rem;">${(x.exchDisp || '').replace(/</g, '&lt;')} · <span style="font-family:ui-monospace,monospace;">${x.symbol}</span></div>` +
+          `</div>` +
+          `<span style="font-size:0.68rem;font-weight:700;color:#3b82f6;background:rgba(59,130,246,0.15);padding:0.2rem 0.55rem;border-radius:20px;white-space:nowrap;flex-shrink:0;border:1px solid #3b82f635;">${tipo}</span>` +
+          `</div>`;
+      }).join('');
+    if (!grid.innerHTML) wrap.style.display = 'none';
+  } catch (e) {
+    if (e.name !== 'AbortError') wrap.style.display = 'none';
+  } finally {
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+function mercadoVerGrafica(tvSymbol) {
+  if (!tvSymbol) return;
+  const input = document.getElementById('cot-ticker');
+  if (input) input.value = tvSymbol;
+  cotizacionesBuscar();
+  const box = document.getElementById('cot-chart-box');
+  if (box) setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+}
+
+// Estado inicial: pestaña "Mi cartera"
+explorarFiltrar();
 
 
 let _cotRangoActivo = '1M';
