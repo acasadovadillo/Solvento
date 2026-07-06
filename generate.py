@@ -24,6 +24,7 @@ CUENTAS_CONFIG = [
     {"cuenta": "Bankinter",      "icono": '<img src="img/logo-bankinter.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#FF6200"},
     {"cuenta": "Santander",      "icono": '<img src="img/logo-santander.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#ec0000"},
     {"cuenta": "Trade Republic", "icono": '<img src="img/logo-trade-republic.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#ffffff"},
+    {"cuenta": "MyInvestor",     "icono": '<img src="img/logo-myinvestor.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;border-radius:5px;">', "accent": "#e12363"},
     {"cuenta": "Efectivo",       "icono": "💵", "accent": "#2d9e5f"},
 ]
 
