@@ -1970,7 +1970,7 @@ html_out = f"""<!DOCTYPE html>
     <div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
         <div>
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del patrimonio neto</div>
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del patrimonio</div>
           <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
             <div id="neto-rend-display" style="font-size:1.05rem;font-weight:600;color:{neto_color};background:{neto_bg};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_neto_rend}</div>
           </div>
@@ -2031,7 +2031,7 @@ html_out = f"""<!DOCTYPE html>
     <div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
         <div>
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del balance</div>
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución de la liquidez</div>
           <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
             <div id="evo-rendimiento-display" style="font-size:1.05rem;font-weight:600;color:{color_trend};background:{color_bg_grad};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_rend}</div>
           </div>
