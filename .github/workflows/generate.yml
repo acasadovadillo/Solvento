@@ -85,15 +85,15 @@ jobs:
           fi
           echo "✅ inversiones.csv válido ($FILAS filas, $BYTES bytes)"
 
-      - name: Descargar y validar fondos_manuales.csv
+      - name: Descargar y validar inmuebles.csv
         run: |
           curl -fsSL \
-            "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=1115001182" \
-            -o data/fondos_manuales.csv
-          BYTES=$(wc -c < data/fondos_manuales.csv)
-          FILAS=$(wc -l < data/fondos_manuales.csv)
-          echo "fondos_manuales.csv — $FILAS filas, $BYTES bytes"
-          if head -1 data/fondos_manuales.csv | grep -qi "<!doctype\|<html"; then
+            "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=1264506332" \
+            -o data/inmuebles.csv
+          BYTES=$(wc -c < data/inmuebles.csv)
+          FILAS=$(wc -l < data/inmuebles.csv)
+          echo "inmuebles.csv — $FILAS filas, $BYTES bytes"
+          if head -1 data/inmuebles.csv | grep -qi "<!doctype\|<html"; then
             echo "❌ Google Sheets devolvió HTML (error de acceso o sesión caducada)"
             exit 1
           fi
@@ -102,19 +102,19 @@ jobs:
             exit 1
           fi
           if [ "$FILAS" -lt 2 ]; then
-            echo "❌ Solo $FILAS filas — se esperaban ≥2 (cabecera + fondos Bankinter)"
+            echo "❌ Solo $FILAS filas — se esperaban ≥2 (cabecera + al menos un inmueble)"
             exit 1
           fi
-          echo "✅ fondos_manuales.csv válido ($FILAS filas, $BYTES bytes)"
+          echo "✅ inmuebles.csv válido ($FILAS filas, $BYTES bytes)"
 
-      - name: Descargar y validar bankinter_nav.csv
+      - name: Descargar y validar historico_valor_liquidativo.csv
         run: |
           curl -fsSL \
             "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=2139797029" \
             -o data/bankinter_nav.csv
           BYTES=$(wc -c < data/bankinter_nav.csv)
           FILAS=$(wc -l < data/bankinter_nav.csv)
-          echo "bankinter_nav.csv — $FILAS filas, $BYTES bytes"
+          echo "historico_valor_liquidativo.csv — $FILAS filas, $BYTES bytes"
           if head -1 data/bankinter_nav.csv | grep -qi "<!doctype\|<html"; then
             echo "❌ Google Sheets devolvió HTML (error de acceso o sesión caducada)"
             exit 1
@@ -127,7 +127,7 @@ jobs:
             echo "❌ Solo $FILAS filas — se esperaban ≥100 (posible truncado)"
             exit 1
           fi
-          echo "✅ bankinter_nav.csv válido ($FILAS filas, $BYTES bytes)"
+          echo "✅ historico_valor_liquidativo.csv válido ($FILAS filas, $BYTES bytes)"
 
       - name: Archivar repositorio completo del día en historic/
         run: |

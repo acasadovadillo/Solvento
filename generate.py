@@ -17,6 +17,7 @@ import pandas as pd
 
 CSV_PATH          = Path("data/movimientos.csv")
 INVERSIONES_PATH  = Path("data/inversiones.csv")
+INMUEBLES_PATH    = Path("data/inmuebles.csv")
 HTML_PATH         = Path("index.html")
 PRICES_CACHE_PATH = Path("data/prices_cache.json")
 
@@ -62,13 +63,14 @@ OBJETIVO_ASIGNACION = {
     "Renta fija":     40.0,
 }
 TIPO_COLORES_INV = {"ETF": "#8b5cf6", "Criptoactivo": "#f59e0b",
-                    "Acciones": "#ec4899", "Fondo de inversión": "#14b8a6",
-                    "Inmueble": "#a16207"}
+                    "Acciones": "#ec4899", "Fondo de inversión": "#14b8a6"}
 
-# Categorías de inversión que quedan fuera del target 60/40 (p.ej. bienes inmuebles):
-# no participan en el donut "Estrategia de inversión" ni en su objetivo de asignación,
-# pero sí cuentan en "Distribución por activos" y en el total de patrimonio/inversiones.
-CATEGORIAS_FUERA_DE_TARGET = {"Bienes inmuebles"}
+# Tipos de inmueble (página Inmuebles, independiente de Inversiones)
+TIPO_COLORES_INMUEBLE = {
+    "Apartamento":      "#a16207",
+    "Plaza de garaje":  "#78716c",
+    "Terreno rústico":  "#65a30d",
+}
 
 R_DONUT = 15.91549430918954
 
@@ -441,24 +443,9 @@ ACTIVOS_CONFIG = [
     {"Nombre": "Apple",                          "ISIN": "US0378331005", "Ticker": "AAPL", "categoria": "Renta variable", "tipo": "Acciones",         "Banco": "Trade Republic", "yf_ticker": "AAPL"},
 ]
 
-# ── Fondos sin ticker público (valor manual en fondos_manuales.csv) ──
-_FONDOS_PATH = Path("data/fondos_manuales.csv")
-if _FONDOS_PATH.exists():
-    for _, _fr in pd.read_csv(_FONDOS_PATH, dtype=str).iterrows():
-        ACTIVOS_CONFIG.append({
-            "Nombre":       str(_fr.get("Nombre", "")).strip(),
-            "ISIN":         str(_fr.get("ISIN", "-")).strip(),
-            "Ticker":       "-",
-            "categoria":    str(_fr.get("categoria", "Renta variable")).strip(),
-            "tipo":         str(_fr.get("tipo", "Fondo de inversión")).strip(),
-            "Banco":        str(_fr.get("Banco", "")).strip(),
-            "yf_ticker":    None,
-            "valor_manual": float(_fr.get("Valor", 0) or 0),
-        })
-
-# ── Leer aportaciones (todo inversiones.csv son aportaciones) ──
+# ── Leer aportaciones (todo inversiones.csv/"Cartera" son aportaciones) ──
 _df_inv = pd.read_csv(INVERSIONES_PATH, encoding="utf-8", dtype=str)
-_df_inv = _df_inv.rename(columns={"Tipo": "categoria", "Activo": "tipo"})
+_df_inv = _df_inv.rename(columns={"Fecha": "fecha", "Tipo": "categoria", "Activo": "tipo"})
 for col in ["tipo", "categoria", "ISIN", "Nombre"]:
     if col in _df_inv.columns:
         _df_inv[col] = _df_inv[col].str.strip()
@@ -472,6 +459,28 @@ for col in ("Coste", "fecha"):
 
 _df_inv["_coste_n"] = pd.to_numeric(_df_inv["Coste"], errors="coerce")
 inv_apor = _df_inv[_df_inv["_coste_n"].notna()].copy()
+
+# ── Fondos sin ticker público (ISIN no mapeado en ISIN_YF_MAP): se derivan
+# automáticamente de las filas de Cartera con coste real, sin necesitar una
+# hoja aparte. Su valor actual se calcula vía histórico de valor liquidativo
+# (_bk_nav, por ISIN) si está disponible; si no, queda "N/D" hasta que se
+# añada su NAV a esa hoja. ──
+_isins_con_ticker = set(ISIN_YF_MAP) | {a["ISIN"] for a in ACTIVOS_CONFIG}
+_fondos_manuales_isins = (
+    inv_apor[(inv_apor["ISIN"] != "-") & (~inv_apor["ISIN"].isin(_isins_con_ticker))]
+    .drop_duplicates(subset=["ISIN"], keep="first")
+)
+for _, _fr in _fondos_manuales_isins.iterrows():
+    ACTIVOS_CONFIG.append({
+        "Nombre":       str(_fr.get("Nombre", "")).strip(),
+        "ISIN":         str(_fr.get("ISIN", "-")).strip(),
+        "Ticker":       "-",
+        "categoria":    str(_fr.get("categoria", "Renta variable")).strip(),
+        "tipo":         str(_fr.get("tipo", "Fondo de inversión")).strip(),
+        "Banco":        str(_fr.get("Banco", "")).strip(),
+        "yf_ticker":    None,
+        "valor_manual": float("nan"),
+    })
 
 # ── Clave de cruce: ISIN o Nombre (Bitcoin no tiene ISIN) ──
 def _jk_v(nombre, isin):
@@ -491,6 +500,23 @@ if len(inv_apor) > 0:
 else:
     _coste_agg = pd.DataFrame(columns=["_jk","coste_total","unidades_total","fecha_primera","n_aportaciones"])
 
+# ── Historial de valor liquidativo (fondos sin ticker público: Bankinter, etc.)
+# Se carga aquí (antes de construir inv_raw) para poder usar el último NAV
+# conocido × unidades como valor actual dinámico de esos fondos. ──
+_BK_NAV_PATH = Path("data/bankinter_nav.csv")
+_bk_nav = {}  # {isin: ([dates], [navs])}
+if _BK_NAV_PATH.exists():
+    _bk_df = pd.read_csv(_BK_NAV_PATH, dtype=str)
+    _bk_df["fecha"] = pd.to_datetime(_bk_df["fecha"], dayfirst=True, errors="coerce").dt.date
+    _bk_df["nav"] = pd.to_numeric(_bk_df["nav"], errors="coerce")
+    _bk_df = _bk_df.dropna(subset=["fecha", "nav"]).sort_values("fecha")
+    for _bisin, _bgrp in _bk_df.groupby("isin"):
+        _bk_nav[str(_bisin)] = (list(_bgrp["fecha"]), list(_bgrp["nav"]))
+    print(f"   Histórico valor liquidativo: {len(_bk_nav)} fondos, {len(_bk_df)} puntos cargados")
+
+# Last known NAV per ISIN for display in the tabla_activos Mercado column
+_bk_last_nav = {isin: (_bkd[-1], _bkn[-1]) for isin, (_bkd, _bkn) in _bk_nav.items() if _bkd}
+
 # ── Construir inv_raw: precio live × unidades ──
 _inv_rows = []
 for _a in ACTIVOS_CONFIG:
@@ -507,6 +533,10 @@ for _a in ACTIVOS_CONFIG:
         _precio  = fetch_precio_actual_eur(_yft)
         _importe = round(_precio * _unids, 2) if (_precio and not math.isnan(_unids)) else float("nan")
         _pfuente = _price_sources.get(_yft, "error")
+    elif str(_a.get("ISIN", "-")).strip() in _bk_last_nav and not math.isnan(_unids):
+        _, _nav_actual = _bk_last_nav[str(_a["ISIN"]).strip()]
+        _importe = round(_nav_actual * _unids, 2)
+        _pfuente = "nav"
     else:
         _importe = float(_a.get("valor_manual", float("nan")))
         _pfuente = "manual"
@@ -573,9 +603,55 @@ total_ganancia_inv = round(total_inversiones - total_coste_inv, 2) if total_cost
 total_rent_inv_pct = ((total_inversiones / total_coste_inv) - 1) * 100 if total_coste_inv > 0 else float("nan")
 hay_rentabilidad   = total_coste_inv > 0
 
-patrimonio_neto = round(patrimonio_liquido + total_inversiones, 2)
+# ════════════════════════════════════════════════════
+# INMUEBLES — página independiente, fuera de Inversiones
+# ════════════════════════════════════════════════════
+inmuebles_df = pd.DataFrame(columns=[
+    "nombre", "tipo", "importe", "coste", "fecha_tasacion", "fecha_compra",
+    "ganancia", "rent_pct", "cagr", "accent",
+])
+if INMUEBLES_PATH.exists():
+    _inm_raw = pd.read_csv(INMUEBLES_PATH, dtype=str)
+    _inm_raw.columns = [c.strip() for c in _inm_raw.columns]
+    _inm = pd.DataFrame({
+        "nombre":         _inm_raw["Direccion"].str.strip(),
+        "tipo":           _inm_raw["Tipo"].str.strip(),
+        "importe":        pd.to_numeric(_inm_raw["Tasacion"], errors="coerce"),
+        "coste":           pd.to_numeric(_inm_raw["Valor_compra"], errors="coerce"),
+        "fecha_tasacion": pd.to_datetime(_inm_raw["Fecha_Tasacion"].str.strip(), dayfirst=True, errors="coerce"),
+        "fecha_compra":   pd.to_datetime(_inm_raw["Fecha_adquisición"].str.strip(), dayfirst=True, errors="coerce"),
+    })
+    _inm["ganancia"] = _inm["importe"] - _inm["coste"]
+    _inm["rent_pct"] = ((_inm["importe"] / _inm["coste"]) - 1) * 100
+    def _cagr_inmueble(r):
+        if pd.isna(r["coste"]) or r["coste"] <= 0 or pd.isnull(r["fecha_compra"]):
+            return float("nan")
+        _anos_i = (_hoy - r["fecha_compra"]).days / 365.25
+        return (math.pow(r["importe"] / r["coste"], 1.0 / _anos_i) - 1) * 100 if _anos_i >= 0.25 else float("nan")
+    _inm["cagr"] = _inm.apply(_cagr_inmueble, axis=1)
+    _inm["accent"] = _inm["tipo"].map(TIPO_COLORES_INMUEBLE).fillna("#a16207")
+    inmuebles_df = _inm.sort_values("importe", ascending=False).reset_index(drop=True)
+
+total_inmuebles       = round(inmuebles_df["importe"].dropna().sum(), 2)
+_coste_inm_validos    = inmuebles_df["coste"].dropna()
+total_coste_inmuebles = round(_coste_inm_validos[_coste_inm_validos > 0].sum(), 2)
+total_ganancia_inm    = round(total_inmuebles - total_coste_inmuebles, 2) if total_coste_inmuebles > 0 else 0.0
+total_rent_inm_pct    = ((total_inmuebles / total_coste_inmuebles) - 1) * 100 if total_coste_inmuebles > 0 else float("nan")
+hay_rentabilidad_inm  = total_coste_inmuebles > 0
+n_inmuebles           = len(inmuebles_df)
+rent_inm_color  = "#10b981" if (not isinstance(total_rent_inm_pct, float) or math.isnan(total_rent_inm_pct) or total_rent_inm_pct >= 0) else "#ef4444"
+rent_inm_signo  = "+" if (not isinstance(total_rent_inm_pct, float) or math.isnan(total_rent_inm_pct) or total_rent_inm_pct >= 0) else ""
+rent_inm_str    = f"{rent_inm_signo}{total_rent_inm_pct:.2f}%" if hay_rentabilidad_inm else "—"
+
+inmuebles_tipo = inmuebles_df.dropna(subset=["importe"]).groupby("tipo")["importe"].sum().round(2).reset_index()
+inmuebles_tipo = inmuebles_tipo.sort_values("importe", ascending=False).reset_index(drop=True)
+inmuebles_tipo["accent"] = inmuebles_tipo["tipo"].map(TIPO_COLORES_INMUEBLE).fillna("#a16207")
+inmuebles_tipo = add_donut_fields(inmuebles_tipo, total_inmuebles)
+
+patrimonio_neto = round(patrimonio_liquido + total_inversiones + total_inmuebles, 2)
 ratio_inv       = (total_inversiones / patrimonio_neto * 100) if patrimonio_neto != 0 else 0.0
-pct_liquidez_num = 100.0 - ratio_inv
+ratio_inmuebles = (total_inmuebles / patrimonio_neto * 100) if patrimonio_neto != 0 else 0.0
+pct_liquidez_num = 100.0 - ratio_inv - ratio_inmuebles
 n_cuentas       = len(saldos)
 rent_color      = "#10b981" if (not isinstance(total_rent_inv_pct, float) or total_rent_inv_pct >= 0) else "#ef4444"
 rent_signo      = "+" if (not isinstance(total_rent_inv_pct, float) or total_rent_inv_pct >= 0) else ""
@@ -592,10 +668,11 @@ _portfolio_cagr_str = (f'{"+" if _portfolio_cagr >= 0 else ""}{_portfolio_cagr:.
 
 inv_raw["pct"] = (inv_raw["importe"] / total_inversiones * 100) if total_inversiones != 0 else 0.0
 
-_inv_raw_target = inv_raw[~inv_raw["categoria"].isin(CATEGORIAS_FUERA_DE_TARGET)]
-total_inv_estrategia = round(_inv_raw_target["importe"].dropna().sum(), 2)
+# Alias: los inmuebles viven en su propia página/CSV y nunca tocan inv_raw,
+# por lo que no hay categorías que excluir del target de asignación.
+total_inv_estrategia = total_inversiones
 
-inv_cat = _inv_raw_target.dropna(subset=["importe"]).groupby("categoria")["importe"].sum().round(2).reset_index()
+inv_cat = inv_raw.dropna(subset=["importe"]).groupby("categoria")["importe"].sum().round(2).reset_index()
 inv_cat = inv_cat.sort_values("importe", ascending=False).reset_index(drop=True)
 inv_cat["accent"] = inv_cat["categoria"].map(CAT_COLORES_INV).fillna("#6b7280")
 inv_cat = add_donut_fields(inv_cat, total_inv_estrategia)
@@ -1238,6 +1315,47 @@ def tabla_aportaciones():
         )
     return "\n".join(rows)
 
+def tabla_inmuebles_html():
+    TD = "padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;"
+    rows = []
+    for _, r in inmuebles_df.iterrows():
+        nombre  = str(r["nombre"])
+        tipo    = str(r["tipo"])
+        accent  = r.get("accent", "#a16207")
+        tasacion_s = r["fecha_tasacion"].strftime("%d/%m/%Y") if pd.notna(r.get("fecha_tasacion")) else "—"
+        coste   = r.get("coste")
+        ganancia = r.get("ganancia")
+        rent_pct = r.get("rent_pct")
+        cagr_val = r.get("cagr")
+        has_coste = pd.notna(coste) and coste > 0
+        tipo_chip = (f'<span style="font-size:0.68rem;font-weight:600;color:{accent};'
+                     f'background:{accent}22;padding:0.15rem 0.45rem;border-radius:4px;'
+                     f'margin-top:0.2rem;display:inline-block;">{html_escape(tipo)}</span>')
+        if has_coste:
+            g_color = "#10b981" if ganancia >= 0 else "#ef4444"
+            g_signo = "+" if ganancia >= 0 else ""
+            _show_cagr = pd.notna(cagr_val)
+            coste_td = f'<td style="{TD}text-align:right;color:#9ca3af;font-size:0.88rem;font-family:ui-monospace,monospace;">{fmt_eur(coste)}</td>'
+            rent_td  = (f'<td style="{TD}text-align:right;">'
+                        f'<div style="color:{g_color};font-weight:600;font-size:0.88rem;">{g_signo}{fmt_eur(ganancia)}</div>'
+                        f'<div style="color:{g_color};font-size:0.75rem;opacity:0.85;">{g_signo}{rent_pct:.2f}%'
+                        + (f' · CAGR {cagr_val:.1f}%' if _show_cagr else '') +
+                        f'</div></td>')
+        else:
+            coste_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
+            rent_td  = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
+        rows.append(
+            f'<tr class="table-row">'
+            f'<td style="{TD}text-align:left;">'
+            f'<div style="font-weight:600;color:#ffffff;font-size:0.9rem;">{html_escape(nombre)}</div>'
+            f'{tipo_chip}</td>'
+            f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;">{fmt_eur(r["importe"])}</td>'
+            f'<td style="{TD}text-align:right;color:#9ca3af;font-size:0.82rem;font-family:ui-monospace,monospace;white-space:nowrap;">{tasacion_s}</td>'
+            f'{coste_td}{rent_td}'
+            f'</tr>'
+        )
+    return "\n".join(rows)
+
 # ════════════════════════════════════════════════════
 # CATÁLOGO DE MERCADO (Explorar activos: populares por categoría)
 # Formato: (nombre, símbolo TradingView, tipo, mercado)
@@ -1608,20 +1726,7 @@ if len(inv_apor) > 0:
 _yft2jk = {a["yf_ticker"]: _jk_v(a["Nombre"], a["ISIN"])
            for a in ACTIVOS_CONFIG if a.get("yf_ticker")}
 
-# ── Historial NAV de fondos Bankinter (valor liquidativo diario) ──
-_BK_NAV_PATH = Path("data/bankinter_nav.csv")
-_bk_nav = {}  # {isin: ([dates], [navs])}
-if _BK_NAV_PATH.exists():
-    _bk_df = pd.read_csv(_BK_NAV_PATH, dtype=str)
-    _bk_df["fecha"] = pd.to_datetime(_bk_df["fecha"], dayfirst=True, errors="coerce").dt.date
-    _bk_df["nav"] = pd.to_numeric(_bk_df["nav"], errors="coerce")
-    _bk_df = _bk_df.dropna(subset=["fecha", "nav"]).sort_values("fecha")
-    for _bisin, _bgrp in _bk_df.groupby("isin"):
-        _bk_nav[str(_bisin)] = (list(_bgrp["fecha"]), list(_bgrp["nav"]))
-    print(f"   Bankinter NAV: {len(_bk_nav)} fondos, {len(_bk_df)} puntos cargados")
-
-# Last known NAV per ISIN for display in the tabla_activos Mercado column
-_bk_last_nav = {isin: (_bkd[-1], _bkn[-1]) for isin, (_bkd, _bkn) in _bk_nav.items() if _bkd}
+# (_bk_nav / _bk_last_nav ya se cargaron arriba, antes de construir inv_raw)
 
 # Inject Bankinter NAV history into portfolio chart data (now that _bk_nav is available)
 for _bisin3, (_bkd3, _bkn3) in _bk_nav.items():
@@ -1642,12 +1747,17 @@ _isin2jk = {str(a["ISIN"]): _jk_v(a["Nombre"], a["ISIN"])
             for a in ACTIVOS_CONFIG
             if not a.get("yf_ticker") and str(a.get("ISIN", "-")).strip() not in ("-", "", "nan")}
 
-# Constant fallback for Bankinter funds not covered by _bk_nav history
-_bankinter_fix = sum(float(a.get("valor_manual", 0) or 0)
+# Constant fallback for funds not covered by _bk_nav history (valor_manual
+# es NaN salvo que se rellene explícitamente; NaN se trata como 0 aquí)
+def _vm(a):
+    _v = a.get("valor_manual", 0)
+    return _v if (_v is not None and not (isinstance(_v, float) and math.isnan(_v))) else 0.0
+
+_bankinter_fix = sum(_vm(a)
                      for a in ACTIVOS_CONFIG
                      if not a.get("yf_ticker") and str(a.get("ISIN", "-")).strip() not in _bk_nav)
 # Benchmark uses valor_manual as static baseline (Bankinter stays out of MSCI World comparison)
-_bankinter_fix_bench = sum(float(a.get("valor_manual", 0) or 0)
+_bankinter_fix_bench = sum(_vm(a)
                            for a in ACTIVOS_CONFIG if not a.get("yf_ticker"))
 
 def _inv_en(d):
@@ -1979,6 +2089,7 @@ html_out = f"""<!DOCTYPE html>
     <button class="nav-tab active" id="nav-tab-patrimonio" onclick="navTab('patrimonio')">Patrimonio</button>
     <button class="nav-tab" id="nav-tab-cuentas" onclick="navTab('cuentas')">Liquidez</button>
     <button class="nav-tab" id="nav-tab-inversiones" onclick="navTab('inversiones')">Inversiones</button>
+    <button class="nav-tab" id="nav-tab-inmuebles" onclick="navTab('inmuebles')">Inmuebles</button>
     <button class="nav-tab" id="nav-tab-pasivos" onclick="navTab('pasivos')">Pasivos</button>
   </nav>
   <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menú">
@@ -1989,6 +2100,7 @@ html_out = f"""<!DOCTYPE html>
   <button class="mobile-nav-item active" id="mnav-patrimonio" onclick="navTab('patrimonio');toggleMobileNav()">Patrimonio</button>
   <button class="mobile-nav-item" id="mnav-cuentas" onclick="navTab('cuentas');toggleMobileNav()">Liquidez</button>
   <button class="mobile-nav-item" id="mnav-inversiones" onclick="navTab('inversiones');toggleMobileNav()">Inversiones</button>
+  <button class="mobile-nav-item" id="mnav-inmuebles" onclick="navTab('inmuebles');toggleMobileNav()">Inmuebles</button>
   <button class="mobile-nav-item" id="mnav-pasivos" onclick="navTab('pasivos');toggleMobileNav()">Pasivos</button>
 </div>
 
@@ -2000,13 +2112,15 @@ html_out = f"""<!DOCTYPE html>
   </div>
   <!-- ══ HUB CARDS ══ -->
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
-    <div style="display:flex;justify-content:space-between;font-size:0.72rem;font-weight:600;margin-bottom:0.4rem;">
+    <div style="display:flex;justify-content:space-between;font-size:0.72rem;font-weight:600;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.3rem 1rem;">
       <span style="color:#3b82f6;">Liquidez · {pct_liquidez_num:.1f}%</span>
       <span style="color:#10b981;">Inversiones · {ratio_inv:.1f}%</span>
+      <span style="color:#a16207;">Inmuebles · {ratio_inmuebles:.1f}%</span>
     </div>
     <div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;">
       <div title="Liquidez: {pct_liquidez_num:.1f}%" style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
       <div title="Inversiones: {ratio_inv:.1f}%" style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
+      <div title="Inmuebles: {ratio_inmuebles:.1f}%" style="width:{ratio_inmuebles:.2f}%;background:#a16207;transition:width 0.4s;"></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
 
@@ -2022,6 +2136,13 @@ html_out = f"""<!DOCTYPE html>
         <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(total_inversiones)}</div>
         <div style="font-size:0.82rem;color:{rent_color};font-weight:600;margin-bottom:0.75rem;">{rent_str}</div>
         <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{ratio_inv:.1f}% del patrimonio &nbsp;→</div>
+      </div>
+
+      <div class="dashboard-panel" onclick="navTab('inmuebles')" style="cursor:pointer;border-left:3px solid #a16207;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
+        <div style="font-size:0.72rem;color:#a16207;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Inmuebles</div>
+        <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(total_inmuebles)}</div>
+        <div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem;">{n_inmuebles} inmuebles</div>
+        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{ratio_inmuebles:.1f}% del patrimonio &nbsp;→</div>
       </div>
 
       <div class="dashboard-panel" onclick="navTab('pasivos')" style="cursor:pointer;border-left:3px solid #6b7280;padding-left:1.25rem;transition:background 0.2s;opacity:0.7;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
@@ -2605,6 +2726,63 @@ html_out = f"""<!DOCTYPE html>
 </div>
 <!-- fin page-inversiones -->
 
+<!-- ══ PÁGINA: INMUEBLES ══ -->
+<div class="page" id="page-inmuebles">
+  <div class="hero-card" style="margin-top:1.5rem;">
+    <div class="hero-main">
+      <span class="hero-label">Valor actual</span>
+      <span class="hero-value">{fmt_eur(total_inmuebles)}</span>
+    </div>
+    <div class="hero-breakdown">
+      <div class="hero-item">
+        <span class="hero-item-label">Coste de compra</span>
+        <span class="hero-item-value">{fmt_eur(total_coste_inmuebles) if hay_rentabilidad_inm else "—"}</span>
+      </div>
+      <div class="hero-item">
+        <span class="hero-item-label">Ganancia</span>
+        <span class="hero-item-value" style="color:{rent_inm_color};">{('+' if total_ganancia_inm >= 0 else '') + fmt_eur(total_ganancia_inm) if hay_rentabilidad_inm else '—'}</span>
+      </div>
+      <div class="hero-item">
+        <span class="hero-item-label">Rentabilidad</span>
+        <span class="hero-item-value" style="color:{rent_inm_color};">{rent_inm_str}</span>
+      </div>
+      <div class="hero-item">
+        <span class="hero-item-label">Inmuebles</span>
+        <span class="hero-item-value" style="color:#e5e7eb;">{n_inmuebles}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-container-double">
+    <div class="chart-block">
+      <div class="chart-block-title">Distribución por tipo</div>
+      <div class="chart-wrapper">
+        <svg class="donut" viewBox="0 0 42 42">{sectors_donut(inmuebles_tipo, "tipo", "importe")}</svg>
+        <div class="donut-center">
+          <span style="font-size:1rem;font-weight:700;color:#fff;">{fmt_eur(total_inmuebles)}</span>
+          <span style="font-size:0.55rem;color:#6b7280;text-transform:uppercase;margin-top:0.2rem;">Total</span>
+        </div>
+      </div>
+      <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:0.5rem;">{legend_donut(inmuebles_tipo, "tipo")}</div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Inmuebles</div>
+    <table class="minimal-table">
+      <thead><tr>
+        <th style="text-align:left;">Inmueble</th>
+        <th style="text-align:right;">Tasación</th>
+        <th style="text-align:right;">Fecha tasación</th>
+        <th style="text-align:right;">Coste compra</th>
+        <th style="text-align:right;">Ganancia</th>
+      </tr></thead>
+      <tbody>{tabla_inmuebles_html()}</tbody>
+    </table>
+  </div>
+</div>
+<!-- fin page-inmuebles -->
+
 <div class="page" id="page-pasivos">
   <div class="header-block">
     <h2 class="section-title">Pasivos</h2>
@@ -2724,5 +2902,6 @@ HTML_PATH.write_text(html_out, encoding="utf-8")
 print(f"✅ HTML generado: {HTML_PATH}")
 print(f"   Patrimonio líquido:  {fmt_eur(patrimonio_liquido)}")
 print(f"   Total inversiones:   {fmt_eur(total_inversiones)}")
+print(f"   Total inmuebles:     {fmt_eur(total_inmuebles)} ({n_inmuebles} inmuebles)")
 print(f"   Patrimonio neto:     {fmt_eur(patrimonio_neto)}")
 print(f"   Total gastos:        {fmt_eur(total_gastos)}")
