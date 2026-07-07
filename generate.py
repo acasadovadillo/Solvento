@@ -2020,7 +2020,7 @@ html_out = f"""<!DOCTYPE html>
   <div style="max-width:1400px;margin:2rem auto 2rem;width:100%;">
     {tarjetas_cuentas_html()}
   </div>
-  <div class="dashboard-main-grid">
+  <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
     <div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
         <div>
@@ -2067,6 +2067,8 @@ html_out = f"""<!DOCTYPE html>
         <span id="lbl-end-date">{fecha_fin_lbl}</span>
       </div>
     </div>
+  </div>
+  <div style="max-width:1400px;margin:0 auto;width:100%;">
     <div class="dashboard-panel">
       <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.5rem;">Distribución de liquidez</div>
       <div style="display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;flex-grow:1;">
