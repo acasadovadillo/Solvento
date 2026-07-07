@@ -349,8 +349,7 @@ if n_puntos > 0:
     signo_rend  = "+" if diff_abs >= 0 else ""
     color_trend = "#10b981" if diff_abs >= 0 else "#ef4444"
     color_bg_grad = "rgba(16,185,129,0.15)" if diff_abs >= 0 else "rgba(239,68,68,0.15)"
-    # Solo delta en €: el % no es informativo en cuentas de liquidez (saldo inicial ~0)
-    fmt_rend    = f"{signo_rend}{fmt_eur(diff_abs)}"
+    fmt_rend    = f"{signo_rend}{fmt_eur(diff_abs)} ({signo_rend}{fmt_pct(diff_pct)})"
     fecha_ini_lbl = evo["fecha"].iloc[0].strftime("%d/%m/%Y")
     fecha_fin_lbl = evo["fecha"].iloc[-1].strftime("%d/%m/%Y")
 
@@ -413,7 +412,7 @@ if n_puntos > 0:
     evo_ref_y = f"{evo['y_svg'].iloc[0]:.2f}"
 else:
     color_trend = "#6b7280"; color_bg_grad = "rgba(107,114,128,0.1)"
-    fmt_rend = "0,00 €"
+    fmt_rend = "0,00 € (0,00%)"
     fecha_ini_lbl = fecha_fin_lbl = date.today().strftime("%d/%m/%Y")
     path_linea = "M 70 120 L 980 120"
     path_area  = "M 70 120 L 980 120 L 980 280 L 70 280 Z"
