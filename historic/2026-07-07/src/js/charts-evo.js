@@ -62,9 +62,9 @@ function changeTimeframe(period, btnEl) {
   dd.textContent = period === "MAX" ? `Desde el inicio (${filtered[0].f})` : `${filtered[0].f} — ${filtered[filtered.length - 1].f}`;
   window.evoDefaultDateText = dd.textContent;
   const diff = filtered[filtered.length - 1].v - filtered[0].v;
+  const pct = filtered[0].v ? (diff / Math.abs(filtered[0].v) * 100) : 0;
   const signo = diff >= 0 ? "+" : "", color = diff >= 0 ? "#10b981" : "#ef4444";
-  // Solo delta en €: el % no es informativo en cuentas de liquidez (saldo inicial ~0)
-  rendDisplay.textContent = `${signo}${formatEur(diff)}`;
+  rendDisplay.textContent = `${signo}${formatEur(diff)} (${signo}${pct.toFixed(2).replace(".", ",")}%)`;
   rendDisplay.style.color = color;
   rendDisplay.style.background = diff >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
   document.getElementById("chart-line").setAttribute("stroke", color);
