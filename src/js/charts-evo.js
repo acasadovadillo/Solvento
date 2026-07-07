@@ -5,6 +5,7 @@ const iDot = document.getElementById("interactive-dot");
 const valorDisplay = document.getElementById("evo-valor-display");
 const dateDisplay = document.getElementById("evo-date-display");
 const rendDisplay = document.getElementById("evo-rendimiento-display");
+const evoDateTooltip = document.getElementById("evo-date-tooltip");
 
 function renderChartAxes(data, minY, maxY, gid) {
   const g = document.getElementById(gid || "chart-axes");
@@ -133,14 +134,20 @@ if (svgChart && evoData.length) {
     vLine.setAttribute("x1", cl.x); vLine.setAttribute("x2", cl.x); vLine.style.display = "block";
     iDot.style.left = (cl.x / 1000 * 100) + "%"; iDot.style.top = (cl.y / 300 * 100) + "%"; iDot.style.display = "block";
     if (valorDisplay) { valorDisplay.textContent = cl.vf + " €"; valorDisplay.style.display = "inline-block"; }
-    if (dateDisplay) dateDisplay.textContent = cl.f;
     if (rendDisplay) rendDisplay.style.display = "none";
+    if (evoDateTooltip) {
+      const bx = cl.x / 1000 * rect.width;
+      evoDateTooltip.textContent = cl.f;
+      evoDateTooltip.style.left = Math.max(45, Math.min(rect.width * 0.984 - 46, bx)) + "px";
+      evoDateTooltip.style.top = (268 / 300 * rect.height) + "px";
+      evoDateTooltip.style.display = "";
+    }
   });
   svgChart.addEventListener("mouseleave", () => {
     vLine.style.display = "none"; iDot.style.display = "none";
     if (valorDisplay) { valorDisplay.textContent = ""; valorDisplay.style.display = "none"; }
-    if (dateDisplay) dateDisplay.textContent = window.evoDefaultDateText;
     if (rendDisplay) rendDisplay.style.display = "inline-block";
+    if (evoDateTooltip) evoDateTooltip.style.display = "none";
   });
 }
 

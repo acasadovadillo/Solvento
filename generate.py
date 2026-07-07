@@ -2066,6 +2066,7 @@ html_out = f"""<!DOCTYPE html>
           <line id="interactive-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
         </svg>
         <div id="interactive-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{color_trend};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
+        <div id="evo-date-tooltip" style="position:absolute;transform:translate(-50%,0);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
         <span id="lbl-start-date">{fecha_ini_lbl}</span>
