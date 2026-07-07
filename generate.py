@@ -2149,41 +2149,51 @@ html_out = f"""<!DOCTYPE html>
       </table>
     </div>
   </div>
-  <div class="table-container" id="mov-section" style="display:none;">
-    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Movimientos</div>
-      <div id="mov-filter-badge" style="display:none;align-items:center;gap:0.4rem;background:#2a2d3a;border:1px solid #4b5563;border-radius:20px;padding:0.25rem 0.6rem 0.25rem 0.75rem;font-size:0.78rem;color:#e5e7eb;">
-        <span id="mov-filter-label"></span>
-        <span id="mov-filter-saldo" style="color:#9ca3af;font-weight:700;"></span>
-        <button onclick="showMovimientos(null)" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;line-height:1;font-size:1rem;" title="Limpiar filtro">×</button>
+</div>
+
+<!-- ══ PÁGINA MOVIMIENTOS (solo accesible desde una tarjeta de cuenta o la leyenda del donut) ══ -->
+<div class="page" id="page-movimientos">
+  <div class="header-block">
+    <button onclick="navTab('cuentas')"
+      style="background:none;border:none;color:#6b7280;cursor:pointer;padding:0;font-size:0.85rem;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;transition:color 0.15s;"
+      onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">
+      ← Volver a Liquidez
+    </button>
+    <h2 class="section-title">Movimientos</h2>
+  </div>
+  <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
+    <div class="table-container" id="mov-section">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <div id="mov-filter-badge" style="display:none;align-items:center;gap:0.4rem;background:#2a2d3a;border:1px solid #4b5563;border-radius:20px;padding:0.25rem 0.6rem 0.25rem 0.75rem;font-size:0.78rem;color:#e5e7eb;">
+          <span id="mov-filter-label"></span>
+          <span id="mov-filter-saldo" style="color:#9ca3af;font-weight:700;"></span>
+          <button onclick="showMovimientos(null)" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;line-height:1;font-size:1rem;" title="Limpiar filtro">×</button>
+        </div>
+        <input id="mov-search" type="search" placeholder="Buscar movimientos…" oninput="movFiltrar()"
+          style="margin-left:auto;background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;padding:0.5rem 0.85rem;outline:none;font-family:inherit;width:100%;max-width:300px;"
+          onfocus="this.style.borderColor='#6b7280'" onblur="this.style.borderColor='#3b4054'">
       </div>
-      <input id="mov-search" type="search" placeholder="Buscar movimientos…" oninput="movFiltrar()"
-        style="margin-left:auto;background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;padding:0.5rem 0.85rem;outline:none;font-family:inherit;width:100%;max-width:300px;"
-        onfocus="this.style.borderColor='#6b7280'" onblur="this.style.borderColor='#3b4054'">
-      <button onclick="hideMovimientos()" title="Cerrar movimientos"
-        style="background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#9ca3af;cursor:pointer;padding:0.5rem 0.7rem;line-height:1;font-size:0.95rem;font-family:inherit;transition:border-color 0.15s,color 0.15s;"
-        onmouseover="this.style.borderColor='#6b7280';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#3b4054';this.style.color='#9ca3af'">×</button>
-    </div>
-    <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.25rem;overflow-x:auto;">
-      <button class="cmov-tab" onclick="filterCuentasMov(this,'__all__')" style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;margin-bottom:-1px;">Todos</button>
-      {"".join(f'<button class="cmov-tab" onclick="filterCuentasMov(this,\'{html_escape(r["cuenta"]).replace(chr(39), chr(92)+chr(39))}\')" style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;margin-bottom:-1px;">{html_escape(r["cuenta"])}</button>' for _, r in saldos.iterrows())}
-    </div>
-    <table class="minimal-table">
-      <thead><tr>
-        <th style="text-align:left;">Fecha</th>
-        <th style="text-align:left;">Concepto</th>
-        <th style="text-align:right;">Importe</th>
-        <th style="text-align:right;">Saldo</th>
-      </tr></thead>
-      <tbody id="mov-tbody">{_mov_html}</tbody>
-    </table>
-    <p id="mov-empty" style="display:none;text-align:center;color:#6b7280;padding:2rem 0;font-size:0.85rem;">Sin resultados</p>
-    <div id="mov-more-wrap" style="display:none;text-align:center;margin-top:1.25rem;">
-      <button onclick="movMostrarMas()"
-        style="background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;font-weight:600;padding:0.55rem 1.5rem;cursor:pointer;font-family:inherit;transition:border-color 0.15s;"
-        onmouseover="this.style.borderColor='#6b7280'" onmouseout="this.style.borderColor='#3b4054'">
-        Mostrar 50 más&nbsp;·&nbsp;<span id="mov-more-count" style="color:#6b7280;font-weight:500;"></span>
-      </button>
+      <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.25rem;overflow-x:auto;">
+        <button class="cmov-tab" onclick="filterCuentasMov(this,'__all__')" style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;margin-bottom:-1px;">Todos</button>
+        {"".join(f'<button class="cmov-tab" onclick="filterCuentasMov(this,\'{html_escape(r["cuenta"]).replace(chr(39), chr(92)+chr(39))}\')" style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;margin-bottom:-1px;">{html_escape(r["cuenta"])}</button>' for _, r in saldos.iterrows())}
+      </div>
+      <table class="minimal-table">
+        <thead><tr>
+          <th style="text-align:left;">Fecha</th>
+          <th style="text-align:left;">Concepto</th>
+          <th style="text-align:right;">Importe</th>
+          <th style="text-align:right;">Saldo</th>
+        </tr></thead>
+        <tbody id="mov-tbody">{_mov_html}</tbody>
+      </table>
+      <p id="mov-empty" style="display:none;text-align:center;color:#6b7280;padding:2rem 0;font-size:0.85rem;">Sin resultados</p>
+      <div id="mov-more-wrap" style="display:none;text-align:center;margin-top:1.25rem;">
+        <button onclick="movMostrarMas()"
+          style="background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;font-weight:600;padding:0.55rem 1.5rem;cursor:pointer;font-family:inherit;transition:border-color 0.15s;"
+          onmouseover="this.style.borderColor='#6b7280'" onmouseout="this.style.borderColor='#3b4054'">
+          Mostrar 50 más&nbsp;·&nbsp;<span id="mov-more-count" style="color:#6b7280;font-weight:500;"></span>
+        </button>
+      </div>
     </div>
   </div>
 </div>

@@ -91,8 +91,8 @@ function _setCmovTabActiva(cuenta) {
 }
 
 function showMovimientos(cuenta) {
-  showPage("cuentas");
-  const sec = document.getElementById("mov-section");
+  showPage("movimientos");
+  window.scrollTo({ top: 0, behavior: "auto" });
   const badge = document.getElementById("mov-filter-badge");
   const label = document.getElementById("mov-filter-label");
   const saldoEl = document.getElementById("mov-filter-saldo");
@@ -107,16 +107,7 @@ function showMovimientos(cuenta) {
   } else {
     if (badge) badge.style.display = "none";
   }
-  if (sec) sec.style.display = "";
   aplicarFiltrosMov(true);
-  setTimeout(() => {
-    if (sec) sec.scrollIntoView({ behavior: "smooth" });
-  }, 50);
-}
-
-function hideMovimientos() {
-  const sec = document.getElementById("mov-section");
-  if (sec) sec.style.display = "none";
 }
 
 function filterCuentasMov(btn, cuenta) {
