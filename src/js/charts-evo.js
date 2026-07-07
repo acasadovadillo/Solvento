@@ -77,11 +77,9 @@ document.querySelectorAll(".tf-btn").forEach(b => b.addEventListener("click", e 
 window.activeEvoData = evoData;
 window.evoDefaultDateText = dateDisplay ? dateDisplay.textContent : "";
 
-// ── Gráfica de patrimonio neto (página Patrimonio): selector de periodo ──
-function changeNetoTimeframe(period, btnEl) {
+// ── Gráfica de patrimonio neto (página Patrimonio): selector de periodo (desplegable) ──
+function changeNetoTimeframe(period) {
   if (typeof netoHistData === "undefined" || !netoHistData.length) return;
-  document.querySelectorAll(".tf-btn-neto").forEach(b => b.classList.remove("active"));
-  if (btnEl) btnEl.classList.add("active");
   const maxT = Math.max(...netoHistData.map(d => d.t)), day = 86400000;
   let cutoff = 0;
   if (period === "1D") cutoff = maxT - 1 * day;
@@ -123,7 +121,8 @@ function changeNetoTimeframe(period, btnEl) {
   }
   window.activeNetoData = filtered;
 }
-document.querySelectorAll(".tf-btn-neto").forEach(b => b.addEventListener("click", e => changeNetoTimeframe(e.target.dataset.period, e.target)));
+const netoPeriodSelect = document.getElementById("neto-period-select");
+if (netoPeriodSelect) netoPeriodSelect.addEventListener("change", () => changeNetoTimeframe(netoPeriodSelect.value));
 if (typeof netoHistData !== "undefined") window.activeNetoData = netoHistData;
 
 if (svgChart && evoData.length) {

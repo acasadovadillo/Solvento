@@ -1978,13 +1978,15 @@ html_out = f"""<!DOCTYPE html>
           <div id="neto-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;">Desde el inicio ({fecha_ini_lbl})</div>
         </div>
       </div>
-      <div class="timeframe-selector">
-        <button class="tf-btn-neto" data-period="1D">1D</button>
-        <button class="tf-btn-neto" data-period="1W">1W</button>
-        <button class="tf-btn-neto" data-period="1M">1M</button>
-        <button class="tf-btn-neto" data-period="YTD">1YTD</button>
-        <button class="tf-btn-neto" data-period="1Y">1Y</button>
-        <button class="tf-btn-neto active" data-period="MAX">MAX</button>
+      <div style="margin-bottom:1.5rem;">
+        <select id="neto-period-select" style="background:#12141d;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:8px;padding:0.45rem 0.9rem;font-size:0.82rem;font-weight:600;cursor:pointer;outline:none;font-family:inherit;">
+          <option value="1D">1D</option>
+          <option value="1W">1W</option>
+          <option value="1M">1M</option>
+          <option value="YTD">1YTD</option>
+          <option value="1Y">1Y</option>
+          <option value="MAX" selected>MAX</option>
+        </select>
       </div>
       <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
         <svg id="neto-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
