@@ -860,6 +860,66 @@ def legend_donut(df, label_col, targets=None):
     </div>""")
     return "\n".join(parts)
 
+def panel_asignacion_html():
+    """Barras objetivo vs actual (RV/RF) + rentabilidad por categoría. Excluye
+    las categorías fuera de target (inmuebles): usa total_inv_estrategia como base."""
+    stats = {}
+    for cat, obj_pct in OBJETIVO_ASIGNACION.items():
+        rows  = inv_raw[inv_raw["categoria"] == cat]
+        val   = rows["importe"].dropna().sum()
+        coste = rows["coste_total"].dropna().sum()
+        stats[cat] = {
+            "obj":  obj_pct,
+            "pct":  (val / total_inv_estrategia * 100) if total_inv_estrategia > 0 else 0.0,
+            "val":  val,
+            "gan":  val - coste if coste > 0 else float("nan"),
+            "rent": ((val / coste) - 1) * 100 if coste > 0 else float("nan"),
+        }
+
+    def _barra(key):
+        labels, segs = [], []
+        for cat in OBJETIVO_ASIGNACION:
+            pct   = stats[cat][key]
+            color = CAT_COLORES_INV.get(cat, "#6b7280")
+            labels.append(f'<span style="color:{color};">{html_escape(cat)} · {pct:.1f}%</span>')
+            segs.append(f'<div title="{html_escape(cat)}: {pct:.1f}%" style="width:{pct:.2f}%;background:{color};transition:width 0.4s;"></div>')
+        return (
+            '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.3rem 1rem;font-size:0.72rem;font-weight:600;margin-bottom:0.35rem;">'
+            + "".join(labels) + '</div>'
+            '<div style="height:8px;border-radius:4px;overflow:hidden;display:flex;background:#12141d;">'
+            + "".join(segs) + '</div>'
+        )
+
+    tiles = []
+    for cat in OBJETIVO_ASIGNACION:
+        s     = stats[cat]
+        color = CAT_COLORES_INV.get(cat, "#6b7280")
+        if not math.isnan(s["rent"]):
+            rcolor = "#10b981" if s["rent"] >= 0 else "#ef4444"
+            signo  = "+" if s["rent"] >= 0 else ""
+            rent_html = f'<div style="font-size:1.45rem;font-weight:700;color:{rcolor};letter-spacing:-0.02em;">{signo}{s["rent"]:.2f}%</div>'
+            gan_txt   = f'{signo}{fmt_eur(s["gan"])} de ganancia · '
+        else:
+            rent_html = '<div style="font-size:1.45rem;font-weight:700;color:#6b7280;">—</div>'
+            gan_txt   = ""
+        tiles.append(
+            f'<div style="border-left:3px solid {color};padding-left:1rem;">'
+            f'<div style="font-size:0.72rem;color:{color};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.35rem;">Rentabilidad {html_escape(cat)}</div>'
+            f'{rent_html}'
+            f'<div style="font-size:0.78rem;color:#6b7280;margin-top:0.25rem;">{gan_txt}{fmt_eur(s["val"])} actuales</div>'
+            f'</div>'
+        )
+
+    return (
+        '<div style="display:grid;grid-template-columns:64px 1fr;gap:1.1rem 1.25rem;align-items:center;margin-bottom:1.75rem;">'
+        '<span style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Objetivo</span>'
+        f'<div>{_barra("obj")}</div>'
+        '<span style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Actual</span>'
+        f'<div>{_barra("pct")}</div>'
+        '</div>'
+        f'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.5rem;">{"".join(tiles)}</div>'
+    )
+
 def sectors_patrimonio():
     parts = []
     for _, r in saldos.iterrows():
@@ -2306,6 +2366,13 @@ html_out = f"""<!DOCTYPE html>
         </div>
       </div>
       <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:0.5rem;">{legend_donut(inv_tipo, "tipo")}</div>
+    </div>
+  </div>
+  <!-- ══ ASIGNACIÓN ACTUAL VS OBJETIVO + RENTABILIDAD POR CATEGORÍA ══ -->
+  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
+    <div class="dashboard-panel">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.5rem;">Asignación · actual vs objetivo</div>
+      {panel_asignacion_html()}
     </div>
   </div>
   <div class="table-container">
