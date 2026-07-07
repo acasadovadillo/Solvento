@@ -93,20 +93,8 @@ function _setCmovTabActiva(cuenta) {
 function showMovimientos(cuenta) {
   showPage("movimientos");
   window.scrollTo({ top: 0, behavior: "auto" });
-  const badge = document.getElementById("mov-filter-badge");
-  const label = document.getElementById("mov-filter-label");
-  const saldoEl = document.getElementById("mov-filter-saldo");
   movCuentaActiva = cuenta || "__all__";
   _setCmovTabActiva(movCuentaActiva);
-  if (cuenta) {
-    if (badge) badge.style.display = "inline-flex";
-    if (label) label.textContent = cuenta + " · ";
-    if (saldoEl && typeof saldosCuentas !== "undefined" && saldosCuentas[cuenta] !== undefined) {
-      saldoEl.textContent = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(saldosCuentas[cuenta]) + " €";
-    }
-  } else {
-    if (badge) badge.style.display = "none";
-  }
   aplicarFiltrosMov(true);
 }
 

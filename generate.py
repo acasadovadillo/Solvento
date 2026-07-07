@@ -2164,11 +2164,6 @@ html_out = f"""<!DOCTYPE html>
   <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
     <div class="table-container" id="mov-section">
       <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
-        <div id="mov-filter-badge" style="display:none;align-items:center;gap:0.4rem;background:#2a2d3a;border:1px solid #4b5563;border-radius:20px;padding:0.25rem 0.6rem 0.25rem 0.75rem;font-size:0.78rem;color:#e5e7eb;">
-          <span id="mov-filter-label"></span>
-          <span id="mov-filter-saldo" style="color:#9ca3af;font-weight:700;"></span>
-          <button onclick="showMovimientos(null)" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;line-height:1;font-size:1rem;" title="Limpiar filtro">×</button>
-        </div>
         <input id="mov-search" type="search" placeholder="Buscar movimientos…" oninput="movFiltrar()"
           style="margin-left:auto;background:#1e2130;border:1px solid #3b4054;border-radius:8px;color:#e5e7eb;font-size:0.85rem;padding:0.5rem 0.85rem;outline:none;font-family:inherit;width:100%;max-width:300px;"
           onfocus="this.style.borderColor='#6b7280'" onblur="this.style.borderColor='#3b4054'">
