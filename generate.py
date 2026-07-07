@@ -2001,9 +2001,11 @@ html_out = f"""<!DOCTYPE html>
           <path id="neto-chart-area" d="{neto_area_d}" fill="url(#neto-area-grad)"/>
           <path id="neto-chart-line" d="{neto_path_d}" fill="none" stroke="{neto_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           <line id="neto-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+          <line id="neto-h-line" x1="0" y1="0" x2="980" y2="0" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
         </svg>
         <div id="neto-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{neto_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
         <div id="neto-date-tooltip" style="position:absolute;transform:translate(-50%,0);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
+        <div id="neto-price-tooltip" style="position:absolute;transform:translate(0,-50%);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
         <span id="neto-lbl-start">{fecha_ini_lbl}</span><span id="neto-lbl-end">{fecha_fin_lbl}</span>
@@ -2064,9 +2066,11 @@ html_out = f"""<!DOCTYPE html>
           <path id="chart-area" d="{path_area}" fill="url(#chart-area-grad)"/>
           <path id="chart-line" d="{path_linea}" fill="none" stroke="{color_trend}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           <line id="interactive-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+          <line id="interactive-h-line" x1="0" y1="0" x2="980" y2="0" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
         </svg>
         <div id="interactive-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{color_trend};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
         <div id="evo-date-tooltip" style="position:absolute;transform:translate(-50%,0);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
+        <div id="evo-price-tooltip" style="position:absolute;transform:translate(0,-50%);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
         <span id="lbl-start-date">{fecha_ini_lbl}</span>
@@ -2575,10 +2579,12 @@ html_out = f"""<!DOCTYPE html>
     const svg = document.getElementById('neto-svg-chart');
     if (!svg || !netoHistData.length) return;
     const vline = document.getElementById('neto-v-line');
+    const hline = document.getElementById('neto-h-line');
     const dot   = document.getElementById('neto-dot');
     const rdis  = document.getElementById('neto-rend-display');
     const vdis  = document.getElementById('neto-valor-display');
     const tt    = document.getElementById('neto-date-tooltip');
+    const ptt   = document.getElementById('neto-price-tooltip');
     function onMove(e) {{
       const data = window.activeNetoData || netoHistData;
       if (!data.length) return;
@@ -2597,11 +2603,24 @@ html_out = f"""<!DOCTYPE html>
       tt.style.left = Math.max(45, Math.min(rect.width * 0.984 - 46, bx)) + 'px';
       tt.style.top = (268 / 300 * rect.height) + 'px';
       tt.style.display = '';
+      if (hline) {{
+        hline.setAttribute('x1', best.x); hline.setAttribute('y1', best.y);
+        hline.setAttribute('x2', 980); hline.setAttribute('y2', best.y);
+        hline.style.display = '';
+      }}
+      if (ptt) {{
+        ptt.textContent = best.vf + ' €';
+        ptt.style.left = (980 / vbW * rect.width + 6) + 'px';
+        ptt.style.top = Math.max(14, Math.min(rect.height - 14, by)) + 'px';
+        ptt.style.display = '';
+      }}
     }}
     function onLeave() {{
       vline.style.display = 'none'; dot.style.display = 'none';
+      if (hline) hline.style.display = 'none';
       rdis.style.display = ''; vdis.style.display = 'none';
       tt.style.display = 'none';
+      if (ptt) ptt.style.display = 'none';
     }}
     svg.addEventListener('mousemove', onMove);
     svg.addEventListener('mouseleave', onLeave);

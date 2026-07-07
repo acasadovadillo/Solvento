@@ -1,11 +1,13 @@
 // evoData is injected inline by generate.R before this script loads
 const svgChart = document.getElementById("patrimonio-svg-chart");
 const vLine = document.getElementById("interactive-v-line");
+const hLine = document.getElementById("interactive-h-line");
 const iDot = document.getElementById("interactive-dot");
 const valorDisplay = document.getElementById("evo-valor-display");
 const dateDisplay = document.getElementById("evo-date-display");
 const rendDisplay = document.getElementById("evo-rendimiento-display");
 const evoDateTooltip = document.getElementById("evo-date-tooltip");
+const evoPriceTooltip = document.getElementById("evo-price-tooltip");
 
 function renderChartAxes(data, minY, maxY, gid) {
   const g = document.getElementById(gid || "chart-axes");
@@ -142,12 +144,25 @@ if (svgChart && evoData.length) {
       evoDateTooltip.style.top = (268 / 300 * rect.height) + "px";
       evoDateTooltip.style.display = "";
     }
+    if (hLine) {
+      hLine.setAttribute("x1", cl.x); hLine.setAttribute("y1", cl.y);
+      hLine.setAttribute("x2", 980); hLine.setAttribute("y2", cl.y);
+      hLine.style.display = "block";
+    }
+    if (evoPriceTooltip) {
+      evoPriceTooltip.textContent = cl.vf + " €";
+      evoPriceTooltip.style.left = (980 / 1000 * rect.width + 6) + "px";
+      evoPriceTooltip.style.top = Math.max(14, Math.min(rect.height - 14, cl.y / 300 * rect.height)) + "px";
+      evoPriceTooltip.style.display = "";
+    }
   });
   svgChart.addEventListener("mouseleave", () => {
     vLine.style.display = "none"; iDot.style.display = "none";
+    if (hLine) hLine.style.display = "none";
     if (valorDisplay) { valorDisplay.textContent = ""; valorDisplay.style.display = "none"; }
     if (rendDisplay) rendDisplay.style.display = "inline-block";
     if (evoDateTooltip) evoDateTooltip.style.display = "none";
+    if (evoPriceTooltip) evoPriceTooltip.style.display = "none";
   });
 }
 
