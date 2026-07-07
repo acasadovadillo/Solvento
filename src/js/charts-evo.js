@@ -151,7 +151,7 @@ if (svgChart && evoData.length) {
     }
     if (evoPriceTooltip) {
       evoPriceTooltip.textContent = cl.vf + " €";
-      evoPriceTooltip.style.left = (980 / 1000 * rect.width + 6) + "px";
+      evoPriceTooltip.style.left = rect.width + "px";
       evoPriceTooltip.style.top = Math.max(14, Math.min(rect.height - 14, cl.y / 300 * rect.height)) + "px";
       evoPriceTooltip.style.display = "";
     }

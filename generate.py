@@ -2005,7 +2005,7 @@ html_out = f"""<!DOCTYPE html>
         </svg>
         <div id="neto-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{neto_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
         <div id="neto-date-tooltip" style="position:absolute;transform:translate(-50%,0);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
-        <div id="neto-price-tooltip" style="position:absolute;transform:translate(0,-50%);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
+        <div id="neto-price-tooltip" style="position:absolute;transform:translate(-100%,-50%);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
         <span id="neto-lbl-start">{fecha_ini_lbl}</span><span id="neto-lbl-end">{fecha_fin_lbl}</span>
@@ -2070,7 +2070,7 @@ html_out = f"""<!DOCTYPE html>
         </svg>
         <div id="interactive-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{color_trend};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
         <div id="evo-date-tooltip" style="position:absolute;transform:translate(-50%,0);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
-        <div id="evo-price-tooltip" style="position:absolute;transform:translate(0,-50%);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
+        <div id="evo-price-tooltip" style="position:absolute;transform:translate(-100%,-50%);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
         <span id="lbl-start-date">{fecha_ini_lbl}</span>
@@ -2610,7 +2610,7 @@ html_out = f"""<!DOCTYPE html>
       }}
       if (ptt) {{
         ptt.textContent = best.vf + ' €';
-        ptt.style.left = (980 / vbW * rect.width + 6) + 'px';
+        ptt.style.left = rect.width + 'px';
         ptt.style.top = Math.max(14, Math.min(rect.height - 14, by)) + 'px';
         ptt.style.display = '';
       }}
