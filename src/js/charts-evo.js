@@ -32,10 +32,8 @@ function renderChartAxes(data, minY, maxY, gid) {
   g.innerHTML = html;
 }
 
-function changeTimeframe(period, btnEl) {
+function changeTimeframe(period) {
   if (!evoData || !evoData.length) return;
-  document.querySelectorAll(".tf-btn").forEach(b => b.classList.remove("active"));
-  if (btnEl) btnEl.classList.add("active");
   const maxT = Math.max(...evoData.map(d => d.t)), day = 86400000;
   let cutoff = 0;
   if (period === "1D") cutoff = maxT - 1 * day;
@@ -73,7 +71,8 @@ function changeTimeframe(period, btnEl) {
   window.activeEvoData = filtered;
 }
 
-document.querySelectorAll(".tf-btn").forEach(b => b.addEventListener("click", e => changeTimeframe(e.target.dataset.period, e.target)));
+const evoPeriodSelect = document.getElementById("evo-period-select");
+if (evoPeriodSelect) evoPeriodSelect.addEventListener("change", () => changeTimeframe(evoPeriodSelect.value));
 window.activeEvoData = evoData;
 window.evoDefaultDateText = dateDisplay ? dateDisplay.textContent : "";
 
