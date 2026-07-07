@@ -84,7 +84,8 @@ function changeNetoTimeframe(period, btnEl) {
   if (btnEl) btnEl.classList.add("active");
   const maxT = Math.max(...netoHistData.map(d => d.t)), day = 86400000;
   let cutoff = 0;
-  if (period === "1W") cutoff = maxT - 7 * day;
+  if (period === "1D") cutoff = maxT - 1 * day;
+  else if (period === "1W") cutoff = maxT - 7 * day;
   else if (period === "1M") cutoff = maxT - 30 * day;
   else if (period === "YTD") { const y = new Date(maxT).getFullYear(); cutoff = new Date(y, 0, 1).getTime(); }
   else if (period === "1Y") cutoff = maxT - 365 * day;

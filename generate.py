@@ -1980,6 +1980,7 @@ html_out = f"""<!DOCTYPE html>
         </div>
       </div>
       <div class="timeframe-selector">
+        <button class="tf-btn-neto" data-period="1D">1D</button>
         <button class="tf-btn-neto" data-period="1W">1W</button>
         <button class="tf-btn-neto" data-period="1M">1M</button>
         <button class="tf-btn-neto" data-period="YTD">1YTD</button>
