@@ -2346,17 +2346,6 @@ html_out = f"""<!DOCTYPE html>
 
   <div class="chart-container-double">
     <div class="chart-block">
-      <div class="chart-block-title">Estrategia de inversión</div>
-      <div class="chart-wrapper">
-        <svg class="donut" viewBox="0 0 42 42">{sectors_donut(inv_cat, "categoria", "importe")}</svg>
-        <div class="donut-center">
-          <span style="font-size:1rem;font-weight:700;color:#fff;">{fmt_eur(total_inv_estrategia)}</span>
-          <span style="font-size:0.55rem;color:#6b7280;text-transform:uppercase;margin-top:0.2rem;">Total</span>
-        </div>
-      </div>
-      <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:0.5rem;">{legend_donut(inv_cat, "categoria", targets=OBJETIVO_ASIGNACION)}</div>
-    </div>
-    <div class="chart-block">
       <div class="chart-block-title">Distribución por activos</div>
       <div class="chart-wrapper">
         <svg class="donut" viewBox="0 0 42 42">{sectors_donut(inv_tipo, "tipo", "importe")}</svg>
