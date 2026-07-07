@@ -1765,6 +1765,7 @@ if n_puntos > 0:
             f'vf:\'{fmt_eur(_nv2).replace(" €","")}\',x:{_xs[_ni2]:.2f},y:{_neto_y[_ni2]:.2f}}}'
         )
     neto_hist_js = "[" + ",".join(_neto_js) + "]"
+    neto_ref_y = f"{_neto_y[0]:.2f}"
 else:
     neto_path_d = "M 70 120 L 980 120"
     neto_area_d = "M 70 120 L 980 120 L 980 280 L 70 280 Z"
@@ -1773,6 +1774,7 @@ else:
     neto_color = "#10b981"; neto_bg = "rgba(16,185,129,0.15)"
     fmt_neto_rend = "0,00 € (0,00%)"
     neto_hist_js = "[]"
+    neto_ref_y = "120"
     bench_rent_pct = float("nan"); diff_vs_bench = float("nan")
     bench_valor = 0.0; bench_signo = "+"; diff_signo = "+"; diff_color = "#6b7280"
     inv_chart_color = "#10b981"; inv_chart_bg = "rgba(16,185,129,0.15)"
@@ -1997,6 +1999,7 @@ html_out = f"""<!DOCTYPE html>
           </defs>
           <g id="neto-chart-axes">{neto_y_axis_svg}{x_axis_svg}</g>
           <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
+          <line id="neto-ref-line" x1="70" y1="{neto_ref_y}" x2="980" y2="{neto_ref_y}" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4"/>
           <path id="neto-chart-area" d="{neto_area_d}" fill="url(#neto-area-grad)"/>
           <path id="neto-chart-line" d="{neto_path_d}" fill="none" stroke="{neto_color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           <line id="neto-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>

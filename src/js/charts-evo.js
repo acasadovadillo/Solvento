@@ -102,6 +102,8 @@ function changeNetoTimeframe(period) {
   for (let i = 1; i < filtered.length; i++) pl += ` L ${filtered[i].x} ${filtered[i].y}`;
   document.getElementById("neto-chart-line").setAttribute("d", pl);
   document.getElementById("neto-chart-area").setAttribute("d", pl + ` L ${filtered[filtered.length - 1].x} 280 L ${filtered[0].x} 280 Z`);
+  const netoRefLine = document.getElementById("neto-ref-line");
+  if (netoRefLine) { netoRefLine.setAttribute("y1", filtered[0].y); netoRefLine.setAttribute("y2", filtered[0].y); }
   renderChartAxes(filtered, minY, maxY, "neto-chart-axes");
   const s0 = document.getElementById("neto-lbl-start"), s1 = document.getElementById("neto-lbl-end");
   if (s0) s0.textContent = filtered[0].f;
