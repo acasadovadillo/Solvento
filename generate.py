@@ -1971,7 +1971,6 @@ html_out = f"""<!DOCTYPE html>
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del patrimonio neto</div>
           <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
             <div id="neto-rend-display" style="font-size:1.05rem;font-weight:600;color:{neto_color};background:{neto_bg};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_neto_rend}</div>
-            <div id="neto-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
           </div>
         </div>
         <div style="text-align:right;">
@@ -2032,7 +2031,6 @@ html_out = f"""<!DOCTYPE html>
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Evolución del balance</div>
           <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
             <div id="evo-rendimiento-display" style="font-size:1.05rem;font-weight:600;color:{color_trend};background:{color_bg_grad};padding:0.3rem 0.7rem;border-radius:6px;display:inline-block;">{fmt_rend}</div>
-            <div id="evo-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;letter-spacing:-0.02em;display:none;"></div>
           </div>
         </div>
         <div style="text-align:right;">
@@ -2582,7 +2580,6 @@ html_out = f"""<!DOCTYPE html>
     const hline = document.getElementById('neto-h-line');
     const dot   = document.getElementById('neto-dot');
     const rdis  = document.getElementById('neto-rend-display');
-    const vdis  = document.getElementById('neto-valor-display');
     const tt    = document.getElementById('neto-date-tooltip');
     const ptt   = document.getElementById('neto-price-tooltip');
     function onMove(e) {{
@@ -2597,8 +2594,14 @@ html_out = f"""<!DOCTYPE html>
       const bx = best.x / vbW * rect.width, by = best.y / 300 * rect.height;
       vline.setAttribute('x1', best.x); vline.setAttribute('x2', best.x); vline.style.display = '';
       dot.style.left = bx + 'px'; dot.style.top = by + 'px'; dot.style.display = '';
-      rdis.style.display = 'none'; vdis.style.display = 'inline-block';
-      vdis.textContent = best.vf + ' €';
+      if (rdis) {{
+        const diff = best.v - data[0].v;
+        const rpct = data[0].v ? (diff / Math.abs(data[0].v) * 100) : 0;
+        const signo = diff >= 0 ? '+' : '', color = diff >= 0 ? '#10b981' : '#ef4444';
+        rdis.textContent = signo + formatEur(diff) + ' (' + signo + rpct.toFixed(2).replace('.', ',') + '%)';
+        rdis.style.color = color;
+        rdis.style.background = diff >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+      }}
       tt.textContent = best.f;
       tt.style.left = Math.max(45, Math.min(rect.width * 0.984 - 46, bx)) + 'px';
       tt.style.top = (268 / 300 * rect.height) + 'px';
@@ -2618,7 +2621,11 @@ html_out = f"""<!DOCTYPE html>
     function onLeave() {{
       vline.style.display = 'none'; dot.style.display = 'none';
       if (hline) hline.style.display = 'none';
-      rdis.style.display = ''; vdis.style.display = 'none';
+      if (rdis && window.netoDefaultRend) {{
+        rdis.textContent = window.netoDefaultRend.text;
+        rdis.style.color = window.netoDefaultRend.color;
+        rdis.style.background = window.netoDefaultRend.bg;
+      }}
       tt.style.display = 'none';
       if (ptt) ptt.style.display = 'none';
     }}

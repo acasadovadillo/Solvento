@@ -3,7 +3,6 @@ const svgChart = document.getElementById("patrimonio-svg-chart");
 const vLine = document.getElementById("interactive-v-line");
 const hLine = document.getElementById("interactive-h-line");
 const iDot = document.getElementById("interactive-dot");
-const valorDisplay = document.getElementById("evo-valor-display");
 const dateDisplay = document.getElementById("evo-date-display");
 const rendDisplay = document.getElementById("evo-rendimiento-display");
 const evoDateTooltip = document.getElementById("evo-date-tooltip");
@@ -68,6 +67,7 @@ function changeTimeframe(period) {
   rendDisplay.textContent = `${signo}${formatEur(diff)} (${signo}${pct.toFixed(2).replace(".", ",")}%)`;
   rendDisplay.style.color = color;
   rendDisplay.style.background = diff >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
+  window.evoDefaultRend = { text: rendDisplay.textContent, color: rendDisplay.style.color, bg: rendDisplay.style.background };
   document.getElementById("chart-line").setAttribute("stroke", color);
   document.getElementById("chart-area-grad-stop0").setAttribute("stop-color", color);
   document.getElementById("interactive-dot").style.background = color;
@@ -78,6 +78,9 @@ const evoPeriodSelect = document.getElementById("evo-period-select");
 if (evoPeriodSelect) evoPeriodSelect.addEventListener("change", () => changeTimeframe(evoPeriodSelect.value));
 window.activeEvoData = evoData;
 window.evoDefaultDateText = dateDisplay ? dateDisplay.textContent : "";
+window.evoDefaultRend = rendDisplay
+  ? { text: rendDisplay.textContent, color: rendDisplay.style.color, bg: rendDisplay.style.background }
+  : null;
 
 // ── Gráfica de patrimonio neto (página Patrimonio): selector de periodo (desplegable) ──
 function changeNetoTimeframe(period) {
@@ -111,6 +114,7 @@ function changeNetoTimeframe(period) {
     rd.textContent = `${signo}${formatEur(diff)} (${signo}${pct.toFixed(2).replace(".", ",")}%)`;
     rd.style.color = color;
     rd.style.background = diff >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
+    window.netoDefaultRend = { text: rd.textContent, color: rd.style.color, bg: rd.style.background };
   }
   document.getElementById("neto-chart-line").setAttribute("stroke", color);
   document.querySelectorAll("#neto-area-grad stop").forEach(s => s.setAttribute("stop-color", color));
@@ -126,6 +130,12 @@ function changeNetoTimeframe(period) {
 const netoPeriodSelect = document.getElementById("neto-period-select");
 if (netoPeriodSelect) netoPeriodSelect.addEventListener("change", () => changeNetoTimeframe(netoPeriodSelect.value));
 if (typeof netoHistData !== "undefined") window.activeNetoData = netoHistData;
+{
+  const netoRendInit = document.getElementById("neto-rend-display");
+  window.netoDefaultRend = netoRendInit
+    ? { text: netoRendInit.textContent, color: netoRendInit.style.color, bg: netoRendInit.style.background }
+    : null;
+}
 
 if (svgChart && evoData.length) {
   svgChart.addEventListener("mousemove", e => {
@@ -135,8 +145,14 @@ if (svgChart && evoData.length) {
     for (let i = 1; i < data.length; i++) { let d = Math.abs(data[i].x - mx); if (d < minD) { minD = d; cl = data[i]; } }
     vLine.setAttribute("x1", cl.x); vLine.setAttribute("x2", cl.x); vLine.style.display = "block";
     iDot.style.left = (cl.x / 1000 * 100) + "%"; iDot.style.top = (cl.y / 300 * 100) + "%"; iDot.style.display = "block";
-    if (valorDisplay) { valorDisplay.textContent = cl.vf + " €"; valorDisplay.style.display = "inline-block"; }
-    if (rendDisplay) rendDisplay.style.display = "none";
+    if (rendDisplay) {
+      const diff = cl.v - data[0].v;
+      const pct = data[0].v ? (diff / Math.abs(data[0].v) * 100) : 0;
+      const signo = diff >= 0 ? "+" : "", color = diff >= 0 ? "#10b981" : "#ef4444";
+      rendDisplay.textContent = `${signo}${formatEur(diff)} (${signo}${pct.toFixed(2).replace(".", ",")}%)`;
+      rendDisplay.style.color = color;
+      rendDisplay.style.background = diff >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
+    }
     if (evoDateTooltip) {
       const bx = cl.x / 1000 * rect.width;
       evoDateTooltip.textContent = cl.f;
@@ -159,8 +175,11 @@ if (svgChart && evoData.length) {
   svgChart.addEventListener("mouseleave", () => {
     vLine.style.display = "none"; iDot.style.display = "none";
     if (hLine) hLine.style.display = "none";
-    if (valorDisplay) { valorDisplay.textContent = ""; valorDisplay.style.display = "none"; }
-    if (rendDisplay) rendDisplay.style.display = "inline-block";
+    if (rendDisplay && window.evoDefaultRend) {
+      rendDisplay.textContent = window.evoDefaultRend.text;
+      rendDisplay.style.color = window.evoDefaultRend.color;
+      rendDisplay.style.background = window.evoDefaultRend.bg;
+    }
     if (evoDateTooltip) evoDateTooltip.style.display = "none";
     if (evoPriceTooltip) evoPriceTooltip.style.display = "none";
   });
