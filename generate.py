@@ -62,7 +62,13 @@ OBJETIVO_ASIGNACION = {
     "Renta fija":     40.0,
 }
 TIPO_COLORES_INV = {"ETF": "#8b5cf6", "Criptoactivo": "#f59e0b",
-                    "Acciones": "#ec4899", "Fondo de inversión": "#14b8a6"}
+                    "Acciones": "#ec4899", "Fondo de inversión": "#14b8a6",
+                    "Inmueble": "#a16207"}
+
+# Categorías de inversión que quedan fuera del target 60/40 (p.ej. bienes inmuebles):
+# no participan en el donut "Estrategia de inversión" ni en su objetivo de asignación,
+# pero sí cuentan en "Distribución por activos" y en el total de patrimonio/inversiones.
+CATEGORIAS_FUERA_DE_TARGET = {"Bienes inmuebles"}
 
 R_DONUT = 15.91549430918954
 
@@ -586,10 +592,13 @@ _portfolio_cagr_str = (f'{"+" if _portfolio_cagr >= 0 else ""}{_portfolio_cagr:.
 
 inv_raw["pct"] = (inv_raw["importe"] / total_inversiones * 100) if total_inversiones != 0 else 0.0
 
-inv_cat = inv_raw.dropna(subset=["importe"]).groupby("categoria")["importe"].sum().round(2).reset_index()
+_inv_raw_target = inv_raw[~inv_raw["categoria"].isin(CATEGORIAS_FUERA_DE_TARGET)]
+total_inv_estrategia = round(_inv_raw_target["importe"].dropna().sum(), 2)
+
+inv_cat = _inv_raw_target.dropna(subset=["importe"]).groupby("categoria")["importe"].sum().round(2).reset_index()
 inv_cat = inv_cat.sort_values("importe", ascending=False).reset_index(drop=True)
 inv_cat["accent"] = inv_cat["categoria"].map(CAT_COLORES_INV).fillna("#6b7280")
-inv_cat = add_donut_fields(inv_cat, total_inversiones)
+inv_cat = add_donut_fields(inv_cat, total_inv_estrategia)
 
 inv_tipo = inv_raw.dropna(subset=["importe"]).groupby("tipo")["importe"].sum().round(2).reset_index()
 inv_tipo = inv_tipo.sort_values("importe", ascending=False).reset_index(drop=True)
@@ -2281,7 +2290,7 @@ html_out = f"""<!DOCTYPE html>
       <div class="chart-wrapper">
         <svg class="donut" viewBox="0 0 42 42">{sectors_donut(inv_cat, "categoria", "importe")}</svg>
         <div class="donut-center">
-          <span style="font-size:1rem;font-weight:700;color:#fff;">{fmt_eur(total_inversiones)}</span>
+          <span style="font-size:1rem;font-weight:700;color:#fff;">{fmt_eur(total_inv_estrategia)}</span>
           <span style="font-size:0.55rem;color:#6b7280;text-transform:uppercase;margin-top:0.2rem;">Total</span>
         </div>
       </div>
