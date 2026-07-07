@@ -2001,7 +2001,7 @@ html_out = f"""<!DOCTYPE html>
           <line id="neto-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
         </svg>
         <div id="neto-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:{neto_color};border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
-        <div id="neto-date-tooltip" style="position:absolute;transform:translate(-50%,-100%);background:#000000;color:#ffffff;font-size:0.72rem;font-weight:600;padding:0.28rem 0.65rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
+        <div id="neto-date-tooltip" style="position:absolute;transform:translate(-50%,0);background:#000000;color:#ffffff;font-size:0.7rem;font-weight:600;padding:0.24rem 0.6rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;display:none;white-space:nowrap;z-index:5;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
         <span id="neto-lbl-start">{fecha_ini_lbl}</span><span id="neto-lbl-end">{fecha_fin_lbl}</span>
@@ -2589,8 +2589,8 @@ html_out = f"""<!DOCTYPE html>
       rdis.style.display = 'none'; vdis.style.display = 'inline-block';
       vdis.textContent = best.vf + ' €';
       tt.textContent = best.f;
-      tt.style.left = Math.max(45, Math.min(rect.width - 45, bx)) + 'px';
-      tt.style.top = (280 / 300 * rect.height - 5) + 'px';
+      tt.style.left = Math.max(45, Math.min(rect.width * 0.984 - 46, bx)) + 'px';
+      tt.style.top = (268 / 300 * rect.height) + 'px';
       tt.style.display = '';
     }}
     function onLeave() {{
