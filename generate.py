@@ -2018,7 +2018,7 @@ html_out = f"""<!DOCTYPE html>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <meta name="robots" content="noindex, nofollow"/>
   <title>Solvento</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+  <link rel="icon" href="img/logo-solvento.png">
   <link rel="stylesheet" href="src/css/base.css?v={build_ts}">
   <link rel="stylesheet" href="src/css/layout.css?v={build_ts}">
   <link rel="stylesheet" href="src/css/components.css?v={build_ts}">
@@ -2073,7 +2073,7 @@ html_out = f"""<!DOCTYPE html>
 <body>
 <nav class="navbar">
   <div class="navbar-brand">
-    <h1>💰 Solvento</h1>
+    <h1 style="display:flex;align-items:center;gap:0.5rem;"><img src="img/logo-solvento.png" alt="" style="width:24px;height:24px;object-fit:contain;">Solvento</h1>
     <span class="navbar-date">versión 2.1 · Precios del {fecha_actualizacion}</span>
   </div>
   <nav class="nav-tabs">
