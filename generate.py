@@ -1048,13 +1048,12 @@ def legend_patrimonio():
 
 def tarjetas_cuentas_html():
     """Barra de proporción por colores + tarjetas por cuenta (estilo hub de Patrimonio)."""
-    labels, segs, cards = [], [], []
+    segs, cards = [], []
     for _, r in saldos.iterrows():
         cuenta   = html_escape(str(r["cuenta"]))
         cuenta_js = html_escape(str(r["cuenta"])).replace("'", "\\'")
         accent   = r["accent"]
         pct      = max(0.0, float(r["pct"]))
-        labels.append(f'<span style="color:{accent};">{cuenta} · {pct:.1f}%</span>')
         segs.append(
             f'<div title="{cuenta}: {fmt_eur(r["saldo"])} ({pct:.1f}%)" '
             f'style="width:{pct:.2f}%;background:{accent};transition:width 0.4s;"></div>'
@@ -1066,11 +1065,9 @@ def tarjetas_cuentas_html():
           <span style="font-size:0.72rem;color:{accent};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">{cuenta}</span>
         </div>
         <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(r["saldo"])}</div>
-        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{pct:.1f}% de la liquidez &nbsp;→</div>
+        <div style="font-size:0.78rem;color:{accent};font-weight:500;">{pct:.2f}% de la caja actual &nbsp;→</div>
       </div>""")
     return (
-        '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.3rem 1.25rem;font-size:0.72rem;font-weight:600;margin-bottom:0.4rem;">'
-        + "".join(labels) + '</div>\n'
         '<div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;background:#1a1d27;">'
         + "".join(segs) + '</div>\n'
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem;">'
