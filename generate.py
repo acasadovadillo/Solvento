@@ -29,21 +29,38 @@ CUENTAS_CONFIG = [
     {"cuenta": "Efectivo",       "icono": "💵", "accent": "#2d9e5f"},
 ]
 
-# Logo por activo (Cartera / Historial de aportaciones): se busca por palabra
-# clave en el nombre para que cubra automáticamente variantes del mismo emisor
-# (p.ej. varios fondos "Bankinter ..."). Si un activo no encaja con ninguna
-# clave, no se muestra imagen (algunos activos aún no tienen logo).
+# Logo por activo (Cartera / Historial de aportaciones): se busca primero por
+# ISIN exacto (evita confundir p.ej. el ETF "Core S&P 500" con el fondo
+# "Fidelity S&P 500", que comparten palabras en el nombre) y, si no hay ISIN
+# (Bitcoin) o no está mapeado, cae a una palabra clave en el nombre.
+ASSET_LOGO_BY_ISIN = {
+    "IE00BYXYYM63": "asset-etf-logo-us-bond.png",              # US Aggregate Bond USD (Acc)
+    "IE00B4L5Y983": "asset-etf-logo-msci-world.png",           # Core MSCI World USD (Acc)
+    "IE00B5BMR087": "asset-etf-logo-sp500.png",                # Core S&P 500 USD (Acc)
+    "IE000KCS7J59": "asset-etf-logo-msci-emerging-markets.png",# MSCI Emerging Markets USD (Acc)
+    "IE00B4ND3602": "asset-etf-logo-gold.png",                 # Physical Gold USD (Acc)
+    "US0378331005": "asset-logo-apple.png",                    # Apple
+    "ES0164586036": "asset-logo-bankinter.png",                # Bankinter Premium Moderado R
+    "ES0159038001": "asset-logo-bankinter.png",                # Bankinter Horizonte 2028 Cl R
+    "ES0173311103": "asset-fund-logo-numantia.png",            # Renta 4 Multigestión Numantia
+    "IE00BYX5MX67": "asset-fund-logo-sp500.png",               # Fidelity S&P 500 Index Fund
+}
 ASSET_LOGO_KEYWORDS = [
-    ("apple",     "asset-logo-apple.png"),
     ("bitcoin",   "asset-logo-bitcoin.png"),
     ("bankinter", "asset-logo-bankinter.png"),
 ]
 
-def asset_logo_html(nombre):
-    n = str(nombre).lower()
-    for kw, archivo in ASSET_LOGO_KEYWORDS:
-        if kw in n:
-            return f'<img src="img/{archivo}" alt="" style="width:22px;height:22px;object-fit:contain;border-radius:5px;flex-shrink:0;">'
+def asset_logo_html(nombre, isin=None):
+    isin_clean = str(isin).strip() if isin not in (None, "") else ""
+    archivo = ASSET_LOGO_BY_ISIN.get(isin_clean)
+    if not archivo:
+        n = str(nombre).lower()
+        for kw, kw_archivo in ASSET_LOGO_KEYWORDS:
+            if kw in n:
+                archivo = kw_archivo
+                break
+    if archivo:
+        return f'<img src="img/{archivo}" alt="" style="width:22px;height:22px;object-fit:contain;border-radius:5px;flex-shrink:0;">'
     return '<span style="width:22px;height:22px;flex-shrink:0;"></span>'
 
 CATEGORIA_COLORES = {
@@ -1244,7 +1261,7 @@ def tabla_activos():
             f'<tr class="table-row" onclick="showAportaciones(\'{nombre_js}\')" style="cursor:pointer;">'
             f'<td style="{TD}text-align:left;">'
             f'<div style="display:flex;align-items:center;gap:0.6rem;">'
-            f'{asset_logo_html(r["Nombre"])}'
+            f'{asset_logo_html(r["Nombre"], r.get("ISIN"))}'
             f'<div>'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.9rem;">{html_escape(str(r["Nombre"]))}</div>'
             f'<div style="font-size:0.75rem;color:#6b7280;margin-top:0.15rem;">{html_escape(str(r["tipo"]))}'
@@ -1277,6 +1294,7 @@ def tabla_aportaciones():
     rows = []
     for _, r in df.iterrows():
         nombre     = str(r.get("Nombre", "—"))
+        isin       = str(r.get("ISIN", "-"))
         tipo       = str(r.get("tipo", "—"))
         movimiento = str(r.get("Tipo_Movimiento", "Compra"))
         banco      = str(r.get("Banco", "—"))
@@ -1305,7 +1323,7 @@ def tabla_aportaciones():
             f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.82rem;font-family:ui-monospace,monospace;white-space:nowrap;">{fecha_s}</td>'
             f'<td style="{TD}text-align:left;">'
             f'<div style="display:flex;align-items:center;gap:0.6rem;">'
-            f'{asset_logo_html(nombre)}'
+            f'{asset_logo_html(nombre, isin)}'
             f'<div>'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.88rem;">{html_escape(nombre)}</div>'
             f'{tipo_chip}{mov_chip}'
