@@ -282,6 +282,8 @@ async function _yahooBuscar(q) {
 
 function mercadoVerGrafica(tvSymbol) {
   if (!tvSymbol) return;
+  const tvBtn = document.querySelector('.chart-engine-btn[data-engine="tv"]');
+  if (tvBtn && !tvBtn.classList.contains('active')) setChartEngine(tvBtn, 'tv');
   const input = document.getElementById('cot-ticker');
   if (input) input.value = tvSymbol;
   cotizacionesBuscar();
@@ -289,16 +291,61 @@ function mercadoVerGrafica(tvSymbol) {
   if (box) setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
 }
 
+// ── Gráfica de activos: alternar entre motor Solvento (propio) y TradingView ──
+function setChartEngine(btn, engine) {
+  document.querySelectorAll('.chart-engine-btn').forEach(b => {
+    const active = b === btn;
+    b.classList.toggle('active', active);
+    b.style.background = active ? '#2a2d3a' : 'none';
+    b.style.color = active ? '#fff' : '#6b7280';
+    b.style.fontWeight = active ? '700' : '500';
+  });
+  const solvento = document.getElementById('engine-solvento');
+  const tv = document.getElementById('engine-tv');
+  const moneda = document.getElementById('portfolio-moneda');
+  if (solvento) solvento.style.display = engine === 'solvento' ? '' : 'none';
+  if (tv) tv.style.display = engine === 'tv' ? '' : 'none';
+  if (moneda) moneda.style.display = engine === 'solvento' ? '' : 'none';
+  if (engine === 'tv') _syncTvToSelectedAsset();
+}
+
+function _syncTvToSelectedAsset() {
+  const sel = document.getElementById('portfolio-select');
+  const nombre = sel ? sel.value : '';
+  const tvSymbol = (typeof portfolioTvMap !== 'undefined') ? portfolioTvMap[nombre] : undefined;
+  const input = document.getElementById('cot-ticker');
+  if (tvSymbol) {
+    if (input) input.value = tvSymbol;
+    cotizacionesBuscar();
+  } else {
+    if (input) input.value = '';
+    const container = document.getElementById('cot-tv-container');
+    if (container) { container.style.display = 'none'; container.innerHTML = ''; }
+    const placeholder = document.getElementById('cot-placeholder');
+    if (placeholder) {
+      placeholder.style.display = '';
+      placeholder.innerHTML =
+        '<div style="font-size:3rem;margin-bottom:1rem;opacity:0.5;">📉</div>' +
+        '<div style="font-size:0.95rem;color:#6b7280;margin-bottom:0.35rem;">Sin cotización pública en TradingView</div>' +
+        '<div style="font-size:0.8rem;color:#374151;">Este fondo no cotiza en bolsa (usa el valor liquidativo del banco)</div>';
+    }
+  }
+}
+
+(function () {
+  const sel = document.getElementById('portfolio-select');
+  if (!sel) return;
+  sel.addEventListener('change', () => {
+    const tvBtn = document.querySelector('.chart-engine-btn[data-engine="tv"]');
+    if (tvBtn && tvBtn.classList.contains('active')) _syncTvToSelectedAsset();
+  });
+})();
+
 // Estado inicial: pestaña "Mi cartera"
 explorarFiltrar();
 
 
 let _cotRangoActivo = '1M';
-
-function cotChip(btn) {
-  document.getElementById('cot-ticker').value = btn.dataset.tv;
-  cotizacionesBuscar();
-}
 
 function cotizacionesBuscar() {
   const raw = (document.getElementById('cot-ticker')?.value || '').trim();

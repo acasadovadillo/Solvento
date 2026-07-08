@@ -92,13 +92,13 @@ TIPO_COLORES_INMUEBLE = {
 R_DONUT = 15.91549430918954
 
 PORTFOLIO_ASSETS = [
-    {"nombre": "Oro Físico",             "ticker": "PHAU.AS", "moneda": "EUR"},
-    {"nombre": "S&P 500",                "ticker": "CSPX.AS", "moneda": "EUR"},
-    {"nombre": "MSCI Emerging Markets",  "ticker": "EMIM.AS", "moneda": "EUR"},
-    {"nombre": "MSCI World",             "ticker": "IWDA.AS", "moneda": "EUR"},
-    {"nombre": "US Aggregate Bond",      "ticker": "AGGG.L",  "moneda": "USD"},
-    {"nombre": "Bitcoin",                "ticker": "BTC-EUR", "moneda": "EUR"},
-    {"nombre": "Apple",                  "ticker": "AAPL",    "moneda": "USD"},
+    {"nombre": "Oro Físico",             "ticker": "PHAU.AS", "moneda": "EUR", "tv": "EURONEXT:PHAU"},
+    {"nombre": "S&P 500",                "ticker": "CSPX.AS", "moneda": "EUR", "tv": "EURONEXT:CSPX"},
+    {"nombre": "MSCI Emerging Markets",  "ticker": "EMIM.AS", "moneda": "EUR", "tv": "EURONEXT:EMIM"},
+    {"nombre": "MSCI World",             "ticker": "IWDA.AS", "moneda": "EUR", "tv": "EURONEXT:IWDA"},
+    {"nombre": "US Aggregate Bond",      "ticker": "AGGG.L",  "moneda": "USD", "tv": "LSE:AGGG"},
+    {"nombre": "Bitcoin",                "ticker": "BTC-EUR", "moneda": "EUR", "tv": "BITSTAMP:BTCUSD"},
+    {"nombre": "Apple",                  "ticker": "AAPL",    "moneda": "USD", "tv": "NASDAQ:AAPL"},
 ]
 
 # ════════════════════════════════════════════════════
@@ -1676,6 +1676,7 @@ for asset in PORTFOLIO_ASSETS:
 portfolio_history_js  = "{" + ",".join(pf_hist_parts)  + "}"
 portfolio_intraday_js = "{" + ",".join(pf_intra_parts) + "}"
 portfolio_currency_js = "{" + ",".join(pf_cur_parts)   + "}"
+portfolio_tv_js       = json.dumps({a["nombre"]: a["tv"] for a in PORTFOLIO_ASSETS if a.get("tv")}, ensure_ascii=False)
 latest_prices_js    = json.dumps(latest_prices)
 ticker_currency_js  = json.dumps(ticker_currency_map)
 saldos_cuentas_js   = json.dumps({r["cuenta"]: round(r["saldo"], 2) for _, r in saldos.iterrows()})
@@ -2468,51 +2469,106 @@ html_out = f"""<!DOCTYPE html>
       <tbody>{tabla_activos()}</tbody>
     </table>
   </div>
-  <!-- ══ GRÁFICA CARTERA ══ -->
-  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
+  <!-- ══ GRÁFICA DE ACTIVOS (Solvento / TradingView) ══ -->
+  <div style="max-width:1400px;margin:2rem auto 0;width:100%;" id="chart-panel">
     <div class="dashboard-panel" style="min-height:380px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
-        <div>
-          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
-            <select id="portfolio-select" style="background:#12141f;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:6px;padding:0.35rem 0.7rem;font-size:0.85rem;cursor:pointer;outline:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <select id="portfolio-select" style="background:#12141f;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:6px;padding:0.35rem 0.7rem;font-size:0.85rem;cursor:pointer;outline:none;">
 {portfolio_options}
-            </select>
-            <span id="portfolio-moneda" style="font-size:0.72rem;color:#9ca3af;font-weight:600;background:#2a2d3a;padding:0.2rem 0.45rem;border-radius:4px;letter-spacing:0.04em;">EUR</span>
-          </div>
+          </select>
+          <span id="portfolio-moneda" style="font-size:0.72rem;color:#9ca3af;font-weight:600;background:#2a2d3a;padding:0.2rem 0.45rem;border-radius:4px;letter-spacing:0.04em;">EUR</span>
+        </div>
+        <div style="display:flex;border:1px solid #2a2d3a;border-radius:8px;overflow:hidden;">
+          <button class="chart-engine-btn active" data-engine="solvento" onclick="setChartEngine(this,'solvento')" style="background:#2a2d3a;border:none;color:#fff;font-weight:700;font-size:0.8rem;padding:0.45rem 0.9rem;cursor:pointer;font-family:inherit;transition:background 0.15s,color 0.15s;">Solvento</button>
+          <button class="chart-engine-btn" data-engine="tv" onclick="setChartEngine(this,'tv')" style="background:none;border:none;color:#6b7280;font-weight:500;font-size:0.8rem;padding:0.45rem 0.9rem;cursor:pointer;font-family:inherit;transition:background 0.15s,color 0.15s;">TradingView</button>
+        </div>
+      </div>
+
+      <!-- ── Motor Solvento (gráfica propia, datos históricos precalculados) ── -->
+      <div id="engine-solvento">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:1rem;">
           <div style="display:flex;align-items:center;gap:0.8rem;min-height:38px;">
             <div id="pf-rendimiento-display" style="font-size:1.05rem;font-weight:600;color:#10b981;background:rgba(16,185,129,0.15);padding:0.3rem 0.7rem;border-radius:6px;">--</div>
             <div id="pf-valor-display" style="font-size:1.5rem;font-weight:700;color:#fff;display:none;"></div>
           </div>
+          <div id="pf-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;text-align:right;"></div>
         </div>
-        <div id="pf-date-display" style="font-size:0.82rem;color:#6b7280;font-weight:500;text-align:right;"></div>
+        <div class="timeframe-selector">
+          <button class="tf-btn-pf" data-range="1d">1D</button>
+          <button class="tf-btn-pf" data-range="1w">1W</button>
+          <button class="tf-btn-pf active" data-range="1mo">1M</button>
+          <button class="tf-btn-pf" data-range="ytd">1YTD</button>
+          <button class="tf-btn-pf" data-range="1y">1Y</button>
+          <button class="tf-btn-pf" data-range="max">MAX</button>
+        </div>
+        <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
+          <svg id="pf-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
+            <defs>
+              <linearGradient id="pf-area-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop id="pf-grad-stop0" offset="0%" stop-color="#8b5cf6" stop-opacity="0.25"/>
+                <stop id="pf-grad-stop1" offset="100%" stop-color="#8b5cf6" stop-opacity="0.0"/>
+              </linearGradient>
+            </defs>
+            <g id="pf-axes"></g>
+            <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
+            <line id="pf-ref-line" x1="70" y1="260" x2="980" y2="260" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" style="display:none;"/>
+            <path id="pf-chart-area" d="" fill="url(#pf-area-grad)"/>
+            <path id="pf-chart-line" d="" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line id="pf-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+          </svg>
+          <div id="pf-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:#8b5cf6;border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
+          <span id="pf-lbl-start">--</span><span id="pf-lbl-end">--</span>
+        </div>
       </div>
-      <div class="timeframe-selector">
-        <button class="tf-btn-pf" data-range="1d">1D</button>
-        <button class="tf-btn-pf" data-range="1w">1W</button>
-        <button class="tf-btn-pf active" data-range="1mo">1M</button>
-        <button class="tf-btn-pf" data-range="ytd">1YTD</button>
-        <button class="tf-btn-pf" data-range="1y">1Y</button>
-        <button class="tf-btn-pf" data-range="max">MAX</button>
-      </div>
-      <div style="position:relative;width:100%;flex-grow:1;min-height:220px;">
-        <svg id="pf-svg-chart" viewBox="0 0 1000 300" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;cursor:crosshair;">
-          <defs>
-            <linearGradient id="pf-area-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop id="pf-grad-stop0" offset="0%" stop-color="#8b5cf6" stop-opacity="0.25"/>
-              <stop id="pf-grad-stop1" offset="100%" stop-color="#8b5cf6" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-          <g id="pf-axes"></g>
-          <line x1="70" y1="280" x2="980" y2="280" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="4 4"/>
-          <line id="pf-ref-line" x1="70" y1="260" x2="980" y2="260" stroke="#4b5563" stroke-width="1.5" stroke-dasharray="6 4" style="display:none;"/>
-          <path id="pf-chart-area" d="" fill="url(#pf-area-grad)"/>
-          <path id="pf-chart-line" d="" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <line id="pf-v-line" x1="0" y1="20" x2="0" y2="280" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
-        </svg>
-        <div id="pf-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:#8b5cf6;border:2px solid #1a1d27;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;">
-        <span id="pf-lbl-start">--</span><span id="pf-lbl-end">--</span>
+
+      <!-- ── Motor TradingView (widget en vivo, cualquier ticker) ── -->
+      <div id="engine-tv" style="display:none;">
+        <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <div style="position:relative;flex:1;min-width:200px;max-width:500px;">
+            <svg style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:#6b7280;pointer-events:none;" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input id="cot-ticker" type="text" placeholder="Ej. AAPL · BTCUSD · EURONEXT:IWDA · SP500…"
+              onkeydown="if(event.key==='Enter') cotizacionesBuscar()"
+              style="width:100%;box-sizing:border-box;background:#1a1d27;border:1px solid #2a2d3a;border-radius:12px;
+                     padding:0.75rem 1rem 0.75rem 2.75rem;color:#e5e7eb;font-size:0.9rem;outline:none;
+                     transition:border-color 0.2s;font-family:inherit;"
+              onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#2a2d3a'">
+          </div>
+          <button onclick="cotizacionesBuscar()"
+            style="background:#3b82f6;border:none;border-radius:10px;color:#fff;font-size:0.88rem;font-weight:600;
+                   padding:0.72rem 1.5rem;cursor:pointer;white-space:nowrap;transition:background 0.15s;font-family:inherit;"
+            onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+            Ver gráfico
+          </button>
+        </div>
+        <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.5rem;overflow-x:auto;">
+          <button class="cot-range-tab" onclick="cotRango(this,'1M')"
+            style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;
+                   padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">1M</button>
+          <button class="cot-range-tab" onclick="cotRango(this,'6M')"
+            style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+                   padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">6M</button>
+          <button class="cot-range-tab" onclick="cotRango(this,'12M')"
+            style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+                   padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">1A</button>
+          <button class="cot-range-tab" onclick="cotRango(this,'60M')"
+            style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+                   padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">5A</button>
+          <button class="cot-range-tab" onclick="cotRango(this,'ALL')"
+            style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
+                   padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">Máx</button>
+        </div>
+        <div id="cot-chart-box" style="border-radius:16px;overflow:hidden;border:1px solid #2a2d3a;min-height:520px;
+                    display:flex;align-items:center;justify-content:center;background:#13151f;">
+          <div id="cot-placeholder" style="text-align:center;color:#4b5563;padding:3rem;">
+            <div style="font-size:3rem;margin-bottom:1rem;opacity:0.5;">📈</div>
+            <div style="font-size:0.95rem;color:#6b7280;margin-bottom:0.35rem;">Introduce un ticker y pulsa <strong style="color:#9ca3af;">Ver gráfico</strong></div>
+            <div style="font-size:0.8rem;color:#374151;">Acciones · ETFs · Índices · Criptomonedas · Divisas</div>
+          </div>
+          <div id="cot-tv-container" style="display:none;width:100%;height:520px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -2579,66 +2635,6 @@ html_out = f"""<!DOCTYPE html>
       </button>
     </div>
     <style>@keyframes spin {{ to {{ transform: rotate(360deg); }} }}</style>
-
-    <hr style="border:0;height:1px;background:linear-gradient(to right,transparent,#2a2d3a,transparent);margin:3rem 0;">
-
-    <div style="margin-bottom:1.5rem;">
-      <h2 style="font-size:1.5rem;font-weight:700;color:#ffffff;margin:0 0 0.35rem 0;">Cotizaciones</h2>
-      <p style="color:#6b7280;font-size:0.88rem;margin:0;">Busca cualquier activo y consulta su histórico de precio.</p>
-    </div>
-    <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;">
-      <div style="position:relative;flex:1;min-width:200px;max-width:500px;">
-        <svg style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:#6b7280;pointer-events:none;" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input id="cot-ticker" type="text" placeholder="Ej. AAPL · BTCUSD · EURONEXT:IWDA · SP500…"
-          onkeydown="if(event.key==='Enter') cotizacionesBuscar()"
-          style="width:100%;box-sizing:border-box;background:#1a1d27;border:1px solid #2a2d3a;border-radius:12px;
-                 padding:0.75rem 1rem 0.75rem 2.75rem;color:#e5e7eb;font-size:0.9rem;outline:none;
-                 transition:border-color 0.2s;font-family:inherit;"
-          onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#2a2d3a'">
-      </div>
-      <button onclick="cotizacionesBuscar()"
-        style="background:#3b82f6;border:none;border-radius:10px;color:#fff;font-size:0.88rem;font-weight:600;
-               padding:0.72rem 1.5rem;cursor:pointer;white-space:nowrap;transition:background 0.15s;font-family:inherit;"
-        onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
-        Ver gráfico
-      </button>
-    </div>
-    <div style="display:flex;gap:0;border-bottom:1px solid #2a2d3a;margin-bottom:1.5rem;overflow-x:auto;">
-      <button class="cot-range-tab" onclick="cotRango(this,'1M')"
-        style="background:none;border:none;border-bottom:2px solid #ffffff;color:#ffffff;font-weight:700;
-               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">1M</button>
-      <button class="cot-range-tab" onclick="cotRango(this,'6M')"
-        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
-               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">6M</button>
-      <button class="cot-range-tab" onclick="cotRango(this,'12M')"
-        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
-               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">1A</button>
-      <button class="cot-range-tab" onclick="cotRango(this,'60M')"
-        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
-               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">5A</button>
-      <button class="cot-range-tab" onclick="cotRango(this,'ALL')"
-        style="background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-weight:400;
-               padding:0.5rem 1rem;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;">Máx</button>
-    </div>
-    <div id="cot-chart-box" style="border-radius:16px;overflow:hidden;border:1px solid #2a2d3a;min-height:520px;
-                display:flex;align-items:center;justify-content:center;background:#13151f;">
-      <div id="cot-placeholder" style="text-align:center;color:#4b5563;padding:3rem;">
-        <div style="font-size:3rem;margin-bottom:1rem;opacity:0.5;">📈</div>
-        <div style="font-size:0.95rem;color:#6b7280;margin-bottom:0.35rem;">Introduce un ticker y pulsa <strong style="color:#9ca3af;">Ver gráfico</strong></div>
-        <div style="font-size:0.8rem;color:#374151;">Acciones · ETFs · Índices · Criptomonedas · Divisas</div>
-      </div>
-      <div id="cot-tv-container" style="display:none;width:100%;height:520px;"></div>
-    </div>
-    <div style="margin-top:0.9rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-      <span style="font-size:0.75rem;color:#4b5563;margin-right:0.25rem;">Mi cartera:</span>
-      <button class="cot-chip" data-tv="EURONEXT:IWDA" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">MSCI World</button>
-      <button class="cot-chip" data-tv="EURONEXT:CSPX" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">S&amp;P 500</button>
-      <button class="cot-chip" data-tv="EURONEXT:EMIM" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">Emerging Markets</button>
-      <button class="cot-chip" data-tv="LSE:AGGG" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">US Aggregate Bond</button>
-      <button class="cot-chip" data-tv="EURONEXT:PHAU" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">Oro Físico</button>
-      <button class="cot-chip" data-tv="BITSTAMP:BTCUSD" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">Bitcoin</button>
-      <button class="cot-chip" data-tv="NASDAQ:AAPL" onclick="cotChip(this)" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:20px;color:#9ca3af;font-size:0.78rem;padding:0.3rem 0.8rem;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='#4b5563';this.style.color='#e5e7eb'" onmouseout="this.style.borderColor='#2a2d3a';this.style.color='#9ca3af'">Apple</button>
-    </div>
   </div>
 </div>
 <!-- fin page-inversiones -->
@@ -2777,7 +2773,7 @@ html_out = f"""<!DOCTYPE html>
 </div>
 
   <footer>Datos extraídos de Google Sheets &amp; APIs · Actualización automática</footer>
-  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const invHistData = {inv_hist_js};const benchInvHistData = {bench_inv_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};const gastosMensuales={gastos_mensuales_js};const gastosCatColors={gastos_cat_colors_js};
+  <script>const evoData = {js_history_array};const netoHistData = {neto_hist_js};const invHistData = {inv_hist_js};const benchInvHistData = {bench_inv_hist_js};const btcMaxData = {btc_max_data_js};const msciHistoryData = {msci_history_js};const msciIntradayData = {msci_intraday_js};const portfolioHistoryData = {portfolio_history_js};const portfolioIntradayData = {portfolio_intraday_js};const portfolioCurrency = {portfolio_currency_js};const portfolioTvMap = {portfolio_tv_js};const latestPrices={latest_prices_js};const tickerCurrency={ticker_currency_js};const saldosCuentas={saldos_cuentas_js};const gastosMensuales={gastos_mensuales_js};const gastosCatColors={gastos_cat_colors_js};
   (function(){{
     const svg = document.getElementById('neto-svg-chart');
     if (!svg || !netoHistData.length) return;
