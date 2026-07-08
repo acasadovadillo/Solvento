@@ -113,6 +113,46 @@ function movFiltrar() {
 // Estado inicial: oculta la cara "entrada" de los traspasos y aplica paginación
 aplicarFiltrosMov(true);
 
+// ── Historial de aportaciones: filtro por activo + navegación desde Cartera ──
+function _aplicarFiltroAportaciones() {
+  const flt = document.getElementById("apor-filter");
+  const cnt = document.getElementById("apor-count");
+  if (!flt) return;
+  const val = flt.value;
+  const rows = document.querySelectorAll("#apor-table tbody tr[data-nombre]");
+  let visible = 0, visibleCost = 0;
+  rows.forEach(row => {
+    const show = !val || row.dataset.nombre === val;
+    row.style.display = show ? "" : "none";
+    if (show) { visible++; visibleCost += parseFloat(row.dataset.coste || 0); }
+  });
+  if (cnt) {
+    if (val) {
+      const c = visibleCost.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      cnt.textContent = visible + " compras · " + c + " € invertido";
+    } else {
+      cnt.textContent = cnt.dataset.total || cnt.textContent;
+    }
+  }
+}
+
+(function () {
+  const flt = document.getElementById("apor-filter");
+  const cnt = document.getElementById("apor-count");
+  if (cnt) cnt.dataset.total = cnt.textContent;
+  if (flt) flt.addEventListener("change", _aplicarFiltroAportaciones);
+})();
+
+function showAportaciones(nombre) {
+  showPage("aportaciones");
+  window.scrollTo({ top: 0, behavior: "auto" });
+  const flt = document.getElementById("apor-filter");
+  if (flt) {
+    flt.value = nombre || "";
+    _aplicarFiltroAportaciones();
+  }
+}
+
 // ── Explorar activos: cartera + catálogo de mercado + búsqueda global Yahoo ──
 let explorarTipoActivo = 'cartera';
 let _yahooTimer = null;
