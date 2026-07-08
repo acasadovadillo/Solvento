@@ -2099,8 +2099,8 @@ html_out = f"""<!DOCTYPE html>
   </div>
   <nav class="nav-tabs">
     <button class="nav-tab active" id="nav-tab-patrimonio" onclick="navTab('patrimonio')">Patrimonio</button>
-    <button class="nav-tab" id="nav-tab-cuentas" onclick="navTab('cuentas')">Liquidez</button>
-    <button class="nav-tab" id="nav-tab-inversiones" onclick="navTab('inversiones')">Inversiones</button>
+    <button class="nav-tab" id="nav-tab-cuentas" onclick="navTab('cuentas')">Caja</button>
+    <button class="nav-tab" id="nav-tab-inversiones" onclick="navTab('inversiones')">Cartera</button>
     <button class="nav-tab" id="nav-tab-inmuebles" onclick="navTab('inmuebles')">Inmuebles</button>
     <button class="nav-tab" id="nav-tab-pasivos" onclick="navTab('pasivos')">Pasivos</button>
   </nav>
@@ -2110,8 +2110,8 @@ html_out = f"""<!DOCTYPE html>
 </nav>
 <div id="mobile-nav-panel">
   <button class="mobile-nav-item active" id="mnav-patrimonio" onclick="navTab('patrimonio');toggleMobileNav()">Patrimonio</button>
-  <button class="mobile-nav-item" id="mnav-cuentas" onclick="navTab('cuentas');toggleMobileNav()">Liquidez</button>
-  <button class="mobile-nav-item" id="mnav-inversiones" onclick="navTab('inversiones');toggleMobileNav()">Inversiones</button>
+  <button class="mobile-nav-item" id="mnav-cuentas" onclick="navTab('cuentas');toggleMobileNav()">Caja</button>
+  <button class="mobile-nav-item" id="mnav-inversiones" onclick="navTab('inversiones');toggleMobileNav()">Cartera</button>
   <button class="mobile-nav-item" id="mnav-inmuebles" onclick="navTab('inmuebles');toggleMobileNav()">Inmuebles</button>
   <button class="mobile-nav-item" id="mnav-pasivos" onclick="navTab('pasivos');toggleMobileNav()">Pasivos</button>
 </div>
@@ -2125,26 +2125,26 @@ html_out = f"""<!DOCTYPE html>
   <!-- ══ HUB CARDS ══ -->
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
     <div style="display:flex;justify-content:space-between;font-size:0.72rem;font-weight:600;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.3rem 1rem;">
-      <span style="color:#3b82f6;">Liquidez · {pct_liquidez_num:.1f}%</span>
-      <span style="color:#10b981;">Inversiones · {ratio_inv:.1f}%</span>
+      <span style="color:#3b82f6;">Caja · {pct_liquidez_num:.1f}%</span>
+      <span style="color:#10b981;">Cartera · {ratio_inv:.1f}%</span>
       <span style="color:#a16207;">Inmuebles · {ratio_inmuebles:.1f}%</span>
     </div>
     <div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;">
-      <div title="Liquidez: {pct_liquidez_num:.1f}%" style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
-      <div title="Inversiones: {ratio_inv:.1f}%" style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
+      <div title="Caja: {pct_liquidez_num:.1f}%" style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
+      <div title="Cartera: {ratio_inv:.1f}%" style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
       <div title="Inmuebles: {ratio_inmuebles:.1f}%" style="width:{ratio_inmuebles:.2f}%;background:#a16207;transition:width 0.4s;"></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
 
       <div class="dashboard-panel" onclick="navTab('cuentas')" style="cursor:pointer;border-left:3px solid #3b82f6;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
-        <div style="font-size:0.72rem;color:#3b82f6;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Liquidez</div>
+        <div style="font-size:0.72rem;color:#3b82f6;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Caja</div>
         <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(patrimonio_liquido)}</div>
         <div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem;">{n_cuentas} cuentas</div>
         <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{pct_liquidez_num:.1f}% del patrimonio &nbsp;→</div>
       </div>
 
       <div class="dashboard-panel" onclick="navTab('inversiones')" style="cursor:pointer;border-left:3px solid #10b981;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
-        <div style="font-size:0.72rem;color:#10b981;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Inversiones</div>
+        <div style="font-size:0.72rem;color:#10b981;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Cartera</div>
         <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(total_inversiones)}</div>
         <div style="font-size:0.82rem;color:{rent_color};font-weight:600;margin-bottom:0.75rem;">{rent_str}</div>
         <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{ratio_inv:.1f}% del patrimonio &nbsp;→</div>
@@ -2223,7 +2223,7 @@ html_out = f"""<!DOCTYPE html>
 <!-- ══ PÁGINA 2: CUENTAS ══ -->
 <div class="page" id="page-cuentas">
   <div class="header-block">
-    <h2 class="section-title">Liquidez</h2>
+    <h2 class="section-title">Caja</h2>
     <div class="section-subtitle">{fmt_eur(patrimonio_liquido)}</div>
   </div>
   <div style="max-width:1400px;margin:2rem auto 2rem;width:100%;">
@@ -2359,7 +2359,7 @@ html_out = f"""<!DOCTYPE html>
     <button onclick="navTab('cuentas')"
       style="background:none;border:none;color:#6b7280;cursor:pointer;padding:0;font-size:0.85rem;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;transition:color 0.15s;"
       onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">
-      ← Volver a Liquidez
+      ← Volver a Caja
     </button>
     <h2 class="section-title">Movimientos</h2>
   </div>
@@ -2499,7 +2499,7 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
   <div class="table-container">
-    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Inversiones</div>
+    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Cartera</div>
     <table class="minimal-table">
       <thead><tr>
         <th style="text-align:left;">Activo</th>
