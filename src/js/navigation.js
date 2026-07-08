@@ -129,7 +129,7 @@ function _aplicarFiltroAportaciones() {
   if (cnt) {
     if (val) {
       const c = visibleCost.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      cnt.textContent = visible + " compras · " + c + " € invertido";
+      cnt.textContent = visible + " movimientos · " + c + " € invertido";
     } else {
       cnt.textContent = cnt.dataset.total || cnt.textContent;
     }
