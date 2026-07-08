@@ -507,6 +507,8 @@ _BK_NAV_PATH = Path("data/bankinter_nav.csv")
 _bk_nav = {}  # {isin: ([dates], [navs])}
 if _BK_NAV_PATH.exists():
     _bk_df = pd.read_csv(_BK_NAV_PATH, dtype=str)
+    # Cabeceras insensibles a mayúsculas/espacios (la hoja usa Fecha/ISIN/NAV)
+    _bk_df.columns = [c.strip().lower() for c in _bk_df.columns]
     _bk_df["fecha"] = pd.to_datetime(_bk_df["fecha"], dayfirst=True, errors="coerce").dt.date
     _bk_df["nav"] = pd.to_numeric(_bk_df["nav"], errors="coerce")
     _bk_df = _bk_df.dropna(subset=["fecha", "nav"]).sort_values("fecha")
@@ -1276,7 +1278,8 @@ def tabla_aportaciones():
         return '<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:#6b7280;">Sin aportaciones registradas</td></tr>'
     TIPO_COLOR = {
         "ETF": "#8b5cf6", "Acciones": "#ec4899",
-        "Criptoactivo": "#f59e0b", "Fondo de inversión": "#14b8a6",
+        "Criptoactivo": "#f59e0b", "Cripto": "#f59e0b",
+        "Fondo de inversión": "#14b8a6",
     }
     TD = "padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;"
     df = inv_apor.copy()
