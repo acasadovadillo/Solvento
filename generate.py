@@ -1708,6 +1708,15 @@ ticker_currency_js  = json.dumps(ticker_currency_map)
 saldos_cuentas_js   = json.dumps({r["cuenta"]: round(r["saldo"], 2) for _, r in saldos.iterrows()})
 build_ts = int(datetime.now().timestamp())
 
+# Activos con yf_ticker que no están en PORTFOLIO_ASSETS (p.ej. fondos añadidos
+# manualmente a ACTIVOS_CONFIG con precio en vivo): necesitan su propio histórico
+# diario para que "Evolución de la cartera" los incluya, igual que a los demás.
+_pf_tickers = {_pa0["ticker"] for _pa0 in PORTFOLIO_ASSETS}
+_extra_yf_assets = {a["yf_ticker"]: a for a in ACTIVOS_CONFIG
+                    if a.get("yf_ticker") and a["yf_ticker"] not in _pf_tickers}
+for _tk_extra in _extra_yf_assets:
+    _raw_pf_hist[_tk_extra] = fetch_daily_history(_tk_extra)
+
 # ── Patrimonio neto histórico (líquido + inversiones) ──────────────────────
 # Precio EUR por fecha para cada ticker
 _tdp = {}  # {ticker: ([dates], [prices_eur])}
@@ -1718,6 +1727,13 @@ for _pa in PORTFOLIO_ASSETS:
         _ds.append(datetime.fromtimestamp(_ts2 / 1000).date())
         _ps.append(_p * _FX_EUR.get("USD", 0.926) if _mon == "USD" else _p)
     _tdp[_tk] = (_ds, _ps)
+for _tk_extra, _a_extra in _extra_yf_assets.items():
+    _mon_extra = _a_extra.get("moneda", "EUR")
+    _ds, _ps = [], []
+    for _ts2, _p in _raw_pf_hist.get(_tk_extra, []):
+        _ds.append(datetime.fromtimestamp(_ts2 / 1000).date())
+        _ps.append(_p * _FX_EUR.get(_mon_extra, 1.0) if _mon_extra != "EUR" else _p)
+    _tdp[_tk_extra] = (_ds, _ps)
 
 # Unidades acumuladas por jk y fecha
 _utl = {}  # {jk: ([dates], [cum_units])}
@@ -1793,12 +1809,9 @@ def _inv_en(d):
             _bnav = _bkn[0]  # fallback to earliest known NAV
         if _bnav:
             total += _bunits * _bnav
-    # yf_ticker ETFs / stocks / crypto
-    for _pa2 in PORTFOLIO_ASSETS:
-        _tk2 = _pa2["ticker"]
-        _jk3 = _yft2jk.get(_tk2)
-        if not _jk3:
-            continue
+    # yf_ticker ETFs / stocks / crypto / fondos con precio en vivo (todos los
+    # ACTIVOS_CONFIG con yf_ticker, no solo los 7 de PORTFOLIO_ASSETS)
+    for _tk2, _jk3 in _yft2jk.items():
         _tld, _tlu = _utl.get(_jk3, ([], []))
         _units2 = 0.0
         for _i2 in range(len(_tld) - 1, -1, -1):
