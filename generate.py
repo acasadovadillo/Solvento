@@ -22,12 +22,29 @@ HTML_PATH         = Path("index.html")
 PRICES_CACHE_PATH = Path("data/prices_cache.json")
 
 CUENTAS_CONFIG = [
-    {"cuenta": "Bankinter",      "icono": '<img src="img/logo-bankinter.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#FF6200"},
-    {"cuenta": "Santander",      "icono": '<img src="img/logo-santander.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#ec0000"},
-    {"cuenta": "Trade Republic", "icono": '<img src="img/logo-trade-republic.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#ffffff"},
-    {"cuenta": "MyInvestor",     "icono": '<img src="img/logo-myinvestor.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;border-radius:5px;">', "accent": "#e12363"},
+    {"cuenta": "Bankinter",      "icono": '<img src="img/account-logo-bankinter.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#FF6200"},
+    {"cuenta": "Santander",      "icono": '<img src="img/account-logo-santander.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#ec0000"},
+    {"cuenta": "Trade Republic", "icono": '<img src="img/account-logo-trade-republic.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">', "accent": "#ffffff"},
+    {"cuenta": "MyInvestor",     "icono": '<img src="img/account-logo-myinvestor.png" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;border-radius:5px;">', "accent": "#e12363"},
     {"cuenta": "Efectivo",       "icono": "💵", "accent": "#2d9e5f"},
 ]
+
+# Logo por activo (Cartera / Historial de aportaciones): se busca por palabra
+# clave en el nombre para que cubra automáticamente variantes del mismo emisor
+# (p.ej. varios fondos "Bankinter ..."). Si un activo no encaja con ninguna
+# clave, no se muestra imagen (algunos activos aún no tienen logo).
+ASSET_LOGO_KEYWORDS = [
+    ("apple",     "asset-logo-apple.png"),
+    ("bitcoin",   "asset-logo-bitcoin.png"),
+    ("bankinter", "asset-logo-bankinter.png"),
+]
+
+def asset_logo_html(nombre):
+    n = str(nombre).lower()
+    for kw, archivo in ASSET_LOGO_KEYWORDS:
+        if kw in n:
+            return f'<img src="img/{archivo}" alt="" style="width:22px;height:22px;object-fit:contain;border-radius:5px;flex-shrink:0;">'
+    return '<span style="width:22px;height:22px;flex-shrink:0;"></span>'
 
 CATEGORIA_COLORES = {
     "Alimentación":        "#10b981",
@@ -1211,9 +1228,14 @@ def tabla_activos():
         rows.append(
             f'<tr class="table-row" onclick="showAportaciones(\'{nombre_js}\')" style="cursor:pointer;">'
             f'<td style="{TD}text-align:left;">'
+            f'<div style="display:flex;align-items:center;gap:0.6rem;">'
+            f'{asset_logo_html(r["Nombre"])}'
+            f'<div>'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.9rem;">{html_escape(str(r["Nombre"]))}</div>'
             f'<div style="font-size:0.75rem;color:#6b7280;margin-top:0.15rem;">{html_escape(str(r["tipo"]))}'
             + (f'<span style="font-family:ui-monospace,monospace;margin-left:0.5rem;color:#4b5563;">{_isin_display}</span>' if _isin_display else '') +
+            f'</div>'
+            f'</div>'
             f'</div>'
             f'</td>'
             f'{_val_td}'
@@ -1260,8 +1282,14 @@ def tabla_aportaciones():
             f'<tr class="table-row" data-nombre="{html_escape(nombre)}" data-coste="{coste:.2f}">'
             f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.82rem;font-family:ui-monospace,monospace;white-space:nowrap;">{fecha_s}</td>'
             f'<td style="{TD}text-align:left;">'
+            f'<div style="display:flex;align-items:center;gap:0.6rem;">'
+            f'{asset_logo_html(nombre)}'
+            f'<div>'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.88rem;">{html_escape(nombre)}</div>'
-            f'{tipo_chip}</td>'
+            f'{tipo_chip}'
+            f'</div>'
+            f'</div>'
+            f'</td>'
             f'<td style="{TD}text-align:left;color:#6b7280;font-size:0.82rem;">{html_escape(banco)}</td>'
             f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;font-family:ui-monospace,monospace;">{fmt_eur(coste)}</td>'
             f'{unidades_td}{precio_td}'
