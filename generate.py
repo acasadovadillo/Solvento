@@ -2422,6 +2422,14 @@ html_out = f"""<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- ══ ASIGNACIÓN ACTUAL VS OBJETIVO + RENTABILIDAD POR CATEGORÍA ══ -->
+  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
+    <div class="dashboard-panel">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.5rem;">Asignación · actual vs objetivo</div>
+      {panel_asignacion_html()}
+    </div>
+  </div>
+
   <!-- ══ EVOLUCIÓN DE LA CARTERA ══ -->
   <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
     <div class="dashboard-panel" style="padding:1.5rem 2rem 1.5rem;">
@@ -2488,13 +2496,6 @@ html_out = f"""<!DOCTYPE html>
         </div>
       </div>
       <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:0.5rem;">{legend_donut(inv_tipo, "tipo")}</div>
-    </div>
-  </div>
-  <!-- ══ ASIGNACIÓN ACTUAL VS OBJETIVO + RENTABILIDAD POR CATEGORÍA ══ -->
-  <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
-    <div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.5rem;">Asignación · actual vs objetivo</div>
-      {panel_asignacion_html()}
     </div>
   </div>
   <div class="table-container">
