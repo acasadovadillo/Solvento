@@ -1207,8 +1207,9 @@ def tabla_activos():
         else:
             _val_td = f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;">{fmt_eur(r["importe"])}</td>'
         _isin_display = html_escape(str(r["ISIN"])) if str(r.get("ISIN","")).strip() not in ("-","","nan") else ""
+        nombre_js = html_escape(str(r["Nombre"])).replace("'", "\\'")
         rows.append(
-            f'<tr class="table-row">'
+            f'<tr class="table-row" onclick="showAportaciones(\'{nombre_js}\')" style="cursor:pointer;">'
             f'<td style="{TD}text-align:left;">'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.9rem;">{html_escape(str(r["Nombre"]))}</div>'
             f'<div style="font-size:0.75rem;color:#6b7280;margin-top:0.15rem;">{html_escape(str(r["tipo"]))}'
@@ -2487,58 +2488,6 @@ html_out = f"""<!DOCTYPE html>
       </div>
     </div>
   </div>
-  <!-- ══ HISTORIAL DE APORTACIONES ══ -->
-  <div style="max-width:1400px;margin:2rem auto 0;width:100%;padding-bottom:2rem;">
-    <div class="table-container">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Historial de aportaciones</div>
-        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-          <select id="apor-filter" style="background:#12141f;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:6px;padding:0.3rem 0.65rem;font-size:0.8rem;cursor:pointer;outline:none;">
-            {apor_filter_options}
-          </select>
-          <span id="apor-count" style="font-size:0.82rem;color:#9ca3af;">{len(inv_apor)} compras · {fmt_eur(total_coste_inv) if hay_rentabilidad else "—"} invertido</span>
-        </div>
-      </div>
-      <table class="minimal-table" id="apor-table">
-        <thead><tr>
-          <th style="text-align:left;">Fecha</th>
-          <th style="text-align:left;">Activo</th>
-          <th style="text-align:left;">Banco</th>
-          <th style="text-align:right;">Importe</th>
-          <th style="text-align:right;">Unidades</th>
-          <th style="text-align:right;">Precio/ud</th>
-        </tr></thead>
-        <tbody>{tabla_aportaciones()}</tbody>
-      </table>
-    </div>
-  </div>
-  <script>
-  (function() {{
-    const flt = document.getElementById('apor-filter');
-    const cnt = document.getElementById('apor-count');
-    const totalTxt = cnt ? cnt.textContent : '';
-    if (!flt) return;
-    flt.addEventListener('change', function() {{
-      const val = this.value;
-      const rows = document.querySelectorAll('#apor-table tbody tr[data-nombre]');
-      let visible = 0, visibleCost = 0;
-      rows.forEach(function(row) {{
-        const show = !val || row.dataset.nombre === val;
-        row.style.display = show ? '' : 'none';
-        if (show) {{ visible++; visibleCost += parseFloat(row.dataset.coste || 0); }}
-      }});
-      if (cnt) {{
-        if (val) {{
-          const c = visibleCost.toLocaleString('de-DE', {{minimumFractionDigits:2, maximumFractionDigits:2}});
-          cnt.textContent = visible + ' compras · ' + c + ' € invertido';
-        }} else {{
-          cnt.textContent = totalTxt;
-        }}
-      }}
-    }});
-  }})();
-  </script>
-
   <hr style="border:0;height:1px;background:linear-gradient(to right,transparent,#2a2d3a,transparent);margin:3rem 0;">
 
   <div style="max-width:1400px;margin:0 auto 2rem;">
@@ -2665,6 +2614,40 @@ html_out = f"""<!DOCTYPE html>
   </div>
 </div>
 <!-- fin page-inversiones -->
+
+<!-- ══ PÁGINA APORTACIONES (solo accesible desde una fila de la tabla Cartera) ══ -->
+<div class="page" id="page-aportaciones">
+  <div class="header-block">
+    <button onclick="navTab('inversiones')"
+      style="background:none;border:none;color:#6b7280;cursor:pointer;padding:0;font-size:0.85rem;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;transition:color 0.15s;"
+      onmouseover="this.style.color='#e5e7eb'" onmouseout="this.style.color='#6b7280'">
+      ← Volver a Cartera
+    </button>
+    <h2 class="section-title">Historial de aportaciones</h2>
+  </div>
+  <div style="max-width:1400px;margin:0 auto 2rem;width:100%;">
+    <div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+        <select id="apor-filter" style="background:#12141f;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:6px;padding:0.3rem 0.65rem;font-size:0.8rem;cursor:pointer;outline:none;">
+          {apor_filter_options}
+        </select>
+        <span id="apor-count" style="font-size:0.82rem;color:#9ca3af;">{len(inv_apor)} compras · {fmt_eur(total_coste_inv) if hay_rentabilidad else "—"} invertido</span>
+      </div>
+      <table class="minimal-table" id="apor-table">
+        <thead><tr>
+          <th style="text-align:left;">Fecha</th>
+          <th style="text-align:left;">Activo</th>
+          <th style="text-align:left;">Banco</th>
+          <th style="text-align:right;">Importe</th>
+          <th style="text-align:right;">Unidades</th>
+          <th style="text-align:right;">Precio/ud</th>
+        </tr></thead>
+        <tbody>{tabla_aportaciones()}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<!-- fin page-aportaciones -->
 
 <!-- ══ PÁGINA: INMUEBLES ══ -->
 <div class="page" id="page-inmuebles">
