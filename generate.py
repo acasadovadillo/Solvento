@@ -70,6 +70,8 @@ ISIN_YF_MAP = {
     "IE00B5BMR087": "CSPX.AS",
     "IE000KCS7J59": "EMIM.AS",
     "IE00B4ND3602": "PHAU.AS",
+    "ES0173311103": "0P000168OI.F",
+    "IE00BYX5MX67": "0P0001CLDM.F",
 }
 
 CAT_COLORES_INV  = {"Renta variable": "#3b82f6", "Renta fija": "#10b981"}
@@ -458,6 +460,8 @@ ACTIVOS_CONFIG = [
     {"Nombre": "Physical Gold USD (Acc)",        "ISIN": "IE00B4ND3602", "Ticker": "-",    "categoria": "Renta variable", "tipo": "ETF",              "Banco": "Trade Republic", "yf_ticker": "PHAU.AS"},
     {"Nombre": "Bitcoin",                        "ISIN": "-",            "Ticker": "BTC",  "categoria": "Renta variable", "tipo": "Criptoactivo",     "Banco": "Trade Republic", "yf_ticker": "BTC-EUR"},
     {"Nombre": "Apple",                          "ISIN": "US0378331005", "Ticker": "AAPL", "categoria": "Renta variable", "tipo": "Acciones",         "Banco": "Trade Republic", "yf_ticker": "AAPL"},
+    {"Nombre": "Renta 4 Multigestión Numantia Patrimonio Global FI", "ISIN": "ES0173311103", "Ticker": "-", "categoria": "Renta variable", "tipo": "Fondo de inversión", "Banco": "MyInvestor", "yf_ticker": "0P000168OI.F"},
+    {"Nombre": "Fidelity S&P 500 Index Fund P-ACC-EUR",              "ISIN": "IE00BYX5MX67", "Ticker": "-", "categoria": "Renta variable", "tipo": "Fondo de inversión", "Banco": "MyInvestor", "yf_ticker": "0P0001CLDM.F"},
 ]
 
 # ── Leer aportaciones (todo inversiones.csv/"Cartera" son aportaciones) ──
@@ -546,6 +550,7 @@ _bk_last_nav = {isin: (_bkd[-1], _bkn[-1]) for isin, (_bkd, _bkn) in _bk_nav.ite
 
 # ── Construir inv_raw: precio live × unidades ──
 _inv_rows = []
+_activos_precios_extra = {}   # {yf_ticker: precio_eur} para rellenar la columna Mercado
 for _a in ACTIVOS_CONFIG:
     _jk = _jk_v(_a["Nombre"], _a["ISIN"])
     _ag = _coste_agg[_coste_agg["_jk"] == _jk]
@@ -588,6 +593,8 @@ for _a in ACTIVOS_CONFIG:
         src_lbl = {"live": "✅ live", "error": "❌ sin precio"}.get(_pfuente, f"⚠️  caché {_pfuente.split(':')[-1]}")
         _p_str  = f"{_precio:.4f} €" if _precio else "—"
         print(f"   {_a['Nombre'][:30]:30s} {_yft:12s} → {_p_str}  [{src_lbl}]")
+        if _precio and _yft not in _activos_precios_extra:
+            _activos_precios_extra[_yft] = _precio
 
 inv_raw = pd.DataFrame(_inv_rows)
 inv_raw["importe"] = pd.to_numeric(inv_raw["importe"], errors="coerce")
@@ -1668,7 +1675,11 @@ def tarjetas_activos_html():
 # ════════════════════════════════════════════════════
 
 pf_hist_parts, pf_intra_parts, pf_cur_parts = [], [], []
-latest_prices, ticker_currency_map = {}, {}
+# Semilla con los precios ya obtenidos al construir inv_raw (fetch_precio_actual_eur
+# ya devuelve el valor en EUR); el bucle de PORTFOLIO_ASSETS de abajo sobreescribe
+# los tickers que también forman parte del gráfico de Cartera con su precio nativo.
+latest_prices        = dict(_activos_precios_extra)
+ticker_currency_map  = {t: "€" for t in _activos_precios_extra}
 _raw_pf_hist = {}
 for asset in PORTFOLIO_ASSETS:
     hist  = fetch_daily_history(asset["ticker"])
