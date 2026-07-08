@@ -999,53 +999,6 @@ def panel_asignacion_html():
         f'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.5rem;">{"".join(tiles)}</div>'
     )
 
-def sectors_patrimonio():
-    parts = []
-    for _, r in saldos.iterrows():
-        title = f'{html_escape(r["cuenta"])}: {fmt_eur(r["saldo"])} ({fmt_pct(r["pct"])})'
-        parts.append(
-            f'<circle class="sector" cx="21" cy="21" r="{R_DONUT}" fill="transparent" stroke="{r["accent"]}" stroke-width="3"'
-            f' stroke-dasharray="{r["pct"]:.4f} {r["pct_rest"]:.4f}" stroke-dashoffset="25"'
-            f' style="transform:rotate({r["rotacion"]:.2f}deg);transform-origin:center;">'
-            f'<title>{title}</title></circle>'
-        )
-    return "\n".join(parts)
-
-def legend_patrimonio():
-    parts = []
-    rows = list(saldos.iterrows())
-    for i, (_, r) in enumerate(rows):
-        cuenta_js = html_escape(r["cuenta"]).replace("'", "\\'")
-        is_first = i == 0
-        is_last  = i == len(rows) - 1
-        # Use individual margin/padding properties to avoid overriding CSS class's
-        # padding-bottom:0.8rem (the space above the border-bottom separator).
-        # The shorthand `padding:` would reset all four sides and remove that spacing.
-        extra = ""
-        if is_first:
-            extra += "margin-top:-1.25rem;padding-top:1.25rem;"
-        else:
-            # CSS .legend-item has padding-bottom:0.8rem but no padding-top, so
-            # without this the content sticks to the top edge of its row.
-            extra += "padding-top:0.8rem;"
-        if is_last:
-            extra += "margin-bottom:-1.25rem;padding-bottom:1.25rem;"
-        br_t = "13px" if is_first else "8px"
-        br_b = "13px" if is_last  else "8px"
-        parts.append(f"""
-<div class="legend-item" onclick="showMovimientos('{cuenta_js}')" style="cursor:pointer;transition:background 0.15s;margin-left:-1.25rem;margin-right:-1.25rem;padding-left:1.25rem;padding-right:1.25rem;{extra}border-radius:{br_t} {br_t} {br_b} {br_b};" onmouseover="this.style.background='#ffffff0d'" onmouseout="this.style.background='transparent'">
-  <div style="display:flex;align-items:center;justify-content:center;width:30px;">{r["icono"]}</div>
-  <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;">
-    <div style="display:flex;align-items:center;gap:0.5rem;">
-      <span style="width:10px;height:10px;border-radius:50%;background:{r["accent"]};flex-shrink:0;"></span>
-      <span style="color:#ffffff;font-weight:600;font-size:0.95rem;">{html_escape(r["cuenta"])}</span>
-    </div>
-    <span style="color:#9ca3af;font-size:0.8rem;font-weight:500;margin-left:1.15rem;">{fmt_pct(r["pct"])}</span>
-  </div>
-  <div style="text-align:right;color:#ffffff;font-weight:700;font-size:1.05rem;">{fmt_eur(r["saldo"])}</div>
-</div>""")
-    return "\n".join(parts)
-
 def tarjetas_cuentas_html():
     """Barra de proporción por colores + tarjetas por cuenta (estilo hub de Patrimonio)."""
     segs, cards = [], []
@@ -2275,24 +2228,6 @@ html_out = f"""<!DOCTYPE html>
       <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:#4b5563;font-weight:500;padding:0 0.5rem;">
         <span id="lbl-start-date">{fecha_ini_lbl}</span>
         <span id="lbl-end-date">{fecha_fin_lbl}</span>
-      </div>
-    </div>
-  </div>
-  <div style="max-width:1400px;margin:0 auto;width:100%;">
-    <div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.5rem;">Distribución de liquidez</div>
-      <div style="display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;flex-grow:1;">
-        <div class="chart-wrapper" style="margin:0;">
-          <svg class="donut" viewBox="0 0 42 42">
-            {sectors_patrimonio()}
-          </svg>
-          <div class="donut-center">
-            <span style="font-size:1.05rem;font-weight:700;color:#fff;line-height:1.2;word-wrap:break-word;max-width:100px;">{fmt_eur(patrimonio_liquido)}</span>
-            <span style="font-size:0.52rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-top:0.2rem;">Total</span>
-          </div>
-          <div id="dynamic-label" class="chart-label"></div>
-        </div>
-        <div class="legend-box" style="gap:0;">{legend_patrimonio()}</div>
       </div>
     </div>
   </div>
