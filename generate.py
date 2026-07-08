@@ -1811,8 +1811,17 @@ def _inv_en(d):
             total += _units2 * _dpp[0]
     return total
 
+# Valor de los inmuebles en una fecha dada: constante (última tasación conocida)
+# desde su fecha de adquisición en adelante, ya que no hay histórico de tasaciones.
+_inmuebles_compra = [(r["fecha_compra"].date(), r["importe"])
+                     for _, r in inmuebles_df.iterrows()
+                     if pd.notna(r["fecha_compra"]) and pd.notna(r["importe"])]
+
+def _inmuebles_en(d):
+    return sum(v for _fc, v in _inmuebles_compra if _fc <= d)
+
 if n_puntos > 0:
-    _neto_vals = [round(row["patrimonio_acum"] + _inv_en(row["fecha"]), 2)
+    _neto_vals = [round(row["patrimonio_acum"] + _inv_en(row["fecha"]) + _inmuebles_en(row["fecha"]), 2)
                   for _, row in evo.iterrows()]
     # ── Benchmark: ¿qué pasaría si todo hubiera ido a MSCI World? ──
     _msci_dpd, _msci_dpp = _tdp.get("IWDA.AS", ([], []))
@@ -1899,10 +1908,10 @@ if n_puntos > 0:
         )
     bench_inv_hist_js = "[" + ",".join(_bench_inv_js) + "]"
 
-    # Y-axis escala combinada (neto + benchmark)
-    _all_vals = _neto_vals + _bench_vals
-    _neto_min  = min(_all_vals)
-    _neto_max  = max(_all_vals)
+    # Y-axis: solo los valores reales del patrimonio neto (el benchmark no se
+    # dibuja en este gráfico, incluirlo aquí solo aplastaría la curva real).
+    _neto_min  = min(_neto_vals)
+    _neto_max  = max(_neto_vals)
     _neto_rng  = (_neto_max - _neto_min) if _neto_max != _neto_min else 1.0
     _neto_y    = [260 - (v - _neto_min) / _neto_rng * 220 for v in _neto_vals]
     _bench_y   = [260 - (v - _neto_min) / _neto_rng * 220 for v in _bench_vals]
