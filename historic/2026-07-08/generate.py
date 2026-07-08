@@ -2074,11 +2074,6 @@ html_out = f"""<!DOCTYPE html>
   </div>
   <!-- ══ HUB CARDS ══ -->
   <div style="max-width:1400px;margin:2rem auto 0;width:100%;">
-    <div style="display:flex;justify-content:space-between;font-size:0.72rem;font-weight:600;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.3rem 1rem;">
-      <span style="color:#3b82f6;">Caja · {pct_liquidez_num:.1f}%</span>
-      <span style="color:#10b981;">Cartera · {ratio_inv:.1f}%</span>
-      <span style="color:#a16207;">Inmuebles · {ratio_inmuebles:.1f}%</span>
-    </div>
     <div style="height:6px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:1.5rem;">
       <div title="Caja: {pct_liquidez_num:.1f}%" style="width:{pct_liquidez_num:.2f}%;background:#3b82f6;transition:width 0.4s;"></div>
       <div title="Cartera: {ratio_inv:.1f}%" style="width:{ratio_inv:.2f}%;background:#10b981;transition:width 0.4s;"></div>
@@ -2090,28 +2085,28 @@ html_out = f"""<!DOCTYPE html>
         <div style="font-size:0.72rem;color:#3b82f6;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Caja</div>
         <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(patrimonio_liquido)}</div>
         <div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem;">{n_cuentas} cuentas</div>
-        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{pct_liquidez_num:.1f}% del patrimonio &nbsp;→</div>
+        <div style="font-size:0.78rem;color:#3b82f6;font-weight:500;">{pct_liquidez_num:.2f}% del patrimonio actual &nbsp;→</div>
       </div>
 
       <div class="dashboard-panel" onclick="navTab('inversiones')" style="cursor:pointer;border-left:3px solid #10b981;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
         <div style="font-size:0.72rem;color:#10b981;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Cartera</div>
         <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(total_inversiones)}</div>
         <div style="font-size:0.82rem;color:{rent_color};font-weight:600;margin-bottom:0.75rem;">{rent_str}</div>
-        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{ratio_inv:.1f}% del patrimonio &nbsp;→</div>
+        <div style="font-size:0.78rem;color:#10b981;font-weight:500;">{ratio_inv:.2f}% del patrimonio actual &nbsp;→</div>
       </div>
 
       <div class="dashboard-panel" onclick="navTab('inmuebles')" style="cursor:pointer;border-left:3px solid #a16207;padding-left:1.25rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
         <div style="font-size:0.72rem;color:#a16207;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Inmuebles</div>
         <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">{fmt_eur(total_inmuebles)}</div>
         <div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem;">{n_inmuebles} inmuebles</div>
-        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">{ratio_inmuebles:.1f}% del patrimonio &nbsp;→</div>
+        <div style="font-size:0.78rem;color:#a16207;font-weight:500;">{ratio_inmuebles:.2f}% del patrimonio actual &nbsp;→</div>
       </div>
 
       <div class="dashboard-panel" onclick="navTab('pasivos')" style="cursor:pointer;border-left:3px solid #6b7280;padding-left:1.25rem;transition:background 0.2s;opacity:0.7;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
         <div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.75rem;">Pasivos</div>
         <div style="font-size:1.7rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.4rem;white-space:nowrap;">0,00 €</div>
         <div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.75rem;">Sin deudas registradas</div>
-        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">0% del patrimonio &nbsp;→</div>
+        <div style="font-size:0.78rem;color:#6b7280;font-weight:500;">0.00% del patrimonio actual &nbsp;→</div>
       </div>
 
     </div>
