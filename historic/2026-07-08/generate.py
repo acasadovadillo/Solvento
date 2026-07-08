@@ -462,7 +462,7 @@ ACTIVOS_CONFIG = [
 
 # ── Leer aportaciones (todo inversiones.csv/"Cartera" son aportaciones) ──
 _df_inv = pd.read_csv(INVERSIONES_PATH, encoding="utf-8", dtype=str)
-_df_inv = _df_inv.rename(columns={"Fecha": "fecha", "Tipo": "categoria", "Activo": "tipo"})
+_df_inv = _df_inv.rename(columns={"Fecha": "fecha", "Tipo": "categoria", "Activo": "tipo", "Cuenta": "Banco"})
 for col in ["tipo", "categoria", "ISIN", "Nombre"]:
     if col in _df_inv.columns:
         _df_inv[col] = _df_inv[col].str.strip()
@@ -473,6 +473,14 @@ else:
 for col in ("Coste", "fecha"):
     if col not in _df_inv.columns:
         _df_inv[col] = ""
+
+# Tipo_Movimiento: Compra / Venta / Traspaso. Si falta (hojas antiguas), se
+# asume Compra para no romper el histórico previo a esta columna.
+if "Tipo_Movimiento" in _df_inv.columns:
+    _df_inv["Tipo_Movimiento"] = _df_inv["Tipo_Movimiento"].str.strip()
+else:
+    _df_inv["Tipo_Movimiento"] = ""
+_df_inv["Tipo_Movimiento"] = _df_inv["Tipo_Movimiento"].replace("", "Compra").fillna("Compra")
 
 _df_inv["_coste_n"] = pd.to_numeric(_df_inv["Coste"], errors="coerce")
 inv_apor = _df_inv[_df_inv["_coste_n"].notna()].copy()
@@ -1254,30 +1262,37 @@ def tabla_aportaciones():
         "Criptoactivo": "#f59e0b", "Cripto": "#f59e0b",
         "Fondo de inversión": "#14b8a6",
     }
+    MOVIMIENTO_COLOR = {"Compra": "#10b981", "Venta": "#ef4444", "Traspaso": "#3b82f6"}
     TD = "padding:0.7rem 1rem;border-bottom:1px solid #2a2d3a;"
     df = inv_apor.copy()
     if "_fecha" in df.columns:
         df = df.sort_values("_fecha", ascending=False)
     rows = []
     for _, r in df.iterrows():
-        nombre   = str(r.get("Nombre", "—"))
-        tipo     = str(r.get("tipo", "—"))
-        banco    = str(r.get("Banco", "—"))
-        coste    = r["_coste_n"]
-        fecha_v  = r.get("_fecha")
-        fecha_s  = fecha_v.strftime("%d/%m/%Y") if pd.notna(fecha_v) else str(r.get("fecha", "—"))
-        unidades = r.get("_unidades_n", float("nan"))
-        has_u    = pd.notna(unidades) and unidades > 0
+        nombre     = str(r.get("Nombre", "—"))
+        tipo       = str(r.get("tipo", "—"))
+        movimiento = str(r.get("Tipo_Movimiento", "Compra"))
+        banco      = str(r.get("Banco", "—"))
+        coste      = r["_coste_n"]
+        fecha_v    = r.get("_fecha")
+        fecha_s    = fecha_v.strftime("%d/%m/%Y") if pd.notna(fecha_v) else str(r.get("fecha", "—"))
+        unidades   = r.get("_unidades_n", float("nan"))
+        has_u      = pd.notna(unidades) and unidades != 0
         tipo_color = TIPO_COLOR.get(tipo, "#6b7280")
         tipo_chip  = (f'<span style="font-size:0.68rem;font-weight:600;color:{tipo_color};'
                       f'background:{tipo_color}22;padding:0.15rem 0.45rem;border-radius:4px;'
                       f'margin-top:0.2rem;display:inline-block;">{html_escape(tipo)}</span>')
+        mov_color  = MOVIMIENTO_COLOR.get(movimiento, "#6b7280")
+        mov_chip   = (f'<span style="font-size:0.68rem;font-weight:600;color:{mov_color};'
+                      f'background:{mov_color}22;padding:0.15rem 0.45rem;border-radius:4px;'
+                      f'margin-top:0.2rem;margin-left:0.35rem;display:inline-block;">{html_escape(movimiento)}</span>')
         if has_u:
             unidades_td = f'<td style="{TD}text-align:right;color:#e5e7eb;font-size:0.85rem;font-family:ui-monospace,monospace;">{unidades:g}</td>'
             precio_td   = f'<td style="{TD}text-align:right;color:#9ca3af;font-size:0.85rem;font-family:ui-monospace,monospace;">{fmt_eur(coste / unidades)}</td>'
         else:
             unidades_td = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
             precio_td   = f'<td style="{TD}text-align:right;color:#4b5563;font-size:0.85rem;">—</td>'
+        importe_color = "#ffffff" if movimiento == "Compra" else mov_color
         rows.append(
             f'<tr class="table-row" data-nombre="{html_escape(nombre)}" data-coste="{coste:.2f}">'
             f'<td style="{TD}text-align:left;color:#9ca3af;font-size:0.82rem;font-family:ui-monospace,monospace;white-space:nowrap;">{fecha_s}</td>'
@@ -1286,12 +1301,12 @@ def tabla_aportaciones():
             f'{asset_logo_html(nombre)}'
             f'<div>'
             f'<div style="font-weight:600;color:#ffffff;font-size:0.88rem;">{html_escape(nombre)}</div>'
-            f'{tipo_chip}'
+            f'{tipo_chip}{mov_chip}'
             f'</div>'
             f'</div>'
             f'</td>'
             f'<td style="{TD}text-align:left;color:#6b7280;font-size:0.82rem;">{html_escape(banco)}</td>'
-            f'<td style="{TD}text-align:right;color:#ffffff;font-weight:600;font-size:0.9rem;font-family:ui-monospace,monospace;">{fmt_eur(coste)}</td>'
+            f'<td style="{TD}text-align:right;color:{importe_color};font-weight:600;font-size:0.9rem;font-family:ui-monospace,monospace;">{fmt_eur(coste)}</td>'
             f'{unidades_td}{precio_td}'
             f'</tr>'
         )
@@ -1969,8 +1984,9 @@ portfolio_options = "\n".join(
 _hoy_date = date.today()
 _mes_inicio = date(_hoy_date.year, _hoy_date.month, 1)
 _mes_ant_inicio = date(_hoy_date.year, _hoy_date.month - 1, 1) if _hoy_date.month > 1 else date(_hoy_date.year - 1, 12, 1)
-_apor_mes = inv_apor[inv_apor["_fecha"].dt.date >= _mes_inicio] if len(inv_apor) > 0 else inv_apor
-_apor_mes_ant = inv_apor[(inv_apor["_fecha"].dt.date >= _mes_ant_inicio) & (inv_apor["_fecha"].dt.date < _mes_inicio)] if len(inv_apor) > 0 else inv_apor
+_apor_solo_compras = inv_apor[inv_apor["Tipo_Movimiento"] == "Compra"] if len(inv_apor) > 0 else inv_apor
+_apor_mes = _apor_solo_compras[_apor_solo_compras["_fecha"].dt.date >= _mes_inicio] if len(_apor_solo_compras) > 0 else _apor_solo_compras
+_apor_mes_ant = _apor_solo_compras[(_apor_solo_compras["_fecha"].dt.date >= _mes_ant_inicio) & (_apor_solo_compras["_fecha"].dt.date < _mes_inicio)] if len(_apor_solo_compras) > 0 else _apor_solo_compras
 _total_mes = round(_apor_mes["_coste_n"].sum(), 2) if len(_apor_mes) > 0 else 0.0
 _total_mes_ant = round(_apor_mes_ant["_coste_n"].sum(), 2) if len(_apor_mes_ant) > 0 else 0.0
 _n_apor_mes = len(_apor_mes)
@@ -2655,7 +2671,7 @@ html_out = f"""<!DOCTYPE html>
         <select id="apor-filter" style="background:#12141f;color:#e5e7eb;border:1px solid #2a2d3a;border-radius:6px;padding:0.3rem 0.65rem;font-size:0.8rem;cursor:pointer;outline:none;">
           {apor_filter_options}
         </select>
-        <span id="apor-count" style="font-size:0.82rem;color:#9ca3af;">{len(inv_apor)} compras · {fmt_eur(total_coste_inv) if hay_rentabilidad else "—"} invertido</span>
+        <span id="apor-count" style="font-size:0.82rem;color:#9ca3af;">{len(inv_apor)} movimientos · {fmt_eur(total_coste_inv) if hay_rentabilidad else "—"} invertido</span>
       </div>
       <table class="minimal-table" id="apor-table">
         <thead><tr>
