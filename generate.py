@@ -2130,6 +2130,57 @@ html_out = f"""<!DOCTYPE html>
   </style>
 </head>
 <body>
+<!-- ══ LOGIN ══ -->
+<div id="login-overlay" style="position:fixed;inset:0;background:#000000;z-index:10000;display:flex;align-items:center;justify-content:center;padding:1.5rem;">
+  <form id="login-form" style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:0;">
+    <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;margin-bottom:1rem;">
+    <div style="font-size:1.4rem;font-weight:800;color:#ffffff;letter-spacing:-0.02em;margin-bottom:0.35rem;">Solvento</div>
+    <div style="font-size:0.82rem;color:#6b7280;margin-bottom:2rem;">Introduce tus credenciales para acceder</div>
+    <input id="login-user" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none"
+      style="width:100%;background:#12141d;border:1px solid #2a2d3a;border-radius:10px;color:#e5e7eb;font-size:0.95rem;padding:0.8rem 1rem;outline:none;font-family:inherit;margin-bottom:0.75rem;transition:border-color 0.15s;"
+      onfocus="this.style.borderColor='#6b7280'" onblur="this.style.borderColor='#2a2d3a'">
+    <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password"
+      style="width:100%;background:#12141d;border:1px solid #2a2d3a;border-radius:10px;color:#e5e7eb;font-size:0.95rem;padding:0.8rem 1rem;outline:none;font-family:inherit;margin-bottom:1.25rem;transition:border-color 0.15s;"
+      onfocus="this.style.borderColor='#6b7280'" onblur="this.style.borderColor='#2a2d3a'">
+    <button type="submit"
+      style="width:100%;background:#ffffff;border:none;border-radius:10px;color:#000000;font-size:0.95rem;font-weight:700;padding:0.8rem 1rem;cursor:pointer;font-family:inherit;transition:opacity 0.15s;"
+      onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Entrar</button>
+    <div id="login-error" style="display:none;color:#ef4444;font-size:0.82rem;font-weight:600;margin-top:1rem;">Usuario o contraseña incorrectos</div>
+  </form>
+</div>
+<script>
+(function() {{
+  var AUTH_HASH = "0cd6ae5577243da97ae1c8e20129704848b8008a5623c2b43639793777dbb4f4";
+  var overlay = document.getElementById("login-overlay");
+  function sha256(str) {{
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)).then(function(buf) {{
+      return Array.from(new Uint8Array(buf)).map(function(b) {{ return b.toString(16).padStart(2, "0"); }}).join("");
+    }});
+  }}
+  function unlock() {{
+    overlay.style.display = "none";
+    document.documentElement.style.overflow = "";
+  }}
+  document.documentElement.style.overflow = "hidden";
+  try {{
+    if (localStorage.getItem("solvento_auth") === AUTH_HASH) {{ unlock(); return; }}
+  }} catch (e) {{}}
+  document.getElementById("login-form").addEventListener("submit", function(ev) {{
+    ev.preventDefault();
+    var u = document.getElementById("login-user").value.trim();
+    var p = document.getElementById("login-pass").value;
+    sha256(u + ":" + p).then(function(h) {{
+      if (h === AUTH_HASH) {{
+        try {{ localStorage.setItem("solvento_auth", h); }} catch (e) {{}}
+        unlock();
+      }} else {{
+        document.getElementById("login-error").style.display = "";
+        document.getElementById("login-pass").value = "";
+      }}
+    }});
+  }});
+}})();
+</script>
 <nav class="navbar">
   <div class="navbar-brand">
     <h1 style="display:flex;align-items:center;gap:0.5rem;"><img src="img/logo-solvento.png" alt="" style="width:24px;height:24px;object-fit:contain;">Solvento</h1>
