@@ -533,3 +533,35 @@ document.querySelectorAll(".tm-container").forEach(c => {
   new ResizeObserver(layoutTreemaps).observe(c);
 });
 layoutTreemaps();
+
+// Hover: intensifica el color (verde/rojo fuerte) y muestra un tooltip con
+// nombre, peso y rentabilidad, posicionado sobre el recuadro (o debajo si no
+// cabe arriba) y sin salirse de los límites del mapa.
+function bindTreemapHover() {
+  document.querySelectorAll(".tm-container").forEach(container => {
+    const tip = container.querySelector(".tm-tooltip");
+    if (!tip) return;
+    container.querySelectorAll(".tm-tile").forEach(tile => {
+      tile.addEventListener("mouseenter", () => {
+        tile.style.background = tile.dataset.hoverBg;
+        tip.textContent = `${tile.dataset.name} · ${tile.dataset.weight} · ${tile.dataset.rent}`;
+        tip.style.display = "block";
+        const cw = container.clientWidth, ch = container.clientHeight;
+        const tx = tile.offsetLeft, ty = tile.offsetTop, tw = tile.offsetWidth, th = tile.offsetHeight;
+        const tipW = tip.offsetWidth, tipH = tip.offsetHeight;
+        let left = tx + tw / 2 - tipW / 2;
+        left = Math.max(4, Math.min(left, cw - tipW - 4));
+        let top = ty - tipH - 8;
+        if (top < 4) top = ty + th + 8;
+        top = Math.max(4, Math.min(top, ch - tipH - 4));
+        tip.style.left = left + "px";
+        tip.style.top = top + "px";
+      });
+      tile.addEventListener("mouseleave", () => {
+        tile.style.background = tile.dataset.bg;
+        tip.style.display = "none";
+      });
+    });
+  });
+}
+bindTreemapHover();
