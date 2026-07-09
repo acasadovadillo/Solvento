@@ -1085,12 +1085,14 @@ def treemap_cartera_html():
         rent_val = rent if has_rent else float("nan")
         color = _color_treemap(rent_val)
         rent_str = f'{"+" if rent_val >= 0 else ""}{rent_val:.1f}%' if has_rent else "—"
+        hover_color = "#4b5563" if not has_rent else ("#16a34a" if rent_val >= 0 else "#dc2626")
         nombre = html_escape(str(r["Nombre"]))
+        peso_str = fmt_pct(r["pct"])
         tiles.append(f"""
-      <div class="tm-tile" data-name="{nombre}" data-rent="{rent_str}"
-        title="{nombre} · {fmt_pct(r['pct'])} de la cartera · {rent_str}"
+      <div class="tm-tile" data-name="{nombre}" data-rent="{rent_str}" data-weight="{peso_str}"
+        data-bg="{color}" data-hover-bg="{hover_color}" aria-label="{nombre} · {peso_str} de la cartera · {rent_str}"
         style="position:absolute;left:{tx:.3f}%;top:{ty:.3f}%;width:{tw:.3f}%;height:{th:.3f}%;
-        background:{color};border:1px solid #12141d;box-sizing:border-box;overflow:hidden;cursor:default;">
+        background:{color};border:1px solid #12141d;box-sizing:border-box;overflow:hidden;cursor:default;transition:background 0.15s;">
         <div class="tm-label" style="height:100%;box-sizing:border-box;padding:0.4rem 0.55rem;display:flex;flex-direction:column;justify-content:flex-end;">
           <div class="tm-name" style="font-weight:700;color:#0f1115;"></div>
           <div class="tm-rent" style="font-weight:700;color:#0f1115cc;margin-top:0.1rem;"></div>
@@ -1098,7 +1100,11 @@ def treemap_cartera_html():
       </div>""")
     return (
         '<div class="tm-container" style="position:relative;width:100%;height:420px;border-radius:10px;overflow:hidden;">'
-        + "".join(tiles) + "</div>"
+        + "".join(tiles)
+        + '<div class="tm-tooltip" style="position:absolute;display:none;background:#000000;color:#fff;'
+          'font-size:0.78rem;font-weight:600;padding:0.45rem 0.7rem;border-radius:6px;border:1px solid #2a2d3a;'
+          'pointer-events:none;white-space:nowrap;z-index:20;box-shadow:0 4px 14px rgba(0,0,0,0.4);"></div>'
+        + "</div>"
     )
 
 def panel_asignacion_html():
