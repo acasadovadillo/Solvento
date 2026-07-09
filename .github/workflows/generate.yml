@@ -107,27 +107,34 @@ jobs:
           fi
           echo "✅ inmuebles.csv válido ($FILAS filas, $BYTES bytes)"
 
-      - name: Descargar y validar historico_valor_liquidativo.csv
+      - name: Descargar y validar históricos de valor liquidativo (fondos manuales)
         run: |
-          curl -fsSL \
-            "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=2139797029" \
-            -o data/bankinter_nav.csv
-          BYTES=$(wc -c < data/bankinter_nav.csv)
-          FILAS=$(wc -l < data/bankinter_nav.csv)
-          echo "historico_valor_liquidativo.csv — $FILAS filas, $BYTES bytes"
-          if head -1 data/bankinter_nav.csv | grep -qi "<!doctype\|<html"; then
-            echo "❌ Google Sheets devolvió HTML (error de acceso o sesión caducada)"
-            exit 1
-          fi
-          if [ "$BYTES" -lt 5000 ]; then
-            echo "❌ Archivo demasiado pequeño ($BYTES bytes) — descarga incompleta o vacía"
-            exit 1
-          fi
-          if [ "$FILAS" -lt 100 ]; then
-            echo "❌ Solo $FILAS filas — se esperaban ≥100 (posible truncado)"
-            exit 1
-          fi
-          echo "✅ historico_valor_liquidativo.csv válido ($FILAS filas, $BYTES bytes)"
+          # gid ⇄ archivo destino de cada fondo sin precio en Yahoo Finance
+          descargar_nav() {
+            local archivo="$1" gid="$2"
+            curl -fsSL \
+              "https://docs.google.com/spreadsheets/d/1SJ3N377plfut-3iTJJHBiJtRqapuc3VMpLUskQDrkZY/export?format=csv&gid=${gid}" \
+              -o "data/${archivo}"
+            local bytes=$(wc -c < "data/${archivo}")
+            local filas=$(wc -l < "data/${archivo}")
+            echo "${archivo} — $filas filas, $bytes bytes"
+            if head -1 "data/${archivo}" | grep -qi "<!doctype\|<html"; then
+              echo "❌ Google Sheets devolvió HTML (error de acceso o sesión caducada) — ${archivo}"
+              exit 1
+            fi
+            if [ "$bytes" -lt 1000 ]; then
+              echo "❌ Archivo demasiado pequeño ($bytes bytes) — descarga incompleta o vacía — ${archivo}"
+              exit 1
+            fi
+            if [ "$filas" -lt 50 ]; then
+              echo "❌ Solo $filas filas — se esperaban ≥50 (posible truncado) — ${archivo}"
+              exit 1
+            fi
+            echo "✅ ${archivo} válido ($filas filas, $bytes bytes)"
+          }
+          descargar_nav "nav_fidelity_sp500.csv"      "0"
+          descargar_nav "nav_bankinter_premium.csv"   "54078296"
+          descargar_nav "nav_bankinter_horizonte.csv" "399002329"
 
       - name: Archivar repositorio completo del día en historic/
         run: |

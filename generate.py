@@ -88,7 +88,6 @@ ISIN_YF_MAP = {
     "IE000KCS7J59": "EMIM.AS",
     "IE00B4ND3602": "PHAU.AS",
     "ES0173311103": "0P000168OI.F",
-    "IE00BYX5MX67": "0P0001CLDM.F",
 }
 
 CAT_COLORES_INV  = {"Renta variable": "#3b82f6", "Renta fija": "#10b981"}
@@ -478,7 +477,7 @@ ACTIVOS_CONFIG = [
     {"Nombre": "Bitcoin",                        "ISIN": "-",            "Ticker": "BTC",  "categoria": "Renta variable", "tipo": "Criptoactivo",     "Banco": "Trade Republic", "yf_ticker": "BTC-EUR"},
     {"Nombre": "Apple",                          "ISIN": "US0378331005", "Ticker": "AAPL", "categoria": "Renta variable", "tipo": "Acciones",         "Banco": "Trade Republic", "yf_ticker": "AAPL"},
     {"Nombre": "Renta 4 Multigestión Numantia Patrimonio Global FI", "ISIN": "ES0173311103", "Ticker": "-", "categoria": "Renta variable", "tipo": "Fondo de inversión", "Banco": "MyInvestor", "yf_ticker": "0P000168OI.F"},
-    {"Nombre": "Fidelity S&P 500 Index Fund P-ACC-EUR",              "ISIN": "IE00BYX5MX67", "Ticker": "-", "categoria": "Renta variable", "tipo": "Fondo de inversión", "Banco": "MyInvestor", "yf_ticker": "0P0001CLDM.F"},
+    {"Nombre": "Fidelity S&P 500 Index Fund P-ACC-EUR",              "ISIN": "IE00BYX5MX67", "Ticker": "-", "categoria": "Renta variable", "tipo": "Fondo de inversión", "Banco": "MyInvestor", "yf_ticker": None},
 ]
 
 # ── Leer aportaciones (todo inversiones.csv/"Cartera" son aportaciones) ──
@@ -546,21 +545,33 @@ if len(inv_apor) > 0:
 else:
     _coste_agg = pd.DataFrame(columns=["_jk","coste_total","unidades_total","fecha_primera","n_aportaciones"])
 
-# ── Historial de valor liquidativo (fondos sin ticker público: Bankinter, etc.)
-# Se carga aquí (antes de construir inv_raw) para poder usar el último NAV
-# conocido × unidades como valor actual dinámico de esos fondos. ──
-_BK_NAV_PATH = Path("data/bankinter_nav.csv")
+# ── Historial de valor liquidativo (fondos sin precio en Yahoo Finance) ──
+# Un archivo por fondo (una pestaña de Google Sheets cada uno, columnas
+# Fecha/Precio). Se carga aquí (antes de construir inv_raw) para poder usar
+# el último NAV conocido × unidades como valor actual dinámico de esos fondos,
+# y para que el fondo quede indexado en la gráfica de activos aunque ya no
+# se tengan posiciones (ver _bk_option_names más abajo). ──
+_NAV_FONDOS_MANUALES = [
+    ("data/nav_fidelity_sp500.csv",      "IE00BYX5MX67"),  # Fidelity S&P 500 Index Fund P-ACC-EUR
+    ("data/nav_bankinter_premium.csv",   "ES0164586036"),  # Bankinter Premium Moderado R
+    ("data/nav_bankinter_horizonte.csv", "ES0159038001"),  # Bankinter Horizonte 2028 Cl R
+]
 _bk_nav = {}  # {isin: ([dates], [navs])}
-if _BK_NAV_PATH.exists():
-    _bk_df = pd.read_csv(_BK_NAV_PATH, dtype=str)
-    # Cabeceras insensibles a mayúsculas/espacios (la hoja usa Fecha/ISIN/NAV)
+for _nav_path_str, _nav_isin in _NAV_FONDOS_MANUALES:
+    _nav_path = Path(_nav_path_str)
+    if not _nav_path.exists():
+        continue
+    _bk_df = pd.read_csv(_nav_path, dtype=str)
+    # Cabeceras insensibles a mayúsculas/espacios (Fecha + Precio o NAV)
     _bk_df.columns = [c.strip().lower() for c in _bk_df.columns]
     _bk_df["fecha"] = pd.to_datetime(_bk_df["fecha"], dayfirst=True, errors="coerce").dt.date
-    _bk_df["nav"] = pd.to_numeric(_bk_df["nav"], errors="coerce")
+    _precio_col = "precio" if "precio" in _bk_df.columns else "nav"
+    _bk_df["nav"] = pd.to_numeric(_bk_df[_precio_col], errors="coerce")
     _bk_df = _bk_df.dropna(subset=["fecha", "nav"]).sort_values("fecha")
-    for _bisin, _bgrp in _bk_df.groupby("isin"):
-        _bk_nav[str(_bisin)] = (list(_bgrp["fecha"]), list(_bgrp["nav"]))
-    print(f"   Histórico valor liquidativo: {len(_bk_nav)} fondos, {len(_bk_df)} puntos cargados")
+    if len(_bk_df) > 0:
+        _bk_nav[_nav_isin] = (list(_bk_df["fecha"]), list(_bk_df["nav"]))
+if _bk_nav:
+    print(f"   Histórico valor liquidativo: {len(_bk_nav)} fondos, {sum(len(v[0]) for v in _bk_nav.values())} puntos cargados")
 
 # Last known NAV per ISIN for display in the tabla_activos Mercado column
 _bk_last_nav = {isin: (_bkd[-1], _bkn[-1]) for isin, (_bkd, _bkn) in _bk_nav.items() if _bkd}
