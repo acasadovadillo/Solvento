@@ -2161,10 +2161,14 @@ html_out = f"""<!DOCTYPE html>
     overlay.style.display = "none";
     document.documentElement.style.overflow = "";
   }}
-  document.documentElement.style.overflow = "hidden";
-  try {{
-    if (localStorage.getItem("solvento_auth") === AUTH_HASH) {{ unlock(); return; }}
-  }} catch (e) {{}}
+  window.logout = function() {{
+    try {{ localStorage.removeItem("solvento_auth"); }} catch (e) {{}}
+    document.getElementById("login-user").value = "";
+    document.getElementById("login-pass").value = "";
+    document.getElementById("login-error").style.display = "none";
+    document.documentElement.style.overflow = "hidden";
+    overlay.style.display = "flex";
+  }};
   document.getElementById("login-form").addEventListener("submit", function(ev) {{
     ev.preventDefault();
     var u = document.getElementById("login-user").value.trim();
@@ -2179,6 +2183,10 @@ html_out = f"""<!DOCTYPE html>
       }}
     }});
   }});
+  document.documentElement.style.overflow = "hidden";
+  try {{
+    if (localStorage.getItem("solvento_auth") === AUTH_HASH) {{ unlock(); }}
+  }} catch (e) {{}}
 }})();
 </script>
 <nav class="navbar">
@@ -2186,16 +2194,24 @@ html_out = f"""<!DOCTYPE html>
     <h1 style="display:flex;align-items:center;gap:0.5rem;"><img src="img/logo-solvento.png" alt="" style="width:24px;height:24px;object-fit:contain;">Solvento</h1>
     <span class="navbar-date">versión 2.1 · Precios del {fecha_actualizacion}</span>
   </div>
-  <nav class="nav-tabs">
-    <button class="nav-tab active" id="nav-tab-patrimonio" onclick="navTab('patrimonio')">Patrimonio</button>
-    <button class="nav-tab" id="nav-tab-cuentas" onclick="navTab('cuentas')">Caja</button>
-    <button class="nav-tab" id="nav-tab-inversiones" onclick="navTab('inversiones')">Cartera</button>
-    <button class="nav-tab" id="nav-tab-inmuebles" onclick="navTab('inmuebles')">Inmuebles</button>
-    <button class="nav-tab" id="nav-tab-pasivos" onclick="navTab('pasivos')">Pasivos</button>
-  </nav>
-  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menú">
-    <span></span><span></span><span></span>
-  </button>
+  <div style="display:flex;align-items:center;gap:0.85rem;">
+    <nav class="nav-tabs">
+      <button class="nav-tab active" id="nav-tab-patrimonio" onclick="navTab('patrimonio')">Patrimonio</button>
+      <button class="nav-tab" id="nav-tab-cuentas" onclick="navTab('cuentas')">Caja</button>
+      <button class="nav-tab" id="nav-tab-inversiones" onclick="navTab('inversiones')">Cartera</button>
+      <button class="nav-tab" id="nav-tab-inmuebles" onclick="navTab('inmuebles')">Inmuebles</button>
+      <button class="nav-tab" id="nav-tab-pasivos" onclick="navTab('pasivos')">Pasivos</button>
+    </nav>
+    <button id="logout-btn" onclick="logout()" title="Cerrar sesión"
+      style="background:none;border:1px solid #2a2d3a;color:#9ca3af;border-radius:8px;font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;gap:0.4rem;white-space:nowrap;"
+      onmouseover="this.style.color='#fff';this.style.borderColor='#4b5563'" onmouseout="this.style.color='#9ca3af';this.style.borderColor='#2a2d3a'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Salir
+    </button>
+    <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>
 <div id="mobile-nav-panel">
   <button class="mobile-nav-item active" id="mnav-patrimonio" onclick="navTab('patrimonio');toggleMobileNav()">Patrimonio</button>
