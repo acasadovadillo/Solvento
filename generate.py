@@ -999,6 +999,106 @@ def legend_donut(df, label_col, targets=None):
     </div>""")
     return "\n".join(parts)
 
+def _squarify(values, x, y, w, h):
+    """Algoritmo squarified treemap: reparte `values` (positivos) en rectángulos
+    dentro de x,y,w,h intentando que cada uno se acerque a un cuadrado."""
+    if not values:
+        return []
+    if len(values) == 1:
+        return [(x, y, w, h)]
+    total = sum(values)
+    area = w * h
+    values = [v / total * area for v in values] if total > 0 else values
+
+    def worst(row, side):
+        row_sum = sum(row)
+        if row_sum <= 0 or side <= 0:
+            return float("inf")
+        s = row_sum / side
+        return max(max(s * s / v, v / (s * s)) for v in row)
+
+    result = []
+    remaining = list(values)
+    rx, ry, rw, rh = x, y, w, h
+    while remaining:
+        side = min(rw, rh)
+        row = [remaining[0]]
+        i = 1
+        while i < len(remaining):
+            trial = row + [remaining[i]]
+            if worst(trial, side) <= worst(row, side):
+                row = trial
+                i += 1
+            else:
+                break
+        remaining = remaining[len(row):]
+        row_sum = sum(row)
+        if rw >= rh:
+            col_w = row_sum / rh if rh > 0 else 0
+            cy = ry
+            for v in row:
+                ch = v / col_w if col_w > 0 else 0
+                result.append((rx, cy, col_w, ch))
+                cy += ch
+            rx += col_w
+            rw -= col_w
+        else:
+            row_h = row_sum / rw if rw > 0 else 0
+            cx = rx
+            for v in row:
+                cw = v / row_h if row_h > 0 else 0
+                result.append((cx, ry, cw, row_h))
+                cx += cw
+            ry += row_h
+            rh -= row_h
+    return result
+
+def _color_treemap(rent_pct):
+    """Verde/rojo según rentabilidad, gris si no hay dato. Satura a partir de ±15%."""
+    if rent_pct is None or (isinstance(rent_pct, float) and math.isnan(rent_pct)):
+        return "#3a3d4a"
+    capped = max(-15.0, min(15.0, rent_pct))
+    t = abs(capped) / 15.0
+    if capped >= 0:
+        c0, c1 = (134, 239, 172), (22, 163, 74)   # green-300 → green-600
+    else:
+        c0, c1 = (252, 165, 165), (220, 38, 38)   # red-300 → red-600
+    rgb = tuple(round(c0[i] + (c1[i] - c0[i]) * t) for i in range(3))
+    return f"rgb({rgb[0]},{rgb[1]},{rgb[2]})"
+
+def treemap_cartera_html():
+    """Mapa de calor de la Cartera: tamaño = peso (%), color = rentabilidad."""
+    activos = inv_raw[inv_raw["pct"] > 0].sort_values("importe", ascending=False)
+    if len(activos) == 0:
+        return '<div style="text-align:center;color:#6b7280;padding:3rem;font-size:0.85rem;">Sin activos con posición actual</div>'
+    valores = activos["importe"].tolist()
+    rects = _squarify(valores, 0.0, 0.0, 100.0, 100.0)
+    tiles = []
+    for (_, r), (tx, ty, tw, th) in zip(activos.iterrows(), rects):
+        rent = r.get("rent_pct")
+        has_rent = pd.notna(rent) and pd.notna(r.get("coste_total")) and r.get("coste_total", 0) > 0
+        rent_val = rent if has_rent else float("nan")
+        color = _color_treemap(rent_val)
+        rent_str = f'{"+" if rent_val >= 0 else ""}{rent_val:.1f}%' if has_rent else "—"
+        nombre = html_escape(str(r["Nombre"]))
+        area = tw * th
+        # Tamaño de fuente y visibilidad de la 2ª línea según el área del rectángulo
+        show_pct = area >= 1.2
+        name_size = 0.92 if area >= 6 else (0.78 if area >= 2.2 else 0.66)
+        tiles.append(f"""
+      <div title="{nombre} · {fmt_pct(r['pct'])} de la cartera · {rent_str}"
+        style="position:absolute;left:{tx:.3f}%;top:{ty:.3f}%;width:{tw:.3f}%;height:{th:.3f}%;
+        background:{color};border:1px solid #12141d;box-sizing:border-box;padding:0.4rem 0.55rem;
+        overflow:hidden;cursor:default;display:flex;flex-direction:column;justify-content:flex-end;">
+        <div style="font-size:{name_size}rem;font-weight:700;color:#0f1115;line-height:1.2;
+          overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{nombre}</div>
+        {f'<div style="font-size:{max(name_size*0.78,0.62):.2f}rem;font-weight:700;color:#0f1115cc;margin-top:0.1rem;">{rent_str}</div>' if show_pct else ''}
+      </div>""")
+    return (
+        '<div style="position:relative;width:100%;height:420px;border-radius:10px;overflow:hidden;">'
+        + "".join(tiles) + "</div>"
+    )
+
 def panel_asignacion_html():
     """Barras objetivo vs actual (RV/RF) + rentabilidad por categoría. Excluye
     las categorías fuera de target (inmuebles): usa total_inv_estrategia como base."""
@@ -2589,6 +2689,12 @@ html_out = f"""<!DOCTYPE html>
         </div>
       </div>
       <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:0.5rem;">{legend_donut(inv_tipo, "tipo")}</div>
+    </div>
+  </div>
+  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
+    <div class="dashboard-panel">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">Mapa de la cartera · tamaño = peso, color = rentabilidad</div>
+      {treemap_cartera_html()}
     </div>
   </div>
   <div class="table-container">
