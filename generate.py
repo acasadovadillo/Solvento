@@ -1067,7 +1067,12 @@ def _color_treemap(rent_pct):
     return f"rgb({rgb[0]},{rgb[1]},{rgb[2]})"
 
 def treemap_cartera_html():
-    """Mapa de calor de la Cartera: tamaño = peso (%), color = rentabilidad."""
+    """Mapa de calor de la Cartera: tamaño = peso (%), color = rentabilidad.
+    El tamaño de fuente y si se muestra o no texto se decide en runtime (JS,
+    ver layoutTreemaps() en navigation.js) según el tamaño real en píxeles de
+    cada recuadro — un umbral basado solo en el % de área no es fiable porque
+    la misma área puede repartirse en formas muy distintas (una franja fina y
+    larga vs. un recuadro compacto)."""
     activos = inv_raw[inv_raw["pct"] > 0].sort_values("importe", ascending=False)
     if len(activos) == 0:
         return '<div style="text-align:center;color:#6b7280;padding:3rem;font-size:0.85rem;">Sin activos con posición actual</div>'
@@ -1081,21 +1086,18 @@ def treemap_cartera_html():
         color = _color_treemap(rent_val)
         rent_str = f'{"+" if rent_val >= 0 else ""}{rent_val:.1f}%' if has_rent else "—"
         nombre = html_escape(str(r["Nombre"]))
-        area = tw * th
-        # Tamaño de fuente y visibilidad de la 2ª línea según el área del rectángulo
-        show_pct = area >= 1.2
-        name_size = 0.92 if area >= 6 else (0.78 if area >= 2.2 else 0.66)
         tiles.append(f"""
-      <div title="{nombre} · {fmt_pct(r['pct'])} de la cartera · {rent_str}"
+      <div class="tm-tile" data-name="{nombre}" data-rent="{rent_str}"
+        title="{nombre} · {fmt_pct(r['pct'])} de la cartera · {rent_str}"
         style="position:absolute;left:{tx:.3f}%;top:{ty:.3f}%;width:{tw:.3f}%;height:{th:.3f}%;
-        background:{color};border:1px solid #12141d;box-sizing:border-box;padding:0.4rem 0.55rem;
-        overflow:hidden;cursor:default;display:flex;flex-direction:column;justify-content:flex-end;">
-        <div style="font-size:{name_size}rem;font-weight:700;color:#0f1115;line-height:1.2;
-          overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{nombre}</div>
-        {f'<div style="font-size:{max(name_size*0.78,0.62):.2f}rem;font-weight:700;color:#0f1115cc;margin-top:0.1rem;">{rent_str}</div>' if show_pct else ''}
+        background:{color};border:1px solid #12141d;box-sizing:border-box;overflow:hidden;cursor:default;">
+        <div class="tm-label" style="height:100%;box-sizing:border-box;padding:0.4rem 0.55rem;display:flex;flex-direction:column;justify-content:flex-end;">
+          <div class="tm-name" style="font-weight:700;color:#0f1115;"></div>
+          <div class="tm-rent" style="font-weight:700;color:#0f1115cc;margin-top:0.1rem;"></div>
+        </div>
       </div>""")
     return (
-        '<div style="position:relative;width:100%;height:420px;border-radius:10px;overflow:hidden;">'
+        '<div class="tm-container" style="position:relative;width:100%;height:420px;border-radius:10px;overflow:hidden;">'
         + "".join(tiles) + "</div>"
     )
 

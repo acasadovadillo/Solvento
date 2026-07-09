@@ -16,6 +16,7 @@ function showPage(id) {
   if (mb) mb.classList.add("active");
   window.location.hash = id;
   if (alreadyActive) window.scrollTo({ top: 0, behavior: "smooth" });
+  if (typeof layoutTreemaps === "function") layoutTreemaps();
 }
 
 function navTab(id) {
@@ -487,3 +488,48 @@ function gastosRender(key) {
     }).join("");
   }
 }
+
+// ── Mapa de la Cartera (treemap): ajusta texto al tamaño REAL en píxeles de
+// cada recuadro, ya que el mismo % de área puede repartirse en una franja
+// fina y larga o en un recuadro compacto — un umbral en % no basta. ──
+function layoutTreemaps() {
+  document.querySelectorAll(".tm-tile").forEach(tile => {
+    const w = tile.offsetWidth, h = tile.offsetHeight;
+    const label = tile.querySelector(".tm-label");
+    const nameEl = tile.querySelector(".tm-name");
+    const rentEl = tile.querySelector(".tm-rent");
+    if (!label || !nameEl || !rentEl) return;
+    if (w < 44 || h < 28) {
+      label.style.display = "none";
+      return;
+    }
+    label.style.display = "flex";
+    const fs = Math.max(0.62, Math.min(1.0, Math.min(w, h) / 85));
+    nameEl.style.fontSize = fs.toFixed(2) + "rem";
+    nameEl.style.lineHeight = "1.2";
+    const multiLine = h >= 56 && w >= 90;
+    if (multiLine) {
+      nameEl.style.whiteSpace = "normal";
+      nameEl.style.display = "-webkit-box";
+      nameEl.style.webkitLineClamp = "2";
+      nameEl.style.webkitBoxOrient = "vertical";
+      nameEl.style.overflow = "hidden";
+    } else {
+      nameEl.style.whiteSpace = "nowrap";
+      nameEl.style.display = "block";
+      nameEl.style.overflow = "hidden";
+      nameEl.style.textOverflow = "ellipsis";
+    }
+    nameEl.textContent = tile.dataset.name;
+    const showRent = h >= 46;
+    rentEl.style.display = showRent ? "block" : "none";
+    if (showRent) {
+      rentEl.style.fontSize = (fs * 0.82).toFixed(2) + "rem";
+      rentEl.textContent = tile.dataset.rent;
+    }
+  });
+}
+document.querySelectorAll(".tm-container").forEach(c => {
+  new ResizeObserver(layoutTreemaps).observe(c);
+});
+layoutTreemaps();
