@@ -88,6 +88,7 @@ ISIN_YF_MAP = {
     "IE000KCS7J59": "EMIM.AS",
     "IE00B4ND3602": "PHAU.AS",
     "ES0173311103": "0P000168OI.F",
+    "IE00B6R52259": "SSAC.AS",
 }
 
 CAT_COLORES_INV  = {"Renta variable": "#3b82f6", "Renta fija": "#10b981"}
@@ -478,11 +479,15 @@ ACTIVOS_CONFIG = [
     {"Nombre": "Apple",                          "ISIN": "US0378331005", "Ticker": "AAPL", "categoria": "Renta variable", "tipo": "Acciones",         "Banco": "Trade Republic", "yf_ticker": "AAPL"},
     {"Nombre": "Renta 4 Multigestión Numantia Patrimonio Global FI", "ISIN": "ES0173311103", "Ticker": "-", "categoria": "Renta variable", "tipo": "Fondo de inversión", "Banco": "MyInvestor", "yf_ticker": "0P000168OI.F"},
     {"Nombre": "Fidelity S&P 500 Index Fund P-ACC-EUR",              "ISIN": "IE00BYX5MX67", "Ticker": "-", "categoria": "Renta variable", "tipo": "Fondo de inversión", "Banco": "MyInvestor", "yf_ticker": None},
+    {"Nombre": "MSCI ACWI USD (Acc)",                                "ISIN": "IE00B6R52259", "Ticker": "-", "categoria": "Renta variable", "tipo": "ETF",                "Banco": "Trade Republic", "yf_ticker": "SSAC.AS"},
 ]
 
 # ── Leer aportaciones (todo inversiones.csv/"Cartera" son aportaciones) ──
 _df_inv = pd.read_csv(INVERSIONES_PATH, encoding="utf-8", dtype=str)
-_df_inv = _df_inv.rename(columns={"Fecha": "fecha", "Tipo": "categoria", "Activo": "tipo", "Cuenta": "Banco"})
+# "Tipo"/"Renta" y "Tipo_Movimiento"/"Tipo_Mov" son el mismo campo con el
+# nombre antiguo y el actual de la hoja — se aceptan ambos.
+_df_inv = _df_inv.rename(columns={"Fecha": "fecha", "Tipo": "categoria", "Renta": "categoria",
+                                  "Activo": "tipo", "Cuenta": "Banco", "Tipo_Mov": "Tipo_Movimiento"})
 for col in ["tipo", "categoria", "ISIN", "Nombre"]:
     if col in _df_inv.columns:
         _df_inv[col] = _df_inv[col].str.strip()
@@ -501,6 +506,102 @@ if "Tipo_Movimiento" in _df_inv.columns:
 else:
     _df_inv["Tipo_Movimiento"] = ""
 _df_inv["Tipo_Movimiento"] = _df_inv["Tipo_Movimiento"].replace("", "Compra").fillna("Compra")
+
+# ── Compras/ventas registradas SOLO en el formulario de movimientos ──
+# Desde FORM_INV_CUTOVER cada operación se apunta UNA vez, en el formulario:
+#   · Compra → Gasto con categoría "Inversiones" y el nombre o ISIN del activo
+#     en el detalle (p.ej. "Compra de ETF MSCI ACWI USD (Acc)").
+#   · Venta  → Ingreso cuyo detalle contenga "venta" y el nombre o ISIN.
+# Aquí se sintetiza la fila de Cartera equivalente: ISIN, categoría y unidades
+# (exactas si van en el detalle como "· 3.344009 uds"; si no, estimadas con el
+# cierre de mercado de ese día). Antes del corte todo está ya apuntado a mano
+# en la hoja Cartera (doble apunte histórico), así que no se deriva nada.
+FORM_INV_CUTOVER = date(2026, 7, 10)
+_MONEDA_YF = {"AGGG.L": "USD", "AAPL": "USD"}   # el resto de tickers cotizan en EUR
+
+def _activo_desde_detalle(detalle):
+    txt = str(detalle or "")
+    m = re.search(r"\b([A-Z]{2}[A-Z0-9]{9}[0-9])\b", txt.upper())
+    if m:
+        for a in ACTIVOS_CONFIG:
+            if str(a.get("ISIN", "")).upper() == m.group(1):
+                return a
+    txt_l = txt.lower()
+    best = None
+    for a in ACTIVOS_CONFIG:
+        n = str(a["Nombre"]).lower()
+        if n and n in txt_l and (best is None or len(n) > len(str(best["Nombre"]))):
+            best = a
+    return best
+
+_form_hist_cache = {}
+def _precio_eur_en(yf_ticker, d):
+    """Cierre en EUR del último día de mercado ≤ d (para estimar unidades)."""
+    if yf_ticker not in _form_hist_cache:
+        _form_hist_cache[yf_ticker] = fetch_daily_history(yf_ticker)
+    fx = _FX_EUR.get("USD", 0.926) if _MONEDA_YF.get(yf_ticker) == "USD" else 1.0
+    mejor = None
+    for ts, p in _form_hist_cache[yf_ticker]:
+        if datetime.fromtimestamp(ts / 1000).date() <= d:
+            mejor = p
+        else:
+            break
+    return mejor * fx if mejor is not None else None
+
+# Guardia anti-duplicado: si la misma operación (ISIN + fecha + importe) ya
+# está apuntada a mano en la hoja Cartera, no se deriva una segunda vez.
+_claves_hoja = set()
+_tmp_f = pd.to_datetime(_df_inv["fecha"].astype(str).str.strip(), dayfirst=True, errors="coerce")
+_tmp_c = pd.to_numeric(_df_inv["Coste"], errors="coerce")
+for _i in range(len(_df_inv)):
+    if pd.notna(_tmp_f.iloc[_i]) and pd.notna(_tmp_c.iloc[_i]):
+        _claves_hoja.add((str(_df_inv["ISIN"].iloc[_i]).upper(), _tmp_f.iloc[_i].date(), round(abs(_tmp_c.iloc[_i]), 2)))
+
+_form_rows = []
+for _, _mr in mov.iterrows():
+    _fd = _mr.get("fecha")
+    if _fd is None or pd.isna(_fd) or _fd < FORM_INV_CUTOVER:
+        continue
+    _det = str(_mr.get("detalle") or "")
+    _es_compra = _mr.get("tipo") == "Gasto" and str(_mr.get("tipo_gasto") or "").strip().lower() == "inversiones"
+    _es_venta = (_mr.get("tipo") == "Ingreso"
+                 and (re.search(r"\bventa\b", _det, re.I) or str(_mr.get("tipo_ingreso") or "").strip().lower() == "inversiones")
+                 and not re.search(r"inter[eé]s|dividendo", _det, re.I))
+    if not (_es_compra or _es_venta):
+        continue
+    _a = _activo_desde_detalle(_det)
+    if _a is None:
+        print(f"   ⚠️  Movimiento de inversión sin activo reconocible en el detalle ({_fd.strftime('%d/%m/%Y')}): {_det[:60]!r}")
+        continue
+    _imp = float(_mr.get("importe") or 0)
+    if _imp <= 0:
+        continue
+    if (str(_a.get("ISIN", "-")).upper(), _fd, round(_imp, 2)) in _claves_hoja:
+        print(f"   ℹ️  {_a['Nombre'][:38]}: operación del {_fd.strftime('%d/%m/%Y')} ya apuntada a mano en Cartera — no se deriva")
+        continue
+    _signo = 1.0 if _es_compra else -1.0
+    _m_uds = re.search(r"(\d+(?:[.,]\d+))\s*(?:uds?\b|unidades|participaciones)", _det, re.I)
+    if _m_uds:
+        _uds = float(_m_uds.group(1).replace(",", "."))
+        _uds_lbl = "exactas"
+    else:
+        _p = _precio_eur_en(_a.get("yf_ticker"), _fd) if _a.get("yf_ticker") else None
+        _uds = (_imp / _p) if _p else float("nan")
+        _uds_lbl = "estimadas" if _p else "no estimables (sin precio)"
+    _cuenta_op = str((_mr.get("cuenta_origen") if _es_compra else _mr.get("cuenta_destino")) or "").strip()
+    _form_rows.append({
+        "fecha": _fd.strftime("%d/%m/%Y"),
+        "Tipo_Movimiento": "Compra" if _es_compra else "Venta",
+        "Nombre": _a["Nombre"], "Ticker": _a.get("Ticker", "-"), "ISIN": _a.get("ISIN", "-"),
+        "categoria": _a["categoria"], "tipo": _a["tipo"],
+        "Banco": _cuenta_op if _cuenta_op not in ("", "-") else _a.get("Banco", ""),
+        "Valor": "", "Coste": f"{_signo * _imp:.2f}",
+        "Unidades": (f"{_signo * _uds:.6f}" if _uds == _uds else ""),
+    })
+    print(f"   🧾 {'Compra' if _es_compra else 'Venta'} derivada del formulario: {_a['Nombre'][:38]:38s} {_signo * _imp:+9.2f} € · uds {_uds_lbl}")
+
+if _form_rows:
+    _df_inv = pd.concat([_df_inv, pd.DataFrame(_form_rows)], ignore_index=True)
 
 _df_inv["_coste_n"] = pd.to_numeric(_df_inv["Coste"], errors="coerce")
 inv_apor = _df_inv[_df_inv["_coste_n"].notna()].copy()
