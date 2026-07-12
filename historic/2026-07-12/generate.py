@@ -1327,6 +1327,45 @@ def tabla_gastos():
     </tr>""")
     return "\n".join(rows)
 
+def cuentas_broker_html():
+    """Cuentas de bróker en la página Cartera: Trade Republic y MyInvestor
+    (su efectivo sin invertir, que ya se cuenta en Caja — aquí es solo
+    referencia visual) + Cuenta Broker de Bankinter (cuenta asociada a las
+    inversiones en ese banco, sin saldo propio, 0,00 €). No suman al
+    "Valor actual" de la cartera para no duplicar el patrimonio."""
+    cards = []
+    for nombre in ("Trade Republic", "MyInvestor"):
+        fila = saldos[saldos["cuenta"] == nombre]
+        if len(fila) == 0:
+            continue
+        r = fila.iloc[0]
+        accent = r["accent"]
+        cuenta_js = nombre.replace("'", "\\'")
+        cards.append(f"""
+      <div class="dashboard-panel" onclick="showMovimientos('{cuenta_js}')" style="cursor:pointer;border-left:3px solid {accent};padding:1.25rem 1.25rem 1.25rem 1.1rem;transition:background 0.2s;" onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''">
+        <div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.65rem;">
+          {r["icono"]}
+          <span style="font-size:0.72rem;color:{accent};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">{html_escape(nombre)}</span>
+        </div>
+        <div style="font-size:1.4rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.3rem;white-space:nowrap;">{fmt_eur(r["saldo"])}</div>
+        <div style="font-size:0.75rem;color:#6b7280;font-weight:500;">Efectivo sin invertir &nbsp;→</div>
+      </div>""")
+    _bk = next((c for c in CUENTAS_CONFIG if c["cuenta"] == "Bankinter"), None)
+    if _bk:
+        cards.append(f"""
+      <div class="dashboard-panel" style="border-left:3px solid {_bk['accent']};padding:1.25rem 1.25rem 1.25rem 1.1rem;">
+        <div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.65rem;">
+          {_bk["icono"]}
+          <span style="font-size:0.72rem;color:{_bk['accent']};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">Bankinter · Cuenta Broker</span>
+        </div>
+        <div style="font-size:1.4rem;font-weight:700;color:#fff;letter-spacing:-0.02em;margin-bottom:0.3rem;white-space:nowrap;">{fmt_eur(0.0)}</div>
+        <div style="font-size:0.75rem;color:#6b7280;font-weight:500;">Cuenta asociada a tus inversiones en Bankinter</div>
+      </div>""")
+    return (
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem;">'
+        + "".join(cards) + '</div>'
+    )
+
 def tabla_activos():
     TD = "padding:0.85rem 1rem;border-bottom:1px solid #2a2d3a;"
     rows = []
@@ -2621,6 +2660,12 @@ html_out = f"""<!DOCTYPE html>
         <span class="hero-item-value" style="color:#e5e7eb;">{fmt_eur(_total_mes) if _n_apor_mes > 0 else '—'}{'<span style="display:block;font-size:0.68rem;color:' + ('#10b981' if _delta_mes >= 0 else '#ef4444') + ';font-weight:600;margin-top:0.1rem;">' + ('+' if _delta_mes >= 0 else '') + fmt_eur(_delta_mes).replace(' €','') + ' vs mes ant.</span>' if _n_apor_mes > 0 and _total_mes_ant > 0 else ''}</span>
       </div>
     </div>
+  </div>
+
+  <!-- ══ CUENTAS DE BRÓKER (referencia; no suman al valor de la cartera) ══ -->
+  <div style="max-width:1400px;margin:1.5rem auto 0;width:100%;">
+    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1rem;">Cuentas de bróker</div>
+    {cuentas_broker_html()}
   </div>
 
   <!-- ══ ASIGNACIÓN ACTUAL VS OBJETIVO + RENTABILIDAD POR CATEGORÍA ══ -->
