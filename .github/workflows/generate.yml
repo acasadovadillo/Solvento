@@ -43,7 +43,7 @@ jobs:
 
       - name: Descargar y validar movimientos.csv
         run: |
-          curl -fsSL \
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
             "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=1656633092" \
             -o data/movimientos.csv
           BYTES=$(wc -c < data/movimientos.csv)
@@ -65,7 +65,7 @@ jobs:
 
       - name: Descargar y validar inversiones.csv
         run: |
-          curl -fsSL \
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
             "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=0" \
             -o data/inversiones.csv
           BYTES=$(wc -c < data/inversiones.csv)
@@ -87,7 +87,7 @@ jobs:
 
       - name: Descargar y validar inmuebles.csv
         run: |
-          curl -fsSL \
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
             "https://docs.google.com/spreadsheets/d/1zSECHbOkkKyfbkNNhO9FvzpnRP0c46LgYwNFvQfLim4/export?format=csv&gid=1264506332" \
             -o data/inmuebles.csv
           BYTES=$(wc -c < data/inmuebles.csv)
@@ -112,7 +112,7 @@ jobs:
           # gid ⇄ archivo destino de cada fondo sin precio en Yahoo Finance
           descargar_nav() {
             local archivo="$1" gid="$2"
-            curl -fsSL \
+            curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
               "https://docs.google.com/spreadsheets/d/1SJ3N377plfut-3iTJJHBiJtRqapuc3VMpLUskQDrkZY/export?format=csv&gid=${gid}" \
               -o "data/${archivo}"
             local bytes=$(wc -c < "data/${archivo}")
