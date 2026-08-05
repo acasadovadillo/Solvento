@@ -1,0 +1,70 @@
+CHANGELOG — Solvento
+Registro de todos los cambios del proyecto, por fecha.
+
+26/06/2026
+	- Versión inicial del proyecto (subida de archivos base y generate.py).
+	- Creación del workflow de GitHub Actions (generate.yml) para actualización diaria automática.
+
+27/06/2026
+	- Subidas de archivos y reorganización inicial (eliminado src/js/charts-msci.js).
+
+05/07/2026
+	- Añadido gráfico de evolución de cartera en la página Inversiones, con selector de temporalidad.
+	- Corregido spike en la evolución de cartera cuando Yahoo devuelve histórico parcial.
+	- Añadido botón de comparativa contra MSCI World en el gráfico de evolución de cartera.
+	- Integrado historial de valor liquidativo (NAV) de fondos Bankinter para cálculo dinámico.
+	- Añadidos fondos Bankinter al desplegable de gráfica individual.
+	- Añadido filtro por activo en el historial de aportaciones.
+	- Eliminado panel de benchmark estático redundante.
+	- Suprimido CAGR engañoso en posiciones recientes + NAV Bankinter en columna Mercado.
+	- Targets de asignación, ISIN integrado en la tabla y aportaciones del mes en el hero.
+	- Mejoras UI: Pasivos, CAGR en hero, % Ahorro en tabla, fix del filtro de aportaciones.
+	- Revisión completa: bugs de filtros, móvil, privacidad y mejoras por página.
+
+06/07/2026
+	- Añadida sección "Explorar activos": catálogo de mercado + búsqueda global en Yahoo Finance.
+	- Añadida cuenta MyInvestor.
+
+07/07/2026
+	- Liquidez: tarjetas por cuenta + barra de proporción (estilo Patrimonio); gráfica de evolución a ancho completo.
+	- Gráficas de patrimonio neto y balance: selector de periodo como desplegable, periodo 1D, tooltips de fecha y precio en el hover, línea de referencia horizontal en el valor inicial.
+	- Movimientos: convertida en página independiente, accesible desde las tarjetas de cuenta.
+	- Inversiones: panel de asignación actual vs objetivo con rentabilidad por categoría.
+	- Eliminado el donut "Estrategia de inversión" (redundante).
+	- Añadida página Inmuebles con soporte para activos inmobiliarios en propiedad.
+	- Arreglado el workflow tras reestructurar las hojas de Google Sheets.
+
+08/07/2026
+	- Renombrada la página "Liquidez" a "Caja" y la página "Inversiones" a "Cartera".
+	- Caja: eliminadas las etiquetas de colores sobre la barra de proporción; el % de cada tarjeta usa el color de acento de su cuenta y el texto "X.XX% de la caja actual".
+	- Eliminado el recuadro "Distribución de liquidez" (redundante con las tarjetas).
+	- Renombrado el gráfico "Evolución de la liquidez" a "Evolución de la caja".
+	- Patrimonio: eliminadas etiquetas sobre la barra; % de tarjetas en color de acento con texto "X.XX% del patrimonio actual".
+	- Cartera: clic en una fila de la tabla navega a página independiente "Historial de aportaciones" filtrada por ese activo (tabla eliminada de la página Cartera para no duplicar).
+	- Renombrados los logos de cuentas (account-logo-*) y añadidos logos de activos en las tablas Cartera e Historial de aportaciones.
+	- Sustituido el emoji 💰 por el logo de Solvento en la navbar y el favicon.
+	- Cartera: combinadas la gráfica de Solvento y TradingView en un único panel con selector de motor.
+	- Soporte para la columna Tipo_Movimiento (Compra/Venta/Traspaso) en la hoja Cartera y renombrado Banco→Cuenta.
+
+09/07/2026
+	- Registrado el traspaso Bankinter Premium Moderado → Fidelity S&P 500 y la compra de Numantia (100 €).
+	- Añadido precio en vivo vía Yahoo Finance para los fondos Numantia (0P000168OI.F) y Fidelity S&P 500 (0P0001CLDM.F).
+	- Corregida "Evolución de la cartera": el histórico incluye todos los fondos con precio en vivo, no solo los 7 activos predefinidos (arreglaba un falso desplome del 46%).
+	- Añadidos logos para los 7 activos restantes, enlazados por ISIN (evita colisiones entre nombres parecidos).
+	- Añadida pantalla de login (usuario/contraseña) con fondo negro al entrar en la web; sesión persistente en localStorage.
+	- Añadido botón de cerrar sesión en la navbar.
+	- Migrados los históricos de valor liquidativo a hojas separadas por fondo (Fidelity, Bankinter Premium, Bankinter Horizonte); los fondos quedan indexados en la gráfica aunque no haya posición.
+	- Añadido mapa de calor (treemap) de la Cartera: tamaño = peso, color = rentabilidad.
+	- Treemap: texto ajustado al tamaño real en píxeles de cada recuadro (evita desbordamiento en activos con poco peso).
+	- Treemap: hover intensifica el color rojo/verde y muestra tooltip con nombre, peso y rentabilidad.
+
+12/07/2026
+	- Cartera: añadida sección "Cuentas de bróker" con Trade Republic, MyInvestor (efectivo sin invertir, sin duplicar en el total) y nueva "Bankinter · Cuenta Broker" (0,00 €, espejo de las inversiones en ese banco).
+	- Nuevo sistema de registro único: las compras/ventas de activos se registran SOLO en el formulario de movimientos y el script deriva automáticamente la fila de Cartera (ISIN, categoría, unidades exactas del detalle o estimadas con el cierre del día). Corte: 10/07/2026.
+	- Guardia anti-duplicado (ISIN + fecha + importe) y avisos en el log para movimientos de inversión con activo no reconocible.
+	- Alta del ETF MSCI ACWI USD (Acc) (IE00B6R52259, ticker SSAC.AS) con precio en vivo.
+	- Aceptadas las columnas renombradas de la hoja Cartera: Tipo_Mov y Renta.
+	- Creado este changelog.txt para registrar todos los cambios del proyecto.
+
+13/07/2026
+	- Workflow: añadidos reintentos automáticos (--retry 5 --retry-delay 5 --retry-all-errors) a las 4 descargas de Google Sheets, para que un error temporal 502/503 no tumbe la ejecución.
