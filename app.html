@@ -6,9 +6,9 @@
   <meta name="robots" content="noindex, nofollow" />
   <title>Solvento v2</title>
   <link rel="icon" href="img/logo-solvento.png" />
-  <link rel="stylesheet" href="src/css/base.css" />
-  <link rel="stylesheet" href="src/css/layout.css" />
-  <link rel="stylesheet" href="src/css/components.css" />
+  <link rel="stylesheet" href="src/css/base.css?v=p3" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p3" />
+  <link rel="stylesheet" href="src/css/components.css?v=p3" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -30,8 +30,15 @@
     .v2-hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; max-width: 1400px; margin: 0 auto; width: 100%; }
     .v2-prop-bar { height: 6px; border-radius: 4px; overflow: hidden; display: flex; margin: 0 auto 1.5rem; background: #1a1d27; max-width: 1400px; }
     .v2-wrap { max-width: 1400px; margin: 1.5rem auto 0; width: 100%; }
-    #logout-btn { background: none; border: 1px solid #2a2d3a; color: #9ca3af; border-radius: 8px; font-size: 0.8rem; font-weight: 600; padding: 0.4rem 0.75rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
-    #logout-btn:hover { color: #fff; border-color: #4b5563; }
+    #logout-btn, #sync-btn { background: none; border: 1px solid #2a2d3a; color: #9ca3af; border-radius: 8px; font-size: 0.8rem; font-weight: 600; padding: 0.4rem 0.75rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    #logout-btn:hover, #sync-btn:hover { color: #fff; border-color: #4b5563; }
+    #sync-modal .modal-card { background: #171a24; border: 1px solid #232733; border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 440px; }
+    #sync-modal input[type="password"] { width: 100%; background: #12141d; border: 1px solid #2a2d3a; border-radius: 10px; color: #e5e7eb; font-size: 0.9rem; padding: 0.7rem 0.9rem; outline: none; font-family: inherit; }
+    #sync-modal button { border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.55rem 0.9rem; cursor: pointer; font-family: inherit; border: 1px solid #2a2d3a; background: #1e2130; color: #e5e7eb; }
+    #sync-modal button:hover { border-color: #4b5563; }
+    #sync-modal button.primary { background: #fff; color: #000; border: none; }
+    #sync-modal .filebtn { display: inline-block; border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.55rem 0.9rem; cursor: pointer; border: 1px solid #2a2d3a; background: #1e2130; color: #e5e7eb; }
+    #sync-modal small { color: #6b7280; font-size: 0.74rem; }
   </style>
 </head>
 <body>
@@ -58,6 +65,11 @@
     <button type="submit" class="primary">Cifrar y entrar</button>
     <div id="imp-error" class="boot-err"></div>
   </form>
+  <div id="boot-checking" class="boot-panel" style="display:none;">
+    <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
+    <div class="boot-title">Solvento</div>
+    <div class="boot-sub">Buscando tus datos en GitHub…</div>
+  </div>
 </div>
 
 <!-- ══ APP ══ -->
@@ -78,6 +90,7 @@
         <button class="nav-tab" data-page="inmuebles" onclick="v2Tab('inmuebles')">Inmuebles</button>
         <button class="nav-tab" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
       </nav>
+      <button id="sync-btn" title="Sincronizar con GitHub">🔄 Sincronizar</button>
       <button id="logout-btn">🔒 Bloquear</button>
       <button class="nav-hamburger" id="nav-hamburger" onclick="v2ToggleMobileNav()" aria-label="Menú"><span></span><span></span><span></span></button>
     </div>
@@ -97,12 +110,40 @@
   <div class="page" id="v2-page-pasivos"></div>
 </div>
 
-<script src="src/js/crypto.js"></script>
-<script src="src/js/config.js"></script>
-<script src="src/js/model.js"></script>
-<script src="src/js/charts.js"></script>
-<script src="src/js/render.js"></script>
-<script src="src/js/db.js"></script>
-<script src="src/js/boot.js"></script>
+<!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
+<div id="sync-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1100;align-items:center;justify-content:center;padding:1.5rem;">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+      <div style="font-size:1.1rem;font-weight:800;color:#fff;">Sincronización</div>
+      <button id="sync-close" style="border:none;background:none;color:#9ca3af;font-size:1.1rem;">✕</button>
+    </div>
+    <p style="font-size:0.82rem;color:#9ca3af;margin:0 0 1.25rem;">Guarda tu bloque cifrado en tu repo de GitHub para tenerlo en el móvil y el Mac. Los datos viajan siempre cifrados con tu contraseña.</p>
+
+    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;font-weight:700;margin-bottom:0.5rem;">Token de GitHub</div>
+    <input id="sync-token" type="password" placeholder="github_pat_..." autocomplete="off" />
+    <small style="display:block;margin:0.4rem 0 0.5rem;">Token <b>fine-grained</b> con permiso <b>Contents: Read and write</b> solo en este repo. Se guarda cifrado con tu contraseña; nunca se sube.</small>
+    <div id="sync-token-status" style="font-size:0.78rem;margin-bottom:0.75rem;"></div>
+    <button id="sync-save-token" class="primary" style="width:100%;margin-bottom:1.25rem;">Guardar token</button>
+
+    <div style="display:flex;gap:0.6rem;margin-bottom:0.75rem;">
+      <button id="sync-push" style="flex:1;">⬆️ Guardar en GitHub</button>
+      <button id="sync-pull" style="flex:1;">⬇️ Traer de GitHub</button>
+    </div>
+    <div style="display:flex;gap:0.6rem;align-items:center;">
+      <button id="sync-export" style="flex:1;">Exportar copia</button>
+      <label class="filebtn" style="flex:1;text-align:center;">Importar copia<input id="sync-import" type="file" accept=".enc,application/octet-stream,application/json" style="display:none;" /></label>
+    </div>
+    <div id="sync-status" style="font-size:0.82rem;font-weight:600;margin-top:1rem;text-align:center;display:none;"></div>
+  </div>
+</div>
+
+<script src="src/js/crypto.js?v=p3"></script>
+<script src="src/js/config.js?v=p3"></script>
+<script src="src/js/model.js?v=p3"></script>
+<script src="src/js/charts.js?v=p3"></script>
+<script src="src/js/render.js?v=p3"></script>
+<script src="src/js/db.js?v=p3"></script>
+<script src="src/js/sync.js?v=p3"></script>
+<script src="src/js/boot.js?v=p3"></script>
 </body>
 </html>
