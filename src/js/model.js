@@ -180,5 +180,95 @@
     return { saldos, patrimonioLiquido, inv, inm, patrimonioNeto, ratioInv, ratioInm, pctLiquidez };
   }
 
-  window.SolventoModel = { build, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
+  // ── Series de evolución temporal (patrimonio neto y cartera) ──
+  // Muestrea en las fechas de movimiento (como la v1): en cada fecha, el valor
+  // de la cartera = Σ unidades_acumuladas(fecha) × precio(fecha), con precio del
+  // histórico Yahoo (prices.hist) o del NAV (db.nav); el patrimonio neto añade
+  // el líquido acumulado y la tasación de inmuebles ya adquiridos.
+  function buildSeries(db, prices) {
+    const byJk = buildRegistry(db.inversiones);
+    const hist = (prices && prices.hist) || {};
+
+    // Unidades acumuladas por activo (ordenadas por fecha)
+    const rowsByJk = {};
+    for (const r of db.inversiones || []) {
+      if (!isFinite(num(r.coste))) continue;
+      const f = parseFechaES(r.fecha); if (!f) continue;
+      const jk = jkOf(r.nombre, r.isin);
+      (rowsByJk[jk] = rowsByJk[jk] || []).push({ t: f.getTime(), u: num(r.unidades) || 0 });
+    }
+    const unitsTL = {};
+    for (const jk in rowsByJk) {
+      const rows = rowsByJk[jk].sort((a, b) => a.t - b.t);
+      let run = 0; const tl = [];
+      for (const r of rows) { run += r.u; tl.push([r.t, run]); }
+      unitsTL[jk] = tl;
+    }
+    // Serie de precios por activo: histórico Yahoo (EUR) o histórico NAV
+    const priceTL = {};
+    for (const jk in unitsTL) {
+      const meta = byJk[jk];
+      if (meta && meta.yf && hist[meta.yf] && hist[meta.yf].length) {
+        priceTL[jk] = hist[meta.yf];
+      } else if (meta && db.nav && db.nav[meta.isin]) {
+        priceTL[jk] = db.nav[meta.isin]
+          .map((p) => { const f = parseFechaES(p.fecha); return f ? [f.getTime(), num(p.precio)] : null; })
+          .filter((x) => x && isFinite(x[1])).sort((a, b) => a[0] - b[0]);
+      }
+    }
+    const atOrBefore = (arr, t, col) => { // último elemento con arr[i][0] <= t
+      for (let i = arr.length - 1; i >= 0; i--) if (arr[i][0] <= t) return arr[i][col];
+      return null;
+    };
+    function invEn(t) {
+      let total = 0;
+      for (const jk in unitsTL) {
+        const u = atOrBefore(unitsTL[jk], t, 1);
+        if (!u || u <= 0) continue;
+        const ptl = priceTL[jk]; if (!ptl || !ptl.length) continue;
+        let price = atOrBefore(ptl, t, 1);
+        if (price == null) price = ptl[0][1]; // fallback: precio más antiguo conocido
+        total += u * price;
+      }
+      return total;
+    }
+
+    // Deltas de líquido por fecha (mismas cuentas que el saldo) + acumulado
+    const cuentas = new Set(CFG.CUENTAS.map((c) => c.cuenta));
+    const isC = (c) => c && c !== "-" && cuentas.has(c);
+    const deltaByDate = {};
+    for (const m of db.movimientos || []) {
+      const f = parseFechaES(m.fecha); if (!f) continue;
+      const t = f.getTime(); const imp = num(m.importe) || 0;
+      const o = String(m.cuenta_origen || "").trim(), d = String(m.cuenta_destino || "").trim();
+      let delta = 0;
+      switch (m.tipo) {
+        case "Ingreso":  if (isC(d)) delta = imp; break;
+        case "Gasto":    if (isC(o)) delta = -imp; break;
+        case "Traspaso": if (isC(o)) delta -= imp; if (isC(d)) delta += imp; break;
+        case "Préstamo":
+          if (m.tipo_prestamo === "Dinero prestado" && isC(o)) delta -= imp;
+          else if (m.tipo_prestamo === "Devolución" && isC(d)) delta += imp;
+          break;
+      }
+      deltaByDate[t] = (deltaByDate[t] || 0) + delta;
+    }
+    const dates = Object.keys(deltaByDate).map(Number).sort((a, b) => a - b);
+
+    const inmCompra = (db.inmuebles || [])
+      .map((r) => { const f = parseFechaES(r.fecha_adquisicion); return f ? { t: f.getTime(), v: num(r.tasacion) } : null; })
+      .filter((x) => x && isFinite(x.v));
+    const inmEn = (t) => inmCompra.reduce((s, x) => s + (x.t <= t ? x.v : 0), 0);
+
+    let liq = 0; const cartera = [], patrimonio = [];
+    for (const t of dates) {
+      liq += deltaByDate[t];
+      const cv = round2(invEn(t));
+      cartera.push([t, cv]);
+      patrimonio.push([t, round2(liq + cv + inmEn(t))]);
+    }
+    return { cartera, patrimonio };
+  }
+
+  window.SolventoModel = { build, buildSeries, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
 })();

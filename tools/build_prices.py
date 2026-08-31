@@ -42,6 +42,14 @@ def fetch_fx():
     return fx
 
 
+def _to_eur(price, cur, fx):
+    if cur == "GBp":
+        return price / 100 * fx.get("GBP", 1.168)
+    if cur != "EUR":
+        return price * fx.get(cur, 1.0)
+    return price
+
+
 def fetch_precio_eur(ticker, fx):
     """Último precio en EUR (misma lógica que fetch_precio_actual_eur de la v1)."""
     try:
@@ -50,32 +58,52 @@ def fetch_precio_eur(ticker, fx):
         closes = [v for v in result["indicators"]["quote"][0]["close"] if v is not None]
         if not closes:
             return None
-        price = closes[-1]
-        cur = result["meta"].get("currency", "EUR")
-        if cur == "GBp":
-            price = price / 100 * fx.get("GBP", 1.168)
-        elif cur != "EUR":
-            price = price * fx.get(cur, 1.0)
-        return round(price, 6)
+        return round(_to_eur(closes[-1], result["meta"].get("currency", "EUR"), fx), 6)
     except Exception:
         return None
 
 
+# Histórico desde 2023-01-01 (las primeras inversiones son de oct-2024; con margen)
+_HIST_PERIOD1 = 1672531200
+
+def fetch_hist_eur(ticker, fx):
+    """Serie diaria [[ts_ms, precio_eur], ...] en EUR (FX actual, como la v1)."""
+    try:
+        d = _get(f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+                 f"?interval=1d&period1={_HIST_PERIOD1}&period2={int(datetime.now(timezone.utc).timestamp())}")
+        result = d["chart"]["result"][0]
+        ts = result["timestamp"]
+        cl = result["indicators"]["quote"][0]["close"]
+        cur = result["meta"].get("currency", "EUR")
+        out = []
+        for t, v in zip(ts, cl):
+            if v is not None:
+                out.append([t * 1000, round(_to_eur(v, cur, fx), 4)])
+        return out
+    except Exception:
+        return []
+
+
 def main():
     fx = fetch_fx()
-    eur = {}
+    eur, hist = {}, {}
     for t in YF_TICKERS:
         p = fetch_precio_eur(t, fx)
         eur[t] = p
-        print(f"   {t:14s} → {('%.4f €' % p) if p else 'sin precio'}")
+        h = fetch_hist_eur(t, fx)
+        hist[t] = h
+        print(f"   {t:14s} → {('%.4f €' % p) if p else 'sin precio':>12s}  · histórico {len(h)} puntos")
     doc = {
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "fx_eur": fx,
         "eur": eur,
+        "hist": hist,
     }
     with open("prices.json", "w", encoding="utf-8") as f:
-        json.dump(doc, f, ensure_ascii=False, indent=2)
-    print(f"✅ prices.json generado ({sum(1 for v in eur.values() if v)} precios · FX {fx})")
+        json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
+    import os
+    print(f"✅ prices.json generado ({sum(1 for v in eur.values() if v)} precios · "
+          f"{sum(len(v) for v in hist.values())} puntos históricos · {os.path.getsize('prices.json')//1024} KB · FX {fx})")
 
 
 if __name__ == "__main__":
