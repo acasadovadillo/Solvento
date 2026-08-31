@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""
+Solvento v2 — Genera prices.json PÚBLICO (sin datos personales).
+
+Descarga el precio actual (en EUR) de cada activo con ticker de Yahoo Finance y
+lo escribe en prices.json. Los precios NO son secretos: este fichero se versiona
+en el repo y la web lo lee sin autenticación, evitando el CORS de Yahoo en el
+navegador. Los fondos sin ticker (Bankinter, Fidelity) se valoran con su NAV, que
+ya viaja dentro del documento cifrado (db.nav), así que no aparecen aquí.
+
+En la Fase 2 esto se ejecuta a mano; en una fase posterior lo hará la GitHub
+Action diaria en lugar de reconstruir el HTML.
+"""
+import json
+import math
+import urllib.request
+from datetime import datetime, timezone
+
+# yf_ticker → moneda de cotización (el resto cotiza en EUR)
+YF_TICKERS = ["AGGG.L", "IWDA.AS", "CSPX.AS", "EMIM.AS", "PHAU.AS",
+              "BTC-EUR", "AAPL", "0P000168OI.F", "SSAC.AS"]
+MONEDA = {"AGGG.L": "USD", "AAPL": "USD"}  # AGGG.L cotiza en USD pese al sufijo .L
+
+
+def _get(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
+
+
+def fetch_fx():
+    """EUR por 1 unidad de divisa (USD→EUR, GBP→EUR)."""
+    fx = {"USD": 0.926, "GBP": 1.168}
+    for div, sym in (("USD", "USDEUR=X"), ("GBP", "GBPEUR=X")):
+        try:
+            d = _get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}?interval=1d&range=5d")
+            p = d["chart"]["result"][0]["meta"].get("regularMarketPrice")
+            if p:
+                fx[div] = float(p)
+        except Exception:
+            pass
+    return fx
+
+
+def fetch_precio_eur(ticker, fx):
+    """Último precio en EUR (misma lógica que fetch_precio_actual_eur de la v1)."""
+    try:
+        d = _get(f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=5d")
+        result = d["chart"]["result"][0]
+        closes = [v for v in result["indicators"]["quote"][0]["close"] if v is not None]
+        if not closes:
+            return None
+        price = closes[-1]
+        cur = result["meta"].get("currency", "EUR")
+        if cur == "GBp":
+            price = price / 100 * fx.get("GBP", 1.168)
+        elif cur != "EUR":
+            price = price * fx.get(cur, 1.0)
+        return round(price, 6)
+    except Exception:
+        return None
+
+
+def main():
+    fx = fetch_fx()
+    eur = {}
+    for t in YF_TICKERS:
+        p = fetch_precio_eur(t, fx)
+        eur[t] = p
+        print(f"   {t:14s} → {('%.4f €' % p) if p else 'sin precio'}")
+    doc = {
+        "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "fx_eur": fx,
+        "eur": eur,
+    }
+    with open("prices.json", "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=2)
+    print(f"✅ prices.json generado ({sum(1 for v in eur.values() if v)} precios · FX {fx})")
+
+
+if __name__ == "__main__":
+    main()

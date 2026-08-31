@@ -84,28 +84,13 @@
     <button id="lock-btn" class="primary" style="width:auto;background:none;border:1px solid #2a2d3a;color:#9ca3af;">🔒 Bloquear</button>
   </div>
 
-  <div class="card" style="margin-bottom:1.25rem;">
-    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin-bottom:1rem;">Base de datos cifrada · resumen</div>
-    <div class="stat-grid">
-      <div class="stat"><b id="stat-mov">—</b><span>Movimientos</span></div>
-      <div class="stat"><b id="stat-inv">—</b><span>Inversiones</span></div>
-      <div class="stat"><b id="stat-inm">—</b><span>Inmuebles</span></div>
-      <div class="stat"><b id="stat-nav">—</b><span>Fondos NAV</span></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin-bottom:1rem;">Últimos movimientos</div>
-    <div style="overflow-x:auto;">
-      <table>
-        <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th style="text-align:right;">Importe</th></tr></thead>
-        <tbody id="mov-tbody"></tbody>
-      </table>
-    </div>
-  </div>
+  <div id="app-content"></div>
 </div>
 
 <script src="src/js/crypto.js"></script>
+<script src="src/js/config.js"></script>
+<script src="src/js/model.js"></script>
+<script src="src/js/render.js"></script>
 <script src="src/js/db.js"></script>
 <script src="src/js/boot.js"></script>
 </body>
