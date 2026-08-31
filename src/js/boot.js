@@ -18,30 +18,21 @@
   const DB = window.SolventoDB;
 
   const $ = (id) => document.getElementById(id);
+  let PRICES = null; // prices.json (público); puede llegar tras el desbloqueo
 
-  // ── Helpers de formato (mínimos; la analítica real llega en Fase 2) ──
-  function fmtEur(x) {
-    const n = Number(x);
-    if (!isFinite(n)) return "—";
-    return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n);
-  }
-  function esc(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  function parseFechaES(s) {
-    // "dd/mm/yyyy" → Date (para ordenar); tolera vacío
-    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || "").trim());
-    return m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(0);
-  }
-
-  // ── Desbloqueo + render mínimo ──
+  // ── Desbloqueo ──
   function unlock(doc) {
     DB.state.doc = doc;
     $("boot-overlay").style.display = "none";
     document.documentElement.style.overflow = "";
     $("app").style.display = "block";
-    renderReadOnly(doc);
+    render();
+  }
+
+  function render() {
+    if (DB.state.doc && window.SolventoRender) {
+      window.SolventoRender.render(DB.state.doc, PRICES);
+    }
   }
 
   function lock() {
@@ -49,32 +40,6 @@
     $("app").style.display = "none";
     document.documentElement.style.overflow = "hidden";
     startBoot();
-  }
-
-  function renderReadOnly(doc) {
-    const mov = doc.movimientos || [];
-    const inv = doc.inversiones || [];
-    const inm = doc.inmuebles || [];
-    const navN = Object.keys(doc.nav || {}).length;
-
-    $("stat-mov").textContent = mov.length;
-    $("stat-inv").textContent = inv.length;
-    $("stat-inm").textContent = inm.length;
-    $("stat-nav").textContent = navN;
-
-    // Últimos 10 movimientos por fecha (prueba de que los datos reales están ahí)
-    const ultimos = mov.slice().sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha)).slice(0, 10);
-    const TD = "padding:0.6rem 0.9rem;border-bottom:1px solid #2a2d3a;";
-    $("mov-tbody").innerHTML = ultimos.map((r) => {
-      const signo = r.tipo === "Ingreso" ? "+" : (r.tipo === "Gasto" ? "−" : "");
-      const color = r.tipo === "Ingreso" ? "#10b981" : (r.tipo === "Gasto" ? "#ef4444" : "#9ca3af");
-      return `<tr>
-        <td style="${TD}color:#9ca3af;white-space:nowrap;">${esc(r.fecha)}</td>
-        <td style="${TD}"><span style="color:${color};font-weight:600;">${esc(r.tipo)}</span></td>
-        <td style="${TD}color:#e5e7eb;">${esc(r.detalle) || "—"}</td>
-        <td style="${TD}text-align:right;color:${color};font-weight:600;white-space:nowrap;">${signo}${fmtEur(r.importe)}</td>
-      </tr>`;
-    }).join("");
   }
 
   // ── Handlers ──
@@ -136,6 +101,11 @@
     $("import-form").addEventListener("submit", handleImport);
     const lb = $("lock-btn");
     if (lb) lb.addEventListener("click", lock);
+    // Precios públicos: en paralelo; si llegan tras el desbloqueo, re-render.
+    fetch("prices.json?" + Date.now())
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => { PRICES = p; render(); })
+      .catch(() => {});
     startBoot();
   }
 
