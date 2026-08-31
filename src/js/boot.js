@@ -99,7 +99,7 @@
   function init() {
     $("login-form").addEventListener("submit", handleLogin);
     $("import-form").addEventListener("submit", handleImport);
-    const lb = $("lock-btn");
+    const lb = $("logout-btn");
     if (lb) lb.addEventListener("click", lock);
     // Precios públicos: en paralelo; si llegan tras el desbloqueo, re-render.
     fetch("prices.json?" + Date.now())
