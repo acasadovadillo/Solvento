@@ -68,3 +68,9 @@ Registro de todos los cambios del proyecto, por fecha.
 
 13/07/2026
 	- Workflow: añadidos reintentos automáticos (--retry 5 --retry-delay 5 --retry-all-errors) a las 4 descargas de Google Sheets, para que un error temporal 502/503 no tumbe la ejecución.
+
+31/08/2026
+	- Inicio de la v2 (rama v2-cifrado) · Fase 1 — cimientos de la base de datos cifrada e integrada:
+	- tools/csv_to_json.py: migración única de los CSV actuales al documento JSON unificado de la v2 (movimientos, inversiones, inmuebles, NAV) con ids estables por hash del contenido.
+	- src/js/crypto.js: módulo de cifrado zero-knowledge con Web Crypto (PBKDF2-SHA256 310.000 iteraciones + AES-256-GCM); único motor de cifrado, siempre en el navegador. Verificado 7/7 tests, incluido el ciclo completo sobre los datos reales (bloque cifrado ~365 KB).
+	- .gitignore: excluido data.json (documento en claro); en el repo solo se versionará data.enc (cifrado).
