@@ -17,6 +17,9 @@
   const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const GREEN = "#10b981", RED = "#ef4444";
   const rc = (x) => (isFinite(x) && x < 0 ? RED : GREEN);
+  const parseFechaES = (s) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || "")); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(0); };
+  const addBtn = (label, onclick) => `<button onclick="${onclick}" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">${label}</button>`;
+  const delBtn = (onclick) => `<button onclick="event.stopPropagation();${onclick}" title="Borrar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">✕</button>`;
 
   function logoImg(nombre, isin, size) {
     const src = CFG.assetLogo(nombre, isin);
@@ -194,6 +197,52 @@
     </div>`;
   }
 
+  let CURRENT_DOC = null;
+
+  function movimientosList() {
+    const mov = (CURRENT_DOC && CURRENT_DOC.movimientos) || [];
+    const rows = mov.slice().sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha)).slice(0, 30).map((r) => {
+      const signo = r.tipo === "Ingreso" ? "+" : (r.tipo === "Gasto" ? "−" : "");
+      const color = r.tipo === "Ingreso" ? GREEN : (r.tipo === "Gasto" ? RED : "#9ca3af");
+      const det = esc(r.detalle || r.tipo_gasto || r.tipo_ingreso || "—");
+      return `<tr class="table-row">
+        <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
+        <td style="text-align:left;"><span style="color:${color};font-weight:600;font-size:0.8rem;">${esc(r.tipo)}</span> <span style="color:#e5e7eb;">${det}</span></td>
+        <td style="text-align:right;color:${color};font-weight:600;white-space:nowrap;">${signo}${fmtEur(Number(r.importe))}</td>
+        <td style="text-align:right;width:1%;">${delBtn(`v2DelMov('${r.id}')`)}</td></tr>`;
+    }).join("");
+    return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Movimientos recientes</div>
+        ${addBtn("＋ Movimiento", "v2AddMov()")}
+      </div>
+      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Sin movimientos</td></tr>'}</tbody></table>
+    </div></div>`;
+  }
+
+  function operacionesList() {
+    const inv = (CURRENT_DOC && CURRENT_DOC.inversiones) || [];
+    const MC = { Compra: GREEN, Venta: RED, Traspaso: "#3b82f6" };
+    const rows = inv.slice().sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha)).slice(0, 40).map((r) => {
+      const mov = r.tipo_movimiento || "Compra";
+      const c = MC[mov] || "#6b7280";
+      const coste = Number(r.coste);
+      return `<tr class="table-row">
+        <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
+        <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.5rem;">${logoImg(r.nombre, r.isin, 18)}<span style="color:#fff;font-weight:600;font-size:0.85rem;">${esc(r.nombre)}</span><span style="color:${c};font-size:0.7rem;font-weight:700;background:${c}22;padding:0.1rem 0.4rem;border-radius:4px;">${esc(mov)}</span></div></td>
+        <td style="text-align:right;color:${coste < 0 ? RED : "#e5e7eb"};font-weight:600;white-space:nowrap;">${fmtEur(coste)}</td>
+        <td style="text-align:right;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${r.unidades !== "" && r.unidades != null ? Number(r.unidades).toLocaleString("es-ES", { maximumFractionDigits: 6 }) : "—"}</td>
+        <td style="text-align:right;width:1%;">${delBtn(`v2DelInv('${r.id}')`)}</td></tr>`;
+    }).join("");
+    return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Historial de operaciones</div>
+        ${addBtn("＋ Operación", "v2AddInv()")}
+      </div>
+      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Sin operaciones</td></tr>'}</tbody></table>
+    </div></div>`;
+  }
+
   function chartPanel(titulo, containerId) {
     return `<div class="v2-wrap"><div class="dashboard-panel">
       <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">${esc(titulo)}</div>
@@ -256,7 +305,8 @@
       asignacionPanel(inv) +
       donutPanel("Distribución por activos", tipoItems, fmtEur(inv.total), "Activos", inv.total) +
       treemapPanel(inv.assets) +
-      tablaCartera(inv);
+      tablaCartera(inv) +
+      operacionesList();
   }
 
   function pageCaja(m) {
@@ -267,7 +317,8 @@
     }).join("");
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
       donutPanel("Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", m.patrimonioLiquido) +
-      `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th style="text-align:right;">Peso</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+      `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th style="text-align:right;">Peso</th></tr></thead><tbody>${rows}</tbody></table></div></div>` +
+      movimientosList();
   }
 
   function pageInmuebles(m) {
@@ -345,6 +396,7 @@
 
   // ── Entrada ──
   function render(doc, prices) {
+    CURRENT_DOC = doc;
     const m = window.SolventoModel.build(doc, prices);
     window.__MODEL = m;
     document.getElementById("v2-page-patrimonio").innerHTML = pagePatrimonio(m);
@@ -366,6 +418,12 @@
     if (document.getElementById("v2-page-cartera").classList.contains("active")) layoutTreemaps();
     if (!render._resizeBound) { render._resizeBound = true; window.addEventListener("resize", layoutTreemaps); }
   }
+
+  // Acciones de formularios (globales para onclick)
+  window.v2AddMov = () => window.SolventoForms && window.SolventoForms.openMovimiento();
+  window.v2AddInv = () => window.SolventoForms && window.SolventoForms.openInversion();
+  window.v2DelMov = (id) => { if (window.SolventoForms && confirm("¿Borrar este movimiento?")) window.SolventoForms.deleteMovimiento(id); };
+  window.v2DelInv = (id) => { if (window.SolventoForms && confirm("¿Borrar esta operación?")) window.SolventoForms.deleteInversion(id); };
 
   window.SolventoRender = { render, showPage };
 })();
