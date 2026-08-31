@@ -1,0 +1,6 @@
+data/
+.DS_Store
+
+# v2: documento en CLARO producido por tools/csv_to_json.py — NUNCA subir.
+# El único artefacto que se versiona es data.enc (cifrado por el navegador).
+data.json
