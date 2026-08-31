@@ -46,6 +46,41 @@
   function render() {
     if (DB.state.doc && window.SolventoRender) window.SolventoRender.render(DB.state.doc, PRICES);
   }
+
+  let _toastTimer = null;
+  function toast(msg, color) {
+    let t = $("v2-toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "v2-toast";
+      t.style.cssText = "position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:#12141d;border:1px solid #2a2d3a;color:#e5e7eb;font-size:0.85rem;font-weight:600;padding:0.6rem 1.1rem;border-radius:10px;z-index:1300;box-shadow:0 6px 20px rgba(0,0,0,0.5);display:none;";
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.color = color || "#e5e7eb";
+    t.style.display = "block";
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { t.style.display = "none"; }, 3500);
+  }
+
+  // Guardar el documento tras una edición: cifra + guarda local + sube si hay token.
+  async function saveDoc() {
+    if (!DB.state.doc || !DB.state.password) return;
+    render();
+    if (DB.state.token) {
+      toast("Guardando en GitHub…", "#9ca3af");
+      try {
+        await SYNC.push(DB.state.doc, DB.state.password, DB.state.token, "Solvento: cambios desde la web");
+        toast("Guardado y sincronizado ✓", "#10b981");
+      } catch (e) {
+        try { DB.storeBlob(await C.encryptDoc(DB.state.doc, DB.state.password)); } catch (_) {}
+        toast("Guardado en el dispositivo (sync falló: " + e.message + ")", "#fbbf24");
+      }
+    } else {
+      try { DB.storeBlob(await C.encryptDoc(DB.state.doc, DB.state.password)); } catch (_) {}
+      toast("Guardado en este dispositivo · sincroniza para subirlo", "#fbbf24");
+    }
+  }
   function lock() {
     DB.state.doc = null; DB.state.password = null; DB.state.token = null;
     $("app").style.display = "none";
@@ -186,6 +221,6 @@
     startBoot();
   }
 
-  window.SolventoBoot = { lock, openSync };
+  window.SolventoBoot = { lock, openSync, saveDoc, toast };
   document.addEventListener("DOMContentLoaded", init);
 })();
