@@ -62,9 +62,14 @@
     return f ? "img/" + f : null;
   }
 
+  // Sincronización: dónde vive el bloque cifrado (data.enc) en GitHub.
+  // El repo es público, así que LEER data.enc no necesita token; ESCRIBIR sí
+  // (token fine-grained con permiso Contents: Read/Write solo en este repo).
+  const SYNC = { owner: "acasadovadillo", repo: "Solvento", branch: "main", path: "data.enc" };
+
   window.SolventoConfig = {
     CUENTAS, ACTIVOS, OBJETIVO_ASIGNACION,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, INMUEBLE_ACCENT_DEFAULT,
-    assetLogo,
+    assetLogo, SYNC,
   };
 })();

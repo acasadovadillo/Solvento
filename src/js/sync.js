@@ -1,0 +1,88 @@
+/*
+ * Solvento v2 — Sincronización con GitHub (Fase 3).
+ *
+ * El bloque cifrado (data.enc) vive en el repo. LEERLO es público (no requiere
+ * token); ESCRIBIRLO usa un token fine-grained (Contents: Read/Write en este
+ * repo) que se guarda CIFRADO en localStorage con la contraseña del usuario y
+ * solo se descifra a memoria tras el login. El token nunca se versiona ni se
+ * registra en logs.
+ */
+(function () {
+  "use strict";
+  const C = window.SolventoCrypto;
+  const SYNC = window.SolventoConfig.SYNC;
+  const TOKEN_KEY = "solvento_gh_token";
+  const SHA_KEY = "solvento_data_sha";
+
+  const apiUrl = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${SYNC.path}`;
+
+  // JSON (ASCII/UTF-8) ⇄ base64 respetando UTF-8
+  const b64enc = (str) => btoa(unescape(encodeURIComponent(str)));
+  const b64dec = (b64) => decodeURIComponent(escape(atob(String(b64).replace(/\s/g, ""))));
+
+  async function ghGet(token) {
+    const headers = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+    if (token) headers.Authorization = "Bearer " + token;
+    const r = await fetch(apiUrl() + "?ref=" + encodeURIComponent(SYNC.branch) + "&_=" + Date.now(), { headers });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error("GitHub GET " + r.status);
+    const j = await r.json();
+    return { sha: j.sha, content: b64dec(j.content) };
+  }
+
+  async function ghPut(token, contentStr, sha, message) {
+    const body = { message: message || "Solvento: actualizar datos cifrados", content: b64enc(contentStr), branch: SYNC.branch };
+    if (sha) body.sha = sha;
+    const r = await fetch(apiUrl(), {
+      method: "PUT",
+      headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + token, "Content-Type": "application/json", "X-GitHub-Api-Version": "2022-11-28" },
+      body: JSON.stringify(body),
+    });
+    if (r.status === 409 || r.status === 422) { const e = new Error("conflicto: el fichero cambió en el repo"); e.code = "CONFLICT"; throw e; }
+    if (r.status === 401 || r.status === 403) { const e = new Error("token inválido o sin permisos"); e.code = "AUTH"; throw e; }
+    if (!r.ok) throw new Error("GitHub PUT " + r.status);
+    const j = await r.json();
+    return j.content && j.content.sha;
+  }
+
+  // ── Token (cifrado con la contraseña) ──
+  async function storeToken(token, password) {
+    localStorage.setItem(TOKEN_KEY, JSON.stringify(await C.encryptString(token, password)));
+  }
+  async function loadToken(password) {
+    const s = localStorage.getItem(TOKEN_KEY);
+    if (!s) return null;
+    try { return await C.decryptString(JSON.parse(s), password); } catch (e) { return null; }
+  }
+  const hasToken = () => !!localStorage.getItem(TOKEN_KEY);
+  const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
+  const getSha = () => localStorage.getItem(SHA_KEY) || null;
+  const setSha = (s) => { if (s) localStorage.setItem(SHA_KEY, s); };
+
+  // ── Alto nivel ──
+  // Lee el bloque cifrado del repo (público). Devuelve {blob, sha} o null (404).
+  async function fetchRemoteBlob(token) {
+    const res = await ghGet(token);
+    if (!res) return null;
+    setSha(res.sha);
+    return { blob: JSON.parse(res.content), sha: res.sha };
+  }
+
+  // Cifra el doc y lo sube al repo. Devuelve el nuevo sha.
+  async function push(doc, password, token, message) {
+    const blob = await C.encryptDoc(doc, password);
+    const contentStr = JSON.stringify(blob);
+    let sha = getSha();
+    if (!sha) { const cur = await ghGet(token); if (cur) sha = cur.sha; } // actualizar si ya existía
+    const newSha = await ghPut(token, contentStr, sha, message);
+    setSha(newSha);
+    window.SolventoDB.storeBlob(blob); // cache local al día
+    return newSha;
+  }
+
+  window.SolventoSync = {
+    ghGet, ghPut, storeToken, loadToken, hasToken, clearToken,
+    fetchRemoteBlob, push, getSha, setSha,
+  };
+})();
