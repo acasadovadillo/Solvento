@@ -194,6 +194,13 @@
     </div>`;
   }
 
+  function chartPanel(titulo, containerId) {
+    return `<div class="v2-wrap"><div class="dashboard-panel">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">${esc(titulo)}</div>
+      <div id="${containerId}"></div>
+    </div></div>`;
+  }
+
   // ── Páginas ──
   function pagePatrimonio(m) {
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
@@ -203,6 +210,7 @@
         ${hubCard("Cartera", fmtEur(m.inv.total), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct))}
         ${hubCard("Inmuebles", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + " inmuebles")}
       </div>` +
+      chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio") +
       donutPanel("Distribución del patrimonio",
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
          { label: "Cartera", value: m.inv.total, accent: "#10b981" },
@@ -244,6 +252,7 @@
     const tipoItems = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES[t] || "#6b7280" })).sort((a, b) => b.value - a.value);
     const avisoPrecios = prices ? "" : `<div class="v2-wrap"><div style="padding:0.6rem 1rem;background:#3f2d0a;border:1px solid #a16207;border-radius:10px;font-size:0.82rem;color:#fbbf24;">⏳ Cargando precios de mercado…</div></div>`;
     return header("Cartera", heroSub.replace(fmtEur(inv.total), "")) + avisoPrecios + heroCard +
+      chartPanel("Evolución de la cartera", "v2-chart-cartera") +
       asignacionPanel(inv) +
       donutPanel("Distribución por activos", tipoItems, fmtEur(inv.total), "Activos", inv.total) +
       treemapPanel(inv.assets) +
@@ -344,6 +353,15 @@
     document.getElementById("v2-page-inmuebles").innerHTML = pageInmuebles(m);
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos();
     bindTreemapHover();
+    // Gráficas de evolución (patrimonio neto + cartera)
+    if (window.SolventoModel.buildSeries && window.SolventoCharts) {
+      const series = window.SolventoModel.buildSeries(doc, prices);
+      window.__SERIES = series;
+      const cp = document.getElementById("v2-chart-patrimonio");
+      if (cp) window.SolventoCharts.mount(cp, series.patrimonio, { color: "#10b981", id: "patr" });
+      const cc = document.getElementById("v2-chart-cartera");
+      if (cc) window.SolventoCharts.mount(cc, series.cartera, { color: "#8b5cf6", id: "cart" });
+    }
     // ajustar treemap si la pestaña Cartera está activa; y en cualquier resize
     if (document.getElementById("v2-page-cartera").classList.contains("active")) layoutTreemaps();
     if (!render._resizeBound) { render._resizeBound = true; window.addEventListener("resize", layoutTreemaps); }
