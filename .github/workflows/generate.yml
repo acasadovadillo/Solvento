@@ -3,6 +3,7 @@ name: Actualizar Solvento
 on:
   workflow_dispatch:
   push:
+    branches: [main]   # solo en main; las ramas de trabajo (p.ej. v2-cifrado) no regeneran
   schedule:
     - cron: "59 23 * * *"  # todos los días a las 23:59 UTC
 
