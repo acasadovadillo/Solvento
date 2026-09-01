@@ -33,12 +33,24 @@
     return (s && s !== "-" && s !== "nan") ? s : String(nombre || "").trim();
   };
 
+  // ¿Es un viejo apunte de "Inversiones" en Movimientos? (doble contabilidad de
+  // la v1). Se ignora en el cálculo de caja porque ahora el efecto en efectivo
+  // lo aporta la propia operación de inversión (Compra/Venta). Las filas se
+  // conservan en el histórico, no se borran.
+  const esMovInversion = (m) =>
+    String(m.tipo_gasto || "").trim().toLowerCase() === "inversiones" ||
+    String(m.tipo_ingreso || "").trim().toLowerCase() === "inversiones";
+
   // ── Saldos por cuenta (solo las cuentas configuradas cuentan al patrimonio) ──
-  function computeSaldos(movimientos) {
+  // Fase 6: una Compra resta del efectivo de su cuenta, una Venta suma, y un
+  // Traspaso entre fondos es neutro. Así comprar un fondo descuenta el dinero
+  // automáticamente, sin doble apunte.
+  function computeSaldos(movimientos, inversiones) {
     const bal = {};
     CFG.CUENTAS.forEach((c) => (bal[c.cuenta] = 0));
     const isC = (c) => c && c !== "-" && (c in bal);
     for (const m of movimientos || []) {
+      if (esMovInversion(m)) continue; // el efectivo lo mueve la operación, no este apunte
       const imp = num(m.importe) || 0;
       const o = String(m.cuenta_origen || "").trim();
       const d = String(m.cuenta_destino || "").trim();
@@ -51,6 +63,13 @@
           else if (m.tipo_prestamo === "Devolución" && isC(d)) bal[d] += imp;
           break;
       }
+    }
+    // Efecto en efectivo de las operaciones de inversión (Compra/Venta).
+    for (const r of inversiones || []) {
+      if ((r.tipo_movimiento || "Compra") === "Traspaso") continue; // fondo→fondo, neutro
+      const coste = num(r.coste);
+      const cuenta = String(r.cuenta || "").trim();
+      if (isFinite(coste) && isC(cuenta)) bal[cuenta] -= coste; // Compra(+coste)→resta, Venta(−coste)→suma
     }
     const saldos = CFG.CUENTAS.map((c) => ({ cuenta: c.cuenta, accent: c.accent, logo: c.logo, emoji: c.emoji, saldo: round2(bal[c.cuenta]) }));
     const patrimonioLiquido = round2(saldos.reduce((s, x) => s + x.saldo, 0));
@@ -170,7 +189,7 @@
 
   // ── Modelo completo ──
   function build(db, prices) {
-    const { saldos, patrimonioLiquido } = computeSaldos(db.movimientos);
+    const { saldos, patrimonioLiquido } = computeSaldos(db.movimientos, db.inversiones);
     const inv = valuate(db, prices);
     const inm = valuateInmuebles(db.inmuebles);
     const patrimonioNeto = round2(patrimonioLiquido + inv.total + inm.total);
@@ -238,6 +257,7 @@
     const isC = (c) => c && c !== "-" && cuentas.has(c);
     const deltaByDate = {};
     for (const m of db.movimientos || []) {
+      if (esMovInversion(m)) continue; // el efectivo lo mueve la operación
       const f = parseFechaES(m.fecha); if (!f) continue;
       const t = f.getTime(); const imp = num(m.importe) || 0;
       const o = String(m.cuenta_origen || "").trim(), d = String(m.cuenta_destino || "").trim();
@@ -252,6 +272,17 @@
           break;
       }
       deltaByDate[t] = (deltaByDate[t] || 0) + delta;
+    }
+    // Efecto en efectivo de las operaciones (Compra resta, Venta suma, Traspaso neutro):
+    // mantiene la continuidad del patrimonio (el dinero pasa de caja a posiciones).
+    for (const r of db.inversiones || []) {
+      if ((r.tipo_movimiento || "Compra") === "Traspaso") continue;
+      const f = parseFechaES(r.fecha); if (!f) continue;
+      const coste = num(r.coste);
+      if (isFinite(coste) && isC(String(r.cuenta || "").trim())) {
+        const t = f.getTime();
+        deltaByDate[t] = (deltaByDate[t] || 0) - coste;
+      }
     }
     const dates = Object.keys(deltaByDate).map(Number).sort((a, b) => a - b);
 
