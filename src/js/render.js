@@ -20,6 +20,8 @@
   const parseFechaES = (s) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || "")); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(0); };
   const addBtn = (label, onclick) => `<button onclick="${onclick}" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">${label}</button>`;
   const delBtn = (onclick) => `<button onclick="event.stopPropagation();${onclick}" title="Borrar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">✕</button>`;
+  const editBtn = (onclick) => `<button onclick="event.stopPropagation();${onclick}" title="Editar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button>`;
+  const rowActions = (edit, del) => `<td style="text-align:right;width:1%;white-space:nowrap;">${editBtn(edit)}${delBtn(del)}</td>`;
 
   function logoImg(nombre, isin, size) {
     const src = CFG.assetLogo(nombre, isin);
@@ -209,7 +211,7 @@
         <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
         <td style="text-align:left;"><span style="color:${color};font-weight:600;font-size:0.8rem;">${esc(r.tipo)}</span> <span style="color:#e5e7eb;">${det}</span></td>
         <td style="text-align:right;color:${color};font-weight:600;white-space:nowrap;">${signo}${fmtEur(Number(r.importe))}</td>
-        <td style="text-align:right;width:1%;">${delBtn(`v2DelMov('${r.id}')`)}</td></tr>`;
+        ${rowActions(`v2EditMov('${r.id}')`, `v2DelMov('${r.id}')`)}</tr>`;
     }).join("");
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
@@ -232,12 +234,12 @@
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.5rem;">${logoImg(r.nombre, r.isin, 18)}<span style="color:#fff;font-weight:600;font-size:0.85rem;">${esc(r.nombre)}</span><span style="color:${c};font-size:0.7rem;font-weight:700;background:${c}22;padding:0.1rem 0.4rem;border-radius:4px;">${esc(mov)}</span></div></td>
         <td style="text-align:right;color:${coste < 0 ? RED : "#e5e7eb"};font-weight:600;white-space:nowrap;">${fmtEur(coste)}</td>
         <td style="text-align:right;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${r.unidades !== "" && r.unidades != null ? Number(r.unidades).toLocaleString("es-ES", { maximumFractionDigits: 6 }) : "—"}</td>
-        <td style="text-align:right;width:1%;">${delBtn(`v2DelInv('${r.id}')`)}</td></tr>`;
+        ${rowActions(`v2EditInv('${r.id}')`, `v2DelInv('${r.id}')`)}</tr>`;
     }).join("");
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
         <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Historial de operaciones</div>
-        ${addBtn("＋ Operación", "v2AddInv()")}
+        <div style="display:flex;gap:0.5rem;">${addBtn("＋ NAV", "v2AddNav()")}${addBtn("＋ Operación", "v2AddInv()")}</div>
       </div>
       <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Sin operaciones</td></tr>'}</tbody></table>
     </div></div>`;
@@ -326,10 +328,15 @@
     const porTipo = {};
     inm.items.forEach((r) => { if (isFinite(r.importe)) porTipo[r.tipo] = (porTipo[r.tipo] || 0) + r.importe; });
     const items = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES_INMUEBLE[t] || CFG.INMUEBLE_ACCENT_DEFAULT })).sort((a, b) => b.value - a.value);
-    const rows = inm.items.map((r) => `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span><div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(r.tipo)}</div></div></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td></tr>`).join("");
+    const rows = inm.items.map((r) => `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span><div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(r.tipo)}</div></div></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>${rowActions(`v2EditInm('${r.id}')`, `v2DelInm('${r.id}')`)}</tr>`).join("");
     return header("Inmuebles", fmtEur(inm.total)) +
       donutPanel("Distribución por tipo", items, fmtEur(inm.total), "Total", inm.total) +
-      `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Inmueble</th><th style="text-align:right;">Tasación</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+      `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Inmuebles</div>
+          ${addBtn("＋ Inmueble", "v2AddInm()")}
+        </div>
+        <table class="minimal-table"><thead><tr><th style="text-align:left;">Inmueble</th><th style="text-align:right;">Tasación</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
 
   function pagePasivos() {
@@ -420,10 +427,17 @@
   }
 
   // Acciones de formularios (globales para onclick)
-  window.v2AddMov = () => window.SolventoForms && window.SolventoForms.openMovimiento();
-  window.v2AddInv = () => window.SolventoForms && window.SolventoForms.openInversion();
-  window.v2DelMov = (id) => { if (window.SolventoForms && confirm("¿Borrar este movimiento?")) window.SolventoForms.deleteMovimiento(id); };
-  window.v2DelInv = (id) => { if (window.SolventoForms && confirm("¿Borrar esta operación?")) window.SolventoForms.deleteInversion(id); };
+  const F = () => window.SolventoForms;
+  window.v2AddMov = () => F() && F().openMovimiento();
+  window.v2AddInv = () => F() && F().openInversion();
+  window.v2AddInm = () => F() && F().openInmueble();
+  window.v2AddNav = () => F() && F().openNav();
+  window.v2EditMov = (id) => F() && F().editMovimiento(id);
+  window.v2EditInv = (id) => F() && F().editInversion(id);
+  window.v2EditInm = (id) => F() && F().editInmueble(id);
+  window.v2DelMov = (id) => { if (F() && confirm("¿Borrar este movimiento?")) F().deleteMovimiento(id); };
+  window.v2DelInv = (id) => { if (F() && confirm("¿Borrar esta operación?")) F().deleteInversion(id); };
+  window.v2DelInm = (id) => { if (F() && confirm("¿Borrar este inmueble?")) F().deleteInmueble(id); };
 
   window.SolventoRender = { render, showPage };
 })();
