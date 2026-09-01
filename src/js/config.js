@@ -48,6 +48,12 @@
   const TIPO_COLORES_INMUEBLE = { "Apartamento": "#a16207", "Plaza de garaje": "#78716c", "Terreno rústico": "#65a30d" };
   const INMUEBLE_ACCENT_DEFAULT = "#a16207";
 
+  // Paleta para la comparativa de rentabilidad (una línea por activo).
+  // Tonos bien separados para que se distingan sobre fondo oscuro.
+  const SERIE_COLORES = ["#3b82f6", "#f59e0b", "#ec4899", "#14b8a6", "#a78bfa",
+                         "#84cc16", "#f87171", "#22d3ee", "#fb923c", "#c084fc",
+                         "#4ade80", "#e879f9"];
+
   const ASSET_LOGO_BY_ISIN = {
     "IE00BYXYYM63": "asset-etf-logo-us-bond.png",
     "IE00B4L5Y983": "asset-etf-logo-msci-world.png",
@@ -80,7 +86,7 @@
 
   window.SolventoConfig = {
     CUENTAS, BROKERS, ACTIVOS, OBJETIVO_ASIGNACION,
-    CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, INMUEBLE_ACCENT_DEFAULT,
+    CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     assetLogo, SYNC,
   };
 })();

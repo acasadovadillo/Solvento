@@ -217,6 +217,123 @@
              inv, inm, carteraTotal, patrimonioNeto, ratioInv, ratioInm, pctLiquidez };
   }
 
+
+  // ── Analítica por activo: líneas temporales de unidades, coste y precio ──
+  function _timelinesPorActivo(db, prices) {
+    const byJk = buildRegistry(db.inversiones);
+    const hist = (prices && prices.hist) || {};
+    const rowsByJk = {};
+    for (const r of db.inversiones || []) {
+      const coste = num(r.coste); if (!isFinite(coste)) continue;
+      const f = parseFechaES(r.fecha); if (!f) continue;
+      const jk = jkOf(r.nombre, r.isin);
+      (rowsByJk[jk] = rowsByJk[jk] || []).push({ t: f.getTime(), u: num(r.unidades) || 0, c: coste });
+    }
+    const unitsTL = {}, costTL = {};
+    for (const jk in rowsByJk) {
+      const rows = rowsByJk[jk].sort((a, b) => a.t - b.t);
+      let ru = 0, rc = 0; const tu = [], tc = [];
+      for (const r of rows) { ru += r.u; rc += r.c; tu.push([r.t, ru]); tc.push([r.t, rc]); }
+      unitsTL[jk] = tu; costTL[jk] = tc;
+    }
+    const priceTL = {};
+    for (const jk in unitsTL) {
+      const meta = byJk[jk];
+      if (meta && meta.yf && hist[meta.yf] && hist[meta.yf].length) {
+        priceTL[jk] = hist[meta.yf];
+      } else if (meta && db.nav && db.nav[meta.isin]) {
+        priceTL[jk] = db.nav[meta.isin]
+          .map((p) => { const f = parseFechaES(p.fecha); return f ? [f.getTime(), num(p.precio)] : null; })
+          .filter((x) => x && isFinite(x[1])).sort((a, b) => a[0] - b[0]);
+      }
+    }
+    return { byJk, unitsTL, costTL, priceTL };
+  }
+
+  // Reporte mes a mes de la cartera: cada fila un activo, cada columna un mes,
+  // con la rentabilidad ACUMULADA desde el inicio hasta el cierre de ese mes.
+  // Devuelve además la serie de rentabilidad por activo para la comparativa.
+  function buildAnalitica(db, prices) {
+    const { byJk, unitsTL, costTL, priceTL } = _timelinesPorActivo(db, prices);
+    const jks = Object.keys(unitsTL);
+    const vacio = { meses: [], filas: [], total: [], comparativa: [] };
+    if (!jks.length) return vacio;
+
+    const antesDe = (arr, t) => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i][0] <= t) return arr[i][1]; return null; };
+
+    // Cierres de mes desde la primera operación hasta hoy (el último punto es hoy)
+    let t0 = Infinity;
+    jks.forEach((jk) => { t0 = Math.min(t0, unitsTL[jk][0][0]); });
+    const ahora = Date.now();
+    const meses = [];
+    const cur = new Date(t0); cur.setDate(1); cur.setHours(0, 0, 0, 0);
+    for (let guard = 0; guard < 600; guard++) {
+      const fin = new Date(cur.getFullYear(), cur.getMonth() + 1, 0, 23, 59, 59).getTime();
+      if (fin >= ahora) { meses.push(ahora); break; }
+      meses.push(fin);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+
+    function celda(jk, t) {
+      const u = antesDe(unitsTL[jk], t);
+      const c = antesDe(costTL[jk], t);
+      if (u == null || u <= 1e-9 || c == null || c <= 0) return null;  // sin posición ese mes
+      const ptl = priceTL[jk];
+      if (!ptl || !ptl.length) return null;
+      let precio = antesDe(ptl, t);
+      if (precio == null) precio = ptl[0][1];
+      const valor = round2(u * precio);
+      return { valor, coste: round2(c), rentPct: (valor / c - 1) * 100 };
+    }
+
+    const filas = jks.map((jk) => {
+      const meta = byJk[jk] || {};
+      const celdas = meses.map((t) => celda(jk, t));
+      return {
+        jk, nombre: meta.nombre || jk, isin: meta.isin || "-",
+        categoria: meta.categoria, banco: meta.banco, celdas,
+        activo: celdas.some((c) => c),
+      };
+    }).filter((f) => f.activo)
+      .sort((a, b) => {
+        const ua = a.celdas[a.celdas.length - 1], ub = b.celdas[b.celdas.length - 1];
+        return (ub ? ub.valor : -1) - (ua ? ua.valor : -1);
+      });
+
+    // Fila "Total cartera": se calcula sobre TODOS los activos (no solo los que
+    // tienen posición abierta) y con el coste CON SIGNO, igual que el resto de la
+    // app — así la última columna coincide exactamente con la rentabilidad del
+    // panel de Cartera, incluyendo el efecto de traspasos y ventas ya cerradas.
+    const total = meses.map((t) => {
+      let v = 0, c = 0;
+      for (const jk of jks) {
+        const cc = antesDe(costTL[jk], t);
+        if (cc == null) continue;              // el activo aún no existía ese mes
+        c += cc;
+        const u = antesDe(unitsTL[jk], t);
+        const ptl = priceTL[jk];
+        if (u != null && u > 1e-9 && ptl && ptl.length) {
+          let precio = antesDe(ptl, t);
+          if (precio == null) precio = ptl[0][1];
+          v += u * precio;
+        }
+      }
+      return c > 0 ? { valor: round2(v), coste: round2(c), rentPct: (v / c - 1) * 100 } : null;
+    });
+
+    // Comparativa: una línea de rentabilidad (%) por activo, más el total
+    const comparativa = filas.map((f) => ({
+      key: f.jk, label: f.nombre, isin: f.isin,
+      puntos: meses.map((t, i) => (f.celdas[i] ? [t, f.celdas[i].rentPct] : [t, null])),
+    }));
+    comparativa.unshift({
+      key: "__total", label: "Total cartera", isin: "-", destacada: true,
+      puntos: meses.map((t, i) => (total[i] ? [t, total[i].rentPct] : [t, null])),
+    });
+
+    return { meses, filas, total, comparativa };
+  }
+
   // ── Series de evolución temporal (patrimonio neto y cartera) ──
   // Muestrea en las fechas de movimiento (como la v1): en cada fecha, el valor
   // de la cartera = Σ unidades_acumuladas(fecha) × precio(fecha), con precio del
@@ -319,5 +436,5 @@
     return { cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
 })();
