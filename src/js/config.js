@@ -29,11 +29,11 @@
   // Los fondos Bankinter Premium/Horizonte NO están aquí: se derivan de los datos
   // y se valoran con su NAV (db.nav). yf_ticker null + sin NAV ⇒ "N/D".
   const ACTIVOS = [
-    { nombre: "US Aggregate Bond USD (Acc)",     isin: "IE00BYXYYM63", categoria: "Renta fija",     tipo: "ETF",                banco: "Trade Republic", yf: "AGGG.L" },
+    { nombre: "US Aggregate Bond USD (Acc)",     isin: "IE00BYXYYM63", categoria: "Renta fija",     tipo: "ETF",                banco: "Trade Republic", yf: "IUAA.L" },
     { nombre: "Core MSCI World USD (Acc)",       isin: "IE00B4L5Y983", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "IWDA.AS" },
     { nombre: "Core S&P 500 USD (Acc)",          isin: "IE00B5BMR087", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "CSPX.AS" },
-    { nombre: "MSCI Emerging Markets USD (Acc)", isin: "IE000KCS7J59", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "EMIM.AS" },
-    { nombre: "Physical Gold USD (Acc)",         isin: "IE00B4ND3602", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "PHAU.AS" },
+    { nombre: "MSCI Emerging Markets USD (Acc)", isin: "IE000KCS7J59", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "HEMA.L" },
+    { nombre: "Physical Gold USD (Acc)",         isin: "IE00B4ND3602", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "IGLN.L" },
     { nombre: "Bitcoin",                         isin: "-",            categoria: "Renta variable", tipo: "Criptoactivo",       banco: "Trade Republic", yf: "BTC-EUR" },
     { nombre: "Apple",                           isin: "US0378331005", categoria: "Renta variable", tipo: "Acciones",           banco: "Trade Republic", yf: "AAPL" },
     { nombre: "Renta 4 Multigestión Numantia Patrimonio Global FI", isin: "ES0173311103", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "MyInvestor", yf: "0P000168OI.F" },

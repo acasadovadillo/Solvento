@@ -17,9 +17,9 @@ import urllib.request
 from datetime import datetime, timezone
 
 # yf_ticker → moneda de cotización (el resto cotiza en EUR)
-YF_TICKERS = ["AGGG.L", "IWDA.AS", "CSPX.AS", "EMIM.AS", "PHAU.AS",
+YF_TICKERS = ["IUAA.L", "IWDA.AS", "CSPX.AS", "HEMA.L", "IGLN.L",
               "BTC-EUR", "AAPL", "0P000168OI.F", "SSAC.AS"]
-MONEDA = {"AGGG.L": "USD", "AAPL": "USD"}  # AGGG.L cotiza en USD pese al sufijo .L
+MONEDA = {"IUAA.L": "USD", "AAPL": "USD"}  # AGGG.L cotiza en USD pese al sufijo .L
 
 
 def _get(url):
