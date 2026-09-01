@@ -37,9 +37,12 @@
   // la v1). Se ignora en el cálculo de caja porque ahora el efecto en efectivo
   // lo aporta la propia operación de inversión (Compra/Venta). Las filas se
   // conservan en el histórico, no se borran.
+  // Solo los GASTOS "Inversiones" son el doble apunte de la v1 (una compra ya
+  // resta vía su operación). Los INGRESOS no se excluyen: aunque alguno esté
+  // etiquetado así (p.ej. el interés de la cuenta remunerada), es dinero real
+  // que entra en la cuenta.
   const esMovInversion = (m) =>
-    String(m.tipo_gasto || "").trim().toLowerCase() === "inversiones" ||
-    String(m.tipo_ingreso || "").trim().toLowerCase() === "inversiones";
+    String(m.tipo_gasto || "").trim().toLowerCase() === "inversiones";
 
   // ── Saldos por cuenta (solo las cuentas configuradas cuentan al patrimonio) ──
   // Fase 6: una Compra resta del efectivo de su cuenta, una Venta suma, y un
