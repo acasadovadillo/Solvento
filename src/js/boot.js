@@ -111,7 +111,7 @@
     setError("imp-error", "Cargando y cifrando…", "#9ca3af");
     try {
       const res = await fetch("data.json?" + Date.now());
-      if (!res.ok) throw new Error("no se encontró data.json (ejecuta tools/csv_to_json.py)");
+      if (!res.ok) throw new Error("no hay datos en este sitio. Configúralo desde tu equipo (localhost) con tu contraseña y pulsa 🔄 → Guardar en GitHub.");
       const doc = await res.json();
       const blob = await C.encryptDoc(doc, p1);
       DB.storeBlob(blob);
