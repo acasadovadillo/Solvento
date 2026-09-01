@@ -222,8 +222,9 @@
     </div></div>`;
   }
 
-  function operacionesList() {
-    const inv = (CURRENT_DOC && CURRENT_DOC.inversiones) || [];
+  function operacionesList(banco) {
+    let inv = (CURRENT_DOC && CURRENT_DOC.inversiones) || [];
+    if (banco) inv = inv.filter((r) => String(r.cuenta || "").trim() === banco);
     const MC = { Compra: GREEN, Venta: RED, Traspaso: "#3b82f6" };
     const rows = inv.slice().sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha)).slice(0, 40).map((r) => {
       const mov = r.tipo_movimiento || "Compra";
@@ -258,13 +259,13 @@
       propBar(m) +
       `<div class="v2-hub-grid">
         ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldos.length + " cuentas")}
-        ${hubCard("Cartera", fmtEur(m.inv.total), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct))}
+        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct))}
         ${hubCard("Inmuebles", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + " inmuebles")}
       </div>` +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio") +
       donutPanel("Distribución del patrimonio",
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
-         { label: "Cartera", value: m.inv.total, accent: "#10b981" },
+         { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
          { label: "Inmuebles", value: m.inm.total, accent: "#a16207" }],
         fmtEur(m.patrimonioNeto), "Neto", m.patrimonioNeto);
   }
@@ -287,33 +288,111 @@
     </div></div>`;
   }
 
-  function pageCartera(m, prices) {
-    const inv = m.inv;
-    const heroSub = `${fmtEur(inv.total)}`;
-    const heroCard = `<div class="v2-wrap"><div class="hero-card">
-      <div class="hero-main"><span class="hero-item-label">Valor actual</span><span class="hero-value">${fmtEur(inv.total)}</span></div>
+  // ── Cartera: sub-navegación por bróker (Agregado / TR / MyInvestor / Bankinter) ──
+  let CARTERA_TAB = "agregado";
+  let CARTERA_CTX = null;   // {m, prices} para re-renderizar al cambiar de pestaña
+
+  function subNavCartera() {
+    const tabs = [{ id: "agregado", label: "Agregado" }]
+      .concat(CFG.BROKERS.map((b) => ({ id: b.cuenta, label: b.cuenta })));
+    return `<div class="v2-wrap" style="margin-top:0.5rem;"><div style="display:flex;gap:0.25rem;border-bottom:1px solid #2a2d3a;overflow-x:auto;">` +
+      tabs.map((t) => {
+        const on = CARTERA_TAB === t.id;
+        const idJs = String(t.id).replace(/'/g, "\\'");
+        return `<button onclick="v2CarteraTab('${idJs}')" style="background:none;border:none;border-bottom:2px solid ${on ? "#fff" : "transparent"};color:${on ? "#fff" : "#6b7280"};font-weight:${on ? 700 : 500};font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;font-family:inherit;white-space:nowrap;margin-bottom:-1px;">${esc(t.label)}</button>`;
+      }).join("") + `</div></div>`;
+  }
+
+  // Efectivo de un bróker: el saldo de su cuenta, o 0 fijo (Bankinter, cuenta figurativa)
+  function efectivoBroker(m, cuenta) {
+    const cfg = CFG.BROKERS.find((b) => b.cuenta === cuenta);
+    if (!cfg) return { valor: 0, etiqueta: "Efectivo" };
+    if (cfg.efectivo === "cero") return { valor: 0, etiqueta: cfg.etiquetaEfectivo || "Cuenta Broker", fijo: true };
+    const s = (m.saldos || []).find((x) => x.cuenta === cuenta);
+    return { valor: s ? s.saldo : 0, etiqueta: cfg.etiquetaEfectivo || "Efectivo sin invertir" };
+  }
+
+  function tarjetaEfectivo(m, cuenta) {
+    const cta = CFG.CUENTAS.find((c) => c.cuenta === cuenta) || {};
+    const ef = efectivoBroker(m, cuenta);
+    const icon = cta.logo ? `<img src="${cta.logo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:4px;">` : `<span style="font-size:1.05rem;">${cta.emoji || ""}</span>`;
+    return `<div class="dashboard-panel" style="border-left:3px solid ${cta.accent || "#6b7280"};">
+      <div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.6rem;">${icon}
+        <span style="font-size:0.72rem;color:${cta.accent || "#9ca3af"};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">${esc(cuenta)}</span></div>
+      <div style="font-size:1.4rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">${fmtEur(ef.valor)}</div>
+      <div style="font-size:0.76rem;color:#6b7280;margin-top:0.25rem;">${esc(ef.etiqueta)}${ef.fijo ? " · sin efectivo propio" : ""}</div>
+    </div>`;
+  }
+
+  // Recalcula los pesos (%) de un subconjunto de activos sobre su propio total
+  function conPesos(assets) {
+    const total = assets.reduce((s, a) => s + (isFinite(a.importe) ? a.importe : 0), 0);
+    return assets.map((a) => Object.assign({}, a, { pct: total ? (isFinite(a.importe) ? a.importe / total * 100 : 0) : 0 }));
+  }
+
+  function heroCartera(valor, inv, subtitulo) {
+    return `<div class="v2-wrap"><div class="hero-card">
+      <div class="hero-main"><span class="hero-item-label">${esc(subtitulo || "Valor actual")}</span><span class="hero-value">${fmtEur(valor)}</span></div>
       <div class="hero-breakdown">
-        <div class="hero-item"><span class="hero-item-label">Invertido</span><span class="hero-item-value">${inv.hayRentabilidad ? fmtEur(inv.totalCoste) : "—"}</span></div>
-        <div class="hero-item"><span class="hero-item-label">Ganancia</span><span class="hero-item-value" style="color:${rc(inv.totalGanancia)};">${inv.hayRentabilidad ? (inv.totalGanancia >= 0 ? "+" : "") + fmtEur(inv.totalGanancia) : "—"}</span></div>
-        <div class="hero-item"><span class="hero-item-label">Rentabilidad</span><span class="hero-item-value" style="color:${rc(inv.rentPct)};">${inv.hayRentabilidad ? fmtPct(inv.rentPct) : "—"}${isFinite(inv.portfolioCagr) ? '<span style="display:block;font-size:0.65rem;color:#9ca3af;font-weight:500;margin-top:0.15rem;">CAGR ' + (inv.portfolioCagr >= 0 ? "+" : "") + inv.portfolioCagr.toFixed(1) + '% p.a.</span>' : ""}</span></div>
+        <div class="hero-item"><span class="hero-item-label">Invertido</span><span class="hero-item-value">${inv.totalCoste ? fmtEur(inv.totalCoste) : "—"}</span></div>
+        <div class="hero-item"><span class="hero-item-label">Ganancia</span><span class="hero-item-value" style="color:${rc(inv.totalGanancia)};">${inv.totalCoste ? (inv.totalGanancia >= 0 ? "+" : "") + fmtEur(inv.totalGanancia) : "—"}</span></div>
+        <div class="hero-item"><span class="hero-item-label">Rentabilidad</span><span class="hero-item-value" style="color:${rc(inv.rentPct)};">${inv.totalCoste ? fmtPct(inv.rentPct) : "—"}${isFinite(inv.portfolioCagr) ? '<span style="display:block;font-size:0.65rem;color:#9ca3af;font-weight:500;margin-top:0.15rem;">CAGR ' + (inv.portfolioCagr >= 0 ? "+" : "") + inv.portfolioCagr.toFixed(1) + '% p.a.</span>' : ""}</span></div>
       </div></div></div>`;
-    // donut por tipo de activo
+  }
+
+  function donutTipos(assets, total) {
     const porTipo = {};
-    inv.assets.forEach((a) => { if (isFinite(a.importe)) porTipo[a.tipo] = (porTipo[a.tipo] || 0) + a.importe; });
-    const tipoItems = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES[t] || "#6b7280" })).sort((a, b) => b.value - a.value);
-    const avisoPrecios = prices ? "" : `<div class="v2-wrap"><div style="padding:0.6rem 1rem;background:#3f2d0a;border:1px solid #a16207;border-radius:10px;font-size:0.82rem;color:#fbbf24;">⏳ Cargando precios de mercado…</div></div>`;
-    return header("Cartera", heroSub.replace(fmtEur(inv.total), "")) + avisoPrecios + heroCard +
-      chartPanel("Evolución de la cartera", "v2-chart-cartera") +
-      asignacionPanel(inv) +
-      donutPanel("Distribución por activos", tipoItems, fmtEur(inv.total), "Activos", inv.total) +
-      treemapPanel(inv.assets) +
-      tablaCartera(inv) +
-      operacionesList();
+    assets.forEach((a) => { if (isFinite(a.importe)) porTipo[a.tipo] = (porTipo[a.tipo] || 0) + a.importe; });
+    const items = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES[t] || "#6b7280" })).sort((a, b) => b.value - a.value);
+    return items.length ? donutPanel("Distribución por activos", items, fmtEur(total), "Activos", total) : "";
+  }
+
+  // Contenido de la pestaña activa (se re-renderiza al cambiar de bróker)
+  function carteraInner(m, prices) {
+    const inv = m.inv;
+    const aviso = prices ? "" : `<div class="v2-wrap"><div style="padding:0.6rem 1rem;background:#3f2d0a;border:1px solid #a16207;border-radius:10px;font-size:0.82rem;color:#fbbf24;">⏳ Cargando precios de mercado…</div></div>`;
+
+    if (CARTERA_TAB === "agregado") {
+      const tarjetas = `<div class="v2-wrap"><div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1rem;">Cuentas de bróker</div>
+        <div class="v2-hub-grid">${CFG.BROKERS.map((b) => tarjetaEfectivo(m, b.cuenta)).join("")}</div></div>`;
+      return aviso + heroCartera(m.carteraTotal, inv, "Valor total (posiciones + efectivo)") + tarjetas +
+        chartPanel("Evolución de la cartera", "v2-chart-cartera") +
+        asignacionPanel(inv) +
+        donutTipos(inv.assets, inv.total) +
+        treemapPanel(inv.assets) +
+        tablaCartera(inv) +
+        operacionesList();
+    }
+
+    // Vista de un bróker concreto
+    const banco = CARTERA_TAB;
+    const assets = conPesos(inv.assets.filter((a) => a.banco === banco));
+    const posiciones = assets.reduce((s, a) => s + (isFinite(a.importe) ? a.importe : 0), 0);
+    const ef = efectivoBroker(m, banco);
+    const coste = assets.reduce((s, a) => s + (isFinite(a.coste) ? a.coste : 0), 0);
+    const ganancia = posiciones - coste;
+    const invBanco = {
+      assets, total: posiciones, totalCoste: coste, totalGanancia: coste > 0 ? ganancia : 0,
+      rentPct: coste > 0 ? (posiciones / coste - 1) * 100 : NaN, portfolioCagr: NaN, hayRentabilidad: coste > 0,
+    };
+    const sinDatos = !assets.length
+      ? `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:2.5rem;">Sin posiciones en ${esc(banco)}</div></div>` : "";
+    return aviso + heroCartera(posiciones + ef.valor, invBanco, "Valor en " + banco) +
+      `<div class="v2-wrap"><div class="v2-hub-grid">${tarjetaEfectivo(m, banco)}</div></div>` +
+      sinDatos + donutTipos(assets, posiciones) + treemapPanel(assets) +
+      tablaCartera(invBanco) + operacionesList(banco);
+  }
+
+  function pageCartera(m, prices) {
+    CARTERA_CTX = { m, prices };
+    return header("Cartera", fmtEur(m.carteraTotal)) + subNavCartera() +
+      `<div id="v2-cartera-inner">${carteraInner(m, prices)}</div>`;
   }
 
   function pageCaja(m) {
-    const items = m.saldos.filter((s) => s.saldo !== 0).map((s) => ({ label: s.cuenta, value: s.saldo, accent: s.accent }));
-    const rows = m.saldos.map((s) => {
+    const cuentas = m.saldosCaja || m.saldos;
+    const items = cuentas.filter((s) => s.saldo !== 0).map((s) => ({ label: s.cuenta, value: s.saldo, accent: s.accent }));
+    const rows = cuentas.map((s) => {
       const icon = s.logo ? `<img src="${s.logo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:4px;">` : `<span style="font-size:1.1rem;">${s.emoji || ""}</span>`;
       const cuentaJs = String(s.cuenta).replace(/'/g, "\\'");
       return `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<span style="color:#fff;font-weight:600;">${esc(s.cuenta)}</span></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
@@ -436,6 +515,23 @@
   window.v2AddInm = () => F() && F().openInmueble();
   window.v2AddNav = () => F() && F().openNav();
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
+  window.v2CarteraTab = (id) => {
+    CARTERA_TAB = id;
+    const pg = document.getElementById("v2-page-cartera");
+    if (!pg || !CARTERA_CTX) return;
+    pg.innerHTML = pageCartera(CARTERA_CTX.m, CARTERA_CTX.prices);
+    afterCarteraRender();
+  };
+
+  // Tras pintar la Cartera: montar la gráfica (solo en Agregado) y el treemap
+  function afterCarteraRender() {
+    bindTreemapHover();
+    layoutTreemaps();
+    const cc = document.getElementById("v2-chart-cartera");
+    if (cc && window.__SERIES && window.SolventoCharts) {
+      window.SolventoCharts.mount(cc, window.__SERIES.cartera, { color: "#8b5cf6", id: "cart" });
+    }
+  }
   window.v2EditMov = (id) => F() && F().editMovimiento(id);
   window.v2EditInv = (id) => F() && F().editInversion(id);
   window.v2EditInm = (id) => F() && F().editInmueble(id);

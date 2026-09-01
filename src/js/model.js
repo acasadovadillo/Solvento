@@ -74,11 +74,22 @@
       const cuenta = String(r.cuenta || "").trim();
       if (isFinite(coste) && isC(cuenta)) bal[cuenta] -= coste; // Compra(+coste)→resta, Venta(−coste)→suma
     }
-    const saldos = CFG.CUENTAS.map((c) => ({ cuenta: c.cuenta, accent: c.accent, logo: c.logo, emoji: c.emoji, saldo: round2(bal[c.cuenta]) }));
-    const patrimonioLiquido = round2(saldos.reduce((s, x) => s + x.saldo, 0));
-    saldos.forEach((s) => (s.pct = patrimonioLiquido ? s.saldo / patrimonioLiquido * 100 : 0));
+    const saldos = CFG.CUENTAS.map((c) => ({
+      cuenta: c.cuenta, accent: c.accent, logo: c.logo, emoji: c.emoji,
+      broker: !!c.broker, saldo: round2(bal[c.cuenta]),
+    }));
+    // Caja = solo cuentas NO bróker. El efectivo de los brókers (remunerado)
+    // forma parte de la Cartera, no de la Caja.
+    const saldosCaja = saldos.filter((s) => !s.broker);
+    const saldosBroker = saldos.filter((s) => s.broker);
+    const patrimonioLiquido = round2(saldosCaja.reduce((s, x) => s + x.saldo, 0));
+    const efectivoBroker = round2(saldosBroker.reduce((s, x) => s + x.saldo, 0));
+    saldosCaja.forEach((s) => (s.pct = patrimonioLiquido ? s.saldo / patrimonioLiquido * 100 : 0));
+    saldosBroker.forEach((s) => (s.pct = efectivoBroker ? s.saldo / efectivoBroker * 100 : 0));
     saldos.sort((a, b) => b.saldo - a.saldo);
-    return { saldos, patrimonioLiquido };
+    saldosCaja.sort((a, b) => b.saldo - a.saldo);
+    saldosBroker.sort((a, b) => b.saldo - a.saldo);
+    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker };
   }
 
   // ── Registro de activos: conocidos + derivados de los datos ──
@@ -192,14 +203,18 @@
 
   // ── Modelo completo ──
   function build(db, prices) {
-    const { saldos, patrimonioLiquido } = computeSaldos(db.movimientos, db.inversiones);
+    const { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker } =
+      computeSaldos(db.movimientos, db.inversiones);
     const inv = valuate(db, prices);
     const inm = valuateInmuebles(db.inmuebles);
-    const patrimonioNeto = round2(patrimonioLiquido + inv.total + inm.total);
-    const ratioInv = patrimonioNeto ? inv.total / patrimonioNeto * 100 : 0;
+    // La Cartera incluye el efectivo sin invertir de los brókers.
+    const carteraTotal = round2(inv.total + efectivoBroker);
+    const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total);
+    const ratioInv = patrimonioNeto ? carteraTotal / patrimonioNeto * 100 : 0;
     const ratioInm = patrimonioNeto ? inm.total / patrimonioNeto * 100 : 0;
     const pctLiquidez = 100 - ratioInv - ratioInm;
-    return { saldos, patrimonioLiquido, inv, inm, patrimonioNeto, ratioInv, ratioInm, pctLiquidez };
+    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker,
+             inv, inm, carteraTotal, patrimonioNeto, ratioInv, ratioInm, pctLiquidez };
   }
 
   // ── Series de evolución temporal (patrimonio neto y cartera) ──
