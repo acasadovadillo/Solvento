@@ -288,6 +288,56 @@
     </div></div>`;
   }
 
+  // ── Fase 9: reporte mes a mes por activo + comparativa de rentabilidad ──
+  // Cada fila un activo, cada columna un mes, con la rentabilidad ACUMULADA
+  // desde el inicio hasta el cierre de ese mes ("de principio a mes").
+  function tablaMensual(an) {
+    if (!an || !an.meses.length || !an.filas.length) return "";
+    const MAX = 14;                                   // últimos ~14 meses (cabe en pantalla)
+    const desde = Math.max(0, an.meses.length - MAX);
+    const meses = an.meses.slice(desde);
+    const cab = meses.map((t, k) => {
+      const esUlt = desde + k === an.meses.length - 1;
+      const lbl = new Date(t).toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
+      return `<th style="text-align:right;white-space:nowrap;${esUlt ? "color:#fff;" : ""}">${esc(esUlt ? "Hoy" : lbl)}</th>`;
+    }).join("");
+
+    const celda = (c) => {
+      if (!c) return `<td style="text-align:right;color:#374151;">—</td>`;
+      const col = c.rentPct >= 0 ? GREEN : RED;
+      return `<td style="text-align:right;color:${col};font-weight:600;white-space:nowrap;" title="Valor ${fmtEur(c.valor)} · Invertido ${fmtEur(c.coste)}">${fmtPct(c.rentPct)}</td>`;
+    };
+
+    const filas = an.filas.map((f) => {
+      const cs = f.celdas.slice(desde);
+      return `<tr class="table-row"><td style="text-align:left;position:sticky;left:0;background:#12141d;z-index:1;">
+        <div style="display:flex;align-items:center;gap:0.5rem;min-width:200px;">${logoImg(f.nombre, f.isin, 20)}
+          <span style="color:#e5e7eb;font-weight:600;font-size:0.82rem;">${esc(f.nombre.length > 32 ? f.nombre.slice(0, 31) + "…" : f.nombre)}</span></div></td>
+        ${cs.map(celda).join("")}</tr>`;
+    }).join("");
+
+    const tot = an.total.slice(desde);
+    const filaTotal = `<tr style="border-top:2px solid #2a2d3a;"><td style="text-align:left;position:sticky;left:0;background:#12141d;z-index:1;">
+      <span style="color:#fff;font-weight:800;font-size:0.82rem;">Total cartera</span></td>
+      ${tot.map((c) => (c ? `<td style="text-align:right;color:${c.rentPct >= 0 ? GREEN : RED};font-weight:800;white-space:nowrap;" title="Valor ${fmtEur(c.valor)} · Invertido ${fmtEur(c.coste)}">${fmtPct(c.rentPct)}</td>` : `<td style="text-align:right;color:#374151;">—</td>`)).join("")}</tr>`;
+
+    return `<div class="v2-wrap"><div class="dashboard-panel">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.35rem;">Reporte mensual por activo</div>
+      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem;">Rentabilidad acumulada desde el inicio hasta el cierre de cada mes. Pasa el cursor por una celda para ver valor e invertido.</div>
+      <div style="overflow-x:auto;"><table class="minimal-table" style="min-width:100%;">
+        <thead><tr><th style="text-align:left;position:sticky;left:0;background:#12141d;z-index:2;">Activo</th>${cab}</tr></thead>
+        <tbody>${filas}${filaTotal}</tbody></table></div>
+    </div></div>`;
+  }
+
+  function comparativaPanel() {
+    return `<div class="v2-wrap"><div class="dashboard-panel">
+      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.35rem;">Comparativa de rentabilidad</div>
+      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem;">Rentabilidad acumulada de cada activo a lo largo del tiempo.</div>
+      <div id="v2-chart-comparativa"></div>
+    </div></div>`;
+  }
+
   // ── Cartera: sub-navegación por bróker (Agregado / TR / MyInvestor / Bankinter) ──
   let CARTERA_TAB = "agregado";
   let CARTERA_CTX = null;   // {m, prices} para re-renderizar al cambiar de pestaña
@@ -361,6 +411,8 @@
         donutTipos(inv.assets, inv.total) +
         treemapPanel(inv.assets) +
         tablaCartera(inv) +
+        comparativaPanel() +
+        tablaMensual(window.__ANALITICA) +
         operacionesList();
     }
 
@@ -488,6 +540,8 @@
     CURRENT_DOC = doc;
     const m = window.SolventoModel.build(doc, prices);
     window.__MODEL = m;
+    try { window.__ANALITICA = window.SolventoModel.buildAnalitica(doc, prices); }
+    catch (e) { window.__ANALITICA = null; }
     document.getElementById("v2-page-patrimonio").innerHTML = pagePatrimonio(m);
     document.getElementById("v2-page-caja").innerHTML = pageCaja(m);
     document.getElementById("v2-page-cartera").innerHTML = pageCartera(m, prices);
@@ -502,6 +556,7 @@
       if (cp) window.SolventoCharts.mount(cp, series.patrimonio, { color: "#10b981", id: "patr" });
       const cc = document.getElementById("v2-chart-cartera");
       if (cc) window.SolventoCharts.mount(cc, series.cartera, { color: "#8b5cf6", id: "cart" });
+      montarComparativa();
     }
     // ajustar treemap si la pestaña Cartera está activa; y en cualquier resize
     if (document.getElementById("v2-page-cartera").classList.contains("active")) layoutTreemaps();
@@ -530,6 +585,15 @@
     const cc = document.getElementById("v2-chart-cartera");
     if (cc && window.__SERIES && window.SolventoCharts) {
       window.SolventoCharts.mount(cc, window.__SERIES.cartera, { color: "#8b5cf6", id: "cart" });
+    }
+    montarComparativa();
+  }
+
+  function montarComparativa() {
+    const el = document.getElementById("v2-chart-comparativa");
+    const an = window.__ANALITICA;
+    if (el && an && an.comparativa && window.SolventoCharts && window.SolventoCharts.mountMulti) {
+      window.SolventoCharts.mountMulti(el, an.comparativa, { meses: an.meses });
     }
   }
   window.v2EditMov = (id) => F() && F().editMovimiento(id);

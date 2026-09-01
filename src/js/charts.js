@@ -161,14 +161,20 @@
     function hideHover() { vline.style.display = "none"; dot.style.display = "none"; tip.style.display = "none"; }
     function pxFrom(ev, el) {
       const rect = el.getBoundingClientRect();
+      if (!rect.width) return null;          // aún sin layout: evita dividir por 0
       return (ev.clientX - rect.left) / rect.width * PLOT.W;
     }
-    const idxFromPx = (px) => Math.max(0, Math.min(view.length - 1,
-      Math.round((px - PLOT.x0) / (PLOT.x1 - PLOT.x0) * (view.length - 1))));
+    const idxFromPx = (px) => {
+      if (px == null || !isFinite(px)) return 0;
+      const i = Math.round((px - PLOT.x0) / (PLOT.x1 - PLOT.x0) * (view.length - 1));
+      return isFinite(i) ? Math.max(0, Math.min(view.length - 1, i)) : 0;
+    };
 
     function onMove(ev) {
       if (drag) return;                      // durante la selección no hay hover
-      const i = idxFromPx(pxFrom(ev, svg));
+      const px = pxFrom(ev, svg);
+      if (px == null) return;
+      const i = idxFromPx(px);
       const cx = xAt(i), cy = yAt(view[i][1]);
       vline.setAttribute("x1", cx); vline.setAttribute("x2", cx); vline.style.display = "";
       dot.style.display = "block"; dot.style.left = pctOf(cx) + "%"; dot.style.top = (cy / PLOT.H * 100) + "%";
@@ -192,12 +198,14 @@
 
     function empezar(ev, el) {
       if (ev.button != null && ev.button !== 0) return;
-      drag = { a: pxFrom(ev, el), b: pxFrom(ev, el), el };
+      const px = pxFrom(ev, el);
+      if (px == null) return;
+      drag = { a: px, b: px, el };
       hideHover(); pintarSel();
       try { el.setPointerCapture(ev.pointerId); } catch (e) {}
       ev.preventDefault();
     }
-    function mover(ev) { if (!drag) return; drag.b = pxFrom(ev, drag.el); pintarSel(); }
+    function mover(ev) { if (!drag) return; const px = pxFrom(ev, drag.el); if (px == null) return; drag.b = px; pintarSel(); }
     function soltar() {
       if (!drag) return;
       const a = Math.min(drag.a, drag.b), b = Math.max(drag.a, drag.b);
@@ -221,4 +229,148 @@
   }
 
   window.SolventoCharts = { mount };
+})();
+
+/*
+ * Solvento v2 — Comparativa multi-línea de rentabilidad.
+ * SolventoCharts.mountMulti(container, series, {meses}) donde
+ * series = [{key, label, puntos: [[t, pct|null]], destacada}].
+ * Una línea por activo, con leyenda clicable para mostrar/ocultar cada uno.
+ */
+(function () {
+  "use strict";
+  const CFG = window.SolventoConfig;
+  const fmtPct = (x) => (isFinite(x) ? (x >= 0 ? "+" : "") + x.toFixed(2).replace(".", ",") + "%" : "—");
+  const fmtMes = (t) => new Date(t).toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
+  const fmtDia = (t) => new Date(t).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+  const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const P = { x0: 10, x1: 940, y0: 16, y1: 264, W: 1000, H: 300 };
+
+  function mountMulti(container, series, opts) {
+    opts = opts || {};
+    series = (series || []).filter((s) => s.puntos && s.puntos.length);
+    if (!series.length) {
+      container.innerHTML = '<div style="color:#6b7280;padding:2rem;text-align:center;font-size:0.85rem;">Sin datos suficientes para comparar</div>';
+      return;
+    }
+    const pal = CFG.SERIE_COLORES;
+    series.forEach((s, i) => { s.color = s.destacada ? "#ffffff" : pal[i % pal.length]; });
+    const n = series[0].puntos.length;
+    const hidden = new Set();
+
+    container.innerHTML =
+      `<div class="cm-plot" style="position:relative;width:100%;">
+         <svg viewBox="0 0 ${P.W} ${P.H}" width="100%" height="260" preserveAspectRatio="none" style="overflow:visible;display:block;cursor:crosshair;">
+           <g class="cm-grid"></g>
+           <g class="cm-lines"></g>
+           <line class="cm-vline" x1="0" y1="${P.y0}" x2="0" y2="${P.y1}" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+           <rect class="cm-hit" x="0" y="0" width="${P.W}" height="${P.H}" fill="transparent"/>
+         </svg>
+         <div class="cm-tip" style="position:absolute;background:#000;color:#fff;font-size:0.72rem;padding:0.45rem 0.6rem;border-radius:8px;border:1px solid #2a2d3a;pointer-events:none;white-space:nowrap;display:none;z-index:6;line-height:1.5;"></div>
+       </div>
+       <div class="cm-x" style="display:flex;justify-content:space-between;margin-top:0.4rem;font-size:0.72rem;color:#4b5563;font-weight:500;"></div>
+       <div class="cm-leg" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:1rem;"></div>
+       <div style="font-size:0.68rem;color:#374151;margin-top:0.5rem;">Haz clic en la leyenda para mostrar u ocultar cada activo</div>`;
+
+    const svg = container.querySelector("svg");
+    const gridEl = container.querySelector(".cm-grid");
+    const linesEl = container.querySelector(".cm-lines");
+    const vline = container.querySelector(".cm-vline");
+    const tip = container.querySelector(".cm-tip");
+    const legEl = container.querySelector(".cm-leg");
+    const xEl = container.querySelector(".cm-x");
+
+    const xAt = (i) => P.x0 + (n <= 1 ? 0 : i / (n - 1) * (P.x1 - P.x0));
+    let vmin = -1, vmax = 1;
+    const yAt = (v) => P.y1 - (vmax === vmin ? 0.5 : (v - vmin) / (vmax - vmin)) * (P.y1 - P.y0);
+
+    function visibles() { return series.filter((s) => !hidden.has(s.key)); }
+
+    function draw() {
+      const vis = visibles();
+      const vals = [];
+      vis.forEach((s) => s.puntos.forEach((p) => { if (p[1] != null && isFinite(p[1])) vals.push(p[1]); }));
+      if (!vals.length) { vmin = -1; vmax = 1; } else {
+        vmin = Math.min(...vals); vmax = Math.max(...vals);
+        const pad = (vmax - vmin) * 0.08 || 1;
+        vmin -= pad; vmax += pad;
+      }
+      // rejilla + eje Y en %
+      let g = "";
+      for (let k = 0; k < 5; k++) {
+        const f = k / 4, yy = P.y1 - f * (P.y1 - P.y0), vv = vmin + f * (vmax - vmin);
+        g += `<line x1="${P.x0}" y1="${yy.toFixed(1)}" x2="${P.x1}" y2="${yy.toFixed(1)}" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="3 3"/>`;
+        g += `<text x="${P.x1 + 6}" y="${(yy + 4).toFixed(1)}" font-size="10" fill="#6b7280">${vv.toFixed(0)}%</text>`;
+      }
+      // línea del 0% (referencia: ni ganas ni pierdes)
+      if (vmin < 0 && vmax > 0) {
+        const y0 = yAt(0);
+        g += `<line x1="${P.x0}" y1="${y0.toFixed(1)}" x2="${P.x1}" y2="${y0.toFixed(1)}" stroke="#6b7280" stroke-width="1"/>`;
+      }
+      gridEl.innerHTML = g;
+      // líneas (se cortan donde no hay posición)
+      linesEl.innerHTML = vis.map((s) => {
+        let d = "", abierto = false;
+        s.puntos.forEach((p, i) => {
+          if (p[1] == null || !isFinite(p[1])) { abierto = false; return; }
+          d += (abierto ? " L " : " M ") + xAt(i).toFixed(2) + " " + yAt(p[1]).toFixed(2);
+          abierto = true;
+        });
+        if (!d) return "";
+        return `<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="${s.destacada ? 3 : 1.8}"
+          stroke-linecap="round" stroke-linejoin="round" opacity="${s.destacada ? 1 : 0.9}"/>`;
+      }).join("");
+      // leyenda
+      legEl.innerHTML = series.map((s) => {
+        const off = hidden.has(s.key);
+        return `<button data-k="${esc(s.key)}" style="display:inline-flex;align-items:center;gap:0.4rem;background:${off ? "transparent" : "#1e2130"};
+          border:1px solid ${off ? "#2a2d3a" : "#3a3d4a"};border-radius:999px;padding:0.28rem 0.7rem;cursor:pointer;font-family:inherit;
+          font-size:0.74rem;font-weight:600;color:${off ? "#4b5563" : "#e5e7eb"};${off ? "text-decoration:line-through;" : ""}">
+          <span style="width:9px;height:9px;border-radius:50%;background:${s.color};flex-shrink:0;opacity:${off ? 0.35 : 1};"></span>${esc(s.label)}</button>`;
+      }).join("");
+      legEl.querySelectorAll("button").forEach((b) => {
+        b.addEventListener("click", () => {
+          const k = b.dataset.k;
+          if (hidden.has(k)) hidden.delete(k); else hidden.add(k);
+          ocultarTip(); draw();
+        });
+      });
+      const ms = opts.meses || [];
+      if (ms.length) xEl.innerHTML = `<span>${fmtMes(ms[0])}</span><span>${fmtMes(ms[ms.length - 1])}</span>`;
+    }
+
+    function ocultarTip() { vline.style.display = "none"; tip.style.display = "none"; }
+    svg.addEventListener("mousemove", (ev) => {
+      const vis = visibles();
+      if (!vis.length) return;
+      const rect = svg.getBoundingClientRect();
+      if (!rect.width) return;               // aún sin layout: evita dividir por 0
+      const px = (ev.clientX - rect.left) / rect.width * P.W;
+      let i = Math.round((px - P.x0) / (P.x1 - P.x0) * (n - 1));
+      i = isFinite(i) ? Math.max(0, Math.min(n - 1, i)) : 0;
+      const cx = xAt(i);
+      vline.setAttribute("x1", cx); vline.setAttribute("x2", cx); vline.style.display = "";
+      const ms = opts.meses || [];
+      const filas = vis
+        .map((s) => ({ s, v: s.puntos[i] ? s.puntos[i][1] : null }))
+        .filter((x) => x.v != null && isFinite(x.v))
+        .sort((a, b) => b.v - a.v)
+        .slice(0, 10)
+        .map((x) => `<div style="display:flex;gap:0.5rem;justify-content:space-between;">
+            <span style="color:${x.s.color};">■</span>
+            <span style="flex:1;">${esc(x.s.label.length > 26 ? x.s.label.slice(0, 25) + "…" : x.s.label)}</span>
+            <b style="color:${x.v >= 0 ? "#10b981" : "#ef4444"};">${fmtPct(x.v)}</b></div>`).join("");
+      tip.innerHTML = `<div style="color:#9ca3af;margin-bottom:0.3rem;">${ms[i] ? fmtDia(ms[i]) : ""}</div>${filas || '<div style="color:#6b7280;">sin datos</div>'}`;
+      tip.style.display = "block";
+      const p = Math.max(4, Math.min(96, cx / P.W * 100));
+      tip.style.left = p + "%";
+      tip.style.top = "0px";
+      tip.style.transform = `translate(${p > 55 ? "-100%" : "0"},0)`;
+    });
+    svg.addEventListener("mouseleave", ocultarTip);
+
+    draw();
+  }
+
+  window.SolventoCharts.mountMulti = mountMulti;
 })();
