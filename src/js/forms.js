@@ -70,8 +70,11 @@
   // ── Movimiento ──
   function openMovimiento(existing) {
     const doc = DB.state.doc, e = existing || {};
-    const catGasto = uniq((doc.movimientos || []).map((m) => m.tipo_gasto));
-    const catIngreso = uniq((doc.movimientos || []).map((m) => m.tipo_ingreso));
+    // "Inversiones" ya no es una categoría de movimiento (las compras se
+    // registran como operaciones, que mueven el efectivo solas).
+    const noInv = (arr) => arr.filter((c) => String(c).trim().toLowerCase() !== "inversiones");
+    const catGasto = noInv(uniq((doc.movimientos || []).map((m) => m.tipo_gasto)));
+    const catIngreso = noInv(uniq((doc.movimientos || []).map((m) => m.tipo_ingreso)));
     const body =
       field("m-fecha", "Fecha", input("m-fecha", "date", toISO(e.fecha || hoyES()))) +
       field("m-tipo", "Tipo", select("m-tipo", ["Gasto", "Ingreso", "Traspaso", "Préstamo"], e.tipo || "Gasto")) +
