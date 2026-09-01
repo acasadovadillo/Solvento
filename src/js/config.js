@@ -6,12 +6,23 @@
 (function () {
   "use strict";
 
+  // broker:true → su efectivo es de la cuenta de bróker (remunerada) y se muestra
+  // en la página Cartera, no en Caja.
   const CUENTAS = [
     { cuenta: "Bankinter",      accent: "#FF6200", logo: "img/account-logo-bankinter.png" },
     { cuenta: "Santander",      accent: "#ec0000", logo: "img/account-logo-santander.png" },
-    { cuenta: "Trade Republic", accent: "#ffffff", logo: "img/account-logo-trade-republic.png" },
-    { cuenta: "MyInvestor",     accent: "#e12363", logo: "img/account-logo-myinvestor.png" },
+    { cuenta: "Trade Republic", accent: "#ffffff", logo: "img/account-logo-trade-republic.png", broker: true },
+    { cuenta: "MyInvestor",     accent: "#e12363", logo: "img/account-logo-myinvestor.png", broker: true },
     { cuenta: "Efectivo",       accent: "#2d9e5f", logo: null, emoji: "💵" },
+  ];
+
+  // Brókers de la página Cartera (sub-navegación). Bankinter tiene una
+  // "Cuenta Broker" figurativa: siempre 0 €, solo agrupa sus fondos — el dinero
+  // de sus compras sale de la cuenta corriente de Bankinter (que vive en Caja).
+  const BROKERS = [
+    { cuenta: "Trade Republic", efectivo: "cuenta" },
+    { cuenta: "MyInvestor",     efectivo: "cuenta" },
+    { cuenta: "Bankinter",      efectivo: "cero", etiquetaEfectivo: "Cuenta Broker" },
   ];
 
   // Activos conocidos (con ticker de Yahoo, o yf_ticker null si se valoran por NAV).
@@ -68,7 +79,7 @@
   const SYNC = { owner: "acasadovadillo", repo: "Solvento", branch: "main", path: "data.enc" };
 
   window.SolventoConfig = {
-    CUENTAS, ACTIVOS, OBJETIVO_ASIGNACION,
+    CUENTAS, BROKERS, ACTIVOS, OBJETIVO_ASIGNACION,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, INMUEBLE_ACCENT_DEFAULT,
     assetLogo, SYNC,
   };
