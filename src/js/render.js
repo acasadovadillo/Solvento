@@ -315,11 +315,14 @@
     const items = m.saldos.filter((s) => s.saldo !== 0).map((s) => ({ label: s.cuenta, value: s.saldo, accent: s.accent }));
     const rows = m.saldos.map((s) => {
       const icon = s.logo ? `<img src="${s.logo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:4px;">` : `<span style="font-size:1.1rem;">${s.emoji || ""}</span>`;
-      return `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<span style="color:#fff;font-weight:600;">${esc(s.cuenta)}</span></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td></tr>`;
+      const cuentaJs = String(s.cuenta).replace(/'/g, "\\'");
+      return `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<span style="color:#fff;font-weight:600;">${esc(s.cuenta)}</span></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
       donutPanel("Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", m.patrimonioLiquido) +
-      `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th style="text-align:right;">Peso</th></tr></thead><tbody>${rows}</tbody></table></div></div>` +
+      `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+        <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
+      </div></div>` +
       movimientosList();
   }
 
@@ -432,6 +435,7 @@
   window.v2AddInv = () => F() && F().openInversion();
   window.v2AddInm = () => F() && F().openInmueble();
   window.v2AddNav = () => F() && F().openNav();
+  window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
   window.v2EditMov = (id) => F() && F().editMovimiento(id);
   window.v2EditInv = (id) => F() && F().editInversion(id);
   window.v2EditInm = (id) => F() && F().editInmueble(id);

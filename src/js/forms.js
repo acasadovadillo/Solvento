@@ -163,6 +163,37 @@
     });
   }
 
+  // ── Cuadrar saldo de una cuenta con el banco ──
+  // Crea el movimiento de ajuste exacto (Ingreso/Gasto de ajuste) para que el
+  // saldo de Solvento coincida con el real. Útil cuando hay huecos en el
+  // histórico o desfases acumulados.
+  function openCuadrar(cuenta, saldoActual) {
+    const doc = DB.state.doc;
+    const body =
+      `<div style="font-size:0.85rem;color:#9ca3af;margin:0.5rem 0 0.25rem;">Saldo según Solvento: <b style="color:#fff;">${saldoActual.toFixed(2).replace(".", ",")} €</b></div>` +
+      field("c-real", "Saldo real en el banco (€)", input("c-real", "number", "", 'step="0.01"')) +
+      field("c-fecha", "Fecha del ajuste", input("c-fecha", "date", toISO(hoyES()))) +
+      field("c-detalle", "Detalle", input("c-detalle", "text", "Ajuste de saldo"));
+    shell("Cuadrar " + cuenta, body, () => {
+      const real = parseFloat(G("c-real"));
+      if (!isFinite(real)) return "Introduce el saldo real de la cuenta";
+      const diff = Math.round((real - saldoActual) * 100) / 100;
+      if (Math.abs(diff) < 0.01) return "El saldo ya coincide: no hace falta ajuste";
+      const tipo = diff > 0 ? "Ingreso" : "Gasto";
+      doc.movimientos.push({
+        id: newId("m"), marca_temporal: new Date().toLocaleString("es-ES"),
+        fecha: fromISO(G("c-fecha")) || hoyES(), tipo, importe: String(Math.abs(diff)),
+        cuenta_origen: tipo === "Gasto" ? cuenta : "",
+        cuenta_destino: tipo === "Ingreso" ? cuenta : "",
+        tipo_ingreso: tipo === "Ingreso" ? "Ingreso de ajuste" : "",
+        tipo_gasto: tipo === "Gasto" ? "Gasto de ajuste" : "",
+        tipo_prestamo: "", persona_prestamo: "",
+        detalle: G("c-detalle") || "Ajuste de saldo",
+      });
+      return null;
+    });
+  }
+
   // ── Inmueble ──
   function openInmueble(existing) {
     const doc = DB.state.doc, e = existing || {};
@@ -220,7 +251,7 @@
   const findById = (coll, id) => (DB.state.doc[coll] || []).find((x) => x.id === id);
 
   window.SolventoForms = {
-    openMovimiento, openInversion, openInmueble, openNav,
+    openMovimiento, openInversion, openInmueble, openNav, openCuadrar,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editInmueble: (id) => openInmueble(findById("inmuebles", id)),
