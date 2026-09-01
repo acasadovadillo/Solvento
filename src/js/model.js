@@ -160,7 +160,7 @@
       const ganancia = (isFinite(importe) && isFinite(coste)) ? round2(importe - coste) : NaN;
       const rentPct = (coste > 0 && isFinite(importe)) ? (importe / coste - 1) * 100 : NaN;
       const accent = CFG.TIPO_COLORES_INMUEBLE[r.tipo] || CFG.INMUEBLE_ACCENT_DEFAULT;
-      return { nombre: r.direccion, tipo: r.tipo, importe, coste, fechaCompra, ganancia, rentPct, cagr: cagr(importe, coste, fechaCompra, 0.25), accent };
+      return { id: r.id, nombre: r.direccion, tipo: r.tipo, importe, coste, fechaCompra, ganancia, rentPct, cagr: cagr(importe, coste, fechaCompra, 0.25), accent };
     });
     arr.sort((a, b) => (isFinite(b.importe) ? b.importe : 0) - (isFinite(a.importe) ? a.importe : 0));
     const total = round2(arr.reduce((s, x) => s + (isFinite(x.importe) ? x.importe : 0), 0));
