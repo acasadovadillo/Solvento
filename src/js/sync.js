@@ -70,15 +70,33 @@
   }
 
   // Cifra el doc y lo sube al repo. Devuelve el nuevo sha.
+  //
+  // El sha identifica la versión del fichero en GitHub y se cachea en este
+  // navegador. Si el fichero cambió por otra vía (otro dispositivo, o un commit
+  // por git), ese sha queda obsoleto y GitHub rechaza la escritura con un 409.
+  // Antes eso dejaba el guardado en local para siempre; ahora se auto-repara:
+  // se relee el sha actual y se reintenta una vez (last-write-wins, que es lo
+  // acordado para un único usuario).
   async function push(doc, password, token, message) {
     const blob = await C.encryptDoc(doc, password);
     const contentStr = JSON.stringify(blob);
+
+    async function intentar(sha) {
+      const newSha = await ghPut(token, contentStr, sha, message);
+      setSha(newSha);
+      window.SolventoDB.storeBlob(blob); // cache local al día
+      return newSha;
+    }
+
     let sha = getSha();
-    if (!sha) { const cur = await ghGet(token); if (cur) sha = cur.sha; } // actualizar si ya existía
-    const newSha = await ghPut(token, contentStr, sha, message);
-    setSha(newSha);
-    window.SolventoDB.storeBlob(blob); // cache local al día
-    return newSha;
+    if (!sha) { const cur = await ghGet(token); if (cur) sha = cur.sha; } // ya existía
+    try {
+      return await intentar(sha);
+    } catch (e) {
+      if (e.code !== "CONFLICT") throw e;
+      const cur = await ghGet(token);           // sha fresco y reintento
+      return await intentar(cur ? cur.sha : null);
+    }
   }
 
   window.SolventoSync = {
