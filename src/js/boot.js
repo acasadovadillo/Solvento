@@ -42,6 +42,9 @@
     render();
     try { DB.state.token = await SYNC.loadToken(password); } catch (e) { DB.state.token = null; }
     updateSyncUi();
+    if (!DB.state.token) pintarEstado("sintoken", "Añade tu token en 🔄 Sincronizar y el guardado será automático");
+    else if (hayPendiente()) reintentarPendiente();
+    else pintarEstado("ok", "Tus cambios se guardan solos en GitHub");
   }
   function render() {
     if (DB.state.doc && window.SolventoRender) window.SolventoRender.render(DB.state.doc, PRICES);
@@ -63,25 +66,78 @@
     _toastTimer = setTimeout(() => { t.style.display = "none"; }, 3500);
   }
 
-  // Guardar el documento tras una edición: cifra + guarda local + sube si hay token.
+  // ── Estado del guardado (visible en la navbar) ──
+  // "pendiente" se recuerda entre sesiones: si una subida falla, el aviso no se
+  // pierde al recargar y se reintenta sola en cuanto se pueda.
+  const PENDIENTE_KEY = "solvento_sync_pendiente";
+  const hayPendiente = () => localStorage.getItem(PENDIENTE_KEY) === "1";
+  const marcarPendiente = (v) => {
+    if (v) localStorage.setItem(PENDIENTE_KEY, "1");
+    else localStorage.removeItem(PENDIENTE_KEY);
+  };
+  function pintarEstado(estado, detalle) {
+    const el = $("sync-estado");
+    if (!el) return;
+    const mapa = {
+      guardando: ["⏳ Guardando…", "#9ca3af"],
+      ok:        ["✓ Sincronizado", "#10b981"],
+      pendiente: ["⚠ Sin subir", "#fbbf24"],
+      sintoken:  ["⚠ Sin sincronizar", "#fbbf24"],
+    };
+    const [txt, col] = mapa[estado] || ["", "#6b7280"];
+    el.textContent = txt;
+    el.style.color = col;
+    el.title = detalle || "Estado del guardado";
+  }
+
+  // Cifra y guarda en este dispositivo (siempre, pase lo que pase con la red).
+  async function guardarLocal() {
+    try { DB.storeBlob(await C.encryptDoc(DB.state.doc, DB.state.password)); } catch (_) {}
+  }
+
+  // Sube a GitHub. Devuelve true si lo consiguió.
+  async function subir(mensaje) {
+    if (!DB.state.token) return false;
+    pintarEstado("guardando");
+    try {
+      await SYNC.push(DB.state.doc, DB.state.password, DB.state.token, mensaje || "Solvento: cambios desde la web");
+      marcarPendiente(false);
+      pintarEstado("ok", "Tus cambios están guardados en GitHub");
+      return true;
+    } catch (e) {
+      await guardarLocal();
+      marcarPendiente(true);
+      const auth = e.code === "AUTH";
+      pintarEstado("pendiente", auth
+        ? "El token no vale o ha caducado: ponlo de nuevo en 🔄 Sincronizar"
+        : "No se pudo subir (" + e.message + "). Se reintentará solo.");
+      toast(auth ? "El token no vale o ha caducado · ponlo de nuevo en 🔄" : "Sin conexión con GitHub · se reintentará solo", "#fbbf24");
+      return false;
+    }
+  }
+
+  // Guardar el documento tras una edición: cifra, guarda local y sube si se puede.
   async function saveDoc() {
     if (!DB.state.doc || !DB.state.password) return;
     render();
-    if (DB.state.token) {
-      toast("Guardando en GitHub…", "#9ca3af");
-      try {
-        await SYNC.push(DB.state.doc, DB.state.password, DB.state.token, "Solvento: cambios desde la web");
-        toast("Guardado y sincronizado ✓", "#10b981");
-      } catch (e) {
-        try { DB.storeBlob(await C.encryptDoc(DB.state.doc, DB.state.password)); } catch (_) {}
-        toast("Guardado en el dispositivo (sync falló: " + e.message + ")", "#fbbf24");
-      }
-    } else {
-      try { DB.storeBlob(await C.encryptDoc(DB.state.doc, DB.state.password)); } catch (_) {}
-      toast("Guardado en este dispositivo · sincroniza para subirlo", "#fbbf24");
+    await guardarLocal();
+    if (!DB.state.token) {
+      marcarPendiente(true);
+      pintarEstado("sintoken", "Guardado en este dispositivo. Añade tu token en 🔄 Sincronizar para subirlo solo.");
+      toast("Guardado en este dispositivo · añade tu token para subirlo", "#fbbf24");
+      return;
     }
+    if (await subir()) toast("Guardado y sincronizado ✓", "#10b981");
+  }
+
+  // Si quedaron cambios sin subir (fallo de red, token caducado, sha obsoleto),
+  // se reintenta al desbloquear, al recuperar la conexión y al volver a la pestaña.
+  async function reintentarPendiente() {
+    if (!hayPendiente() || !DB.state.doc || !DB.state.token) return;
+    if (await subir("Solvento: subir cambios pendientes")) toast("Cambios pendientes subidos ✓", "#10b981");
   }
   function lock() {
+    pintarEstado("");
     DB.state.doc = null; DB.state.password = null; DB.state.token = null;
     $("app").style.display = "none";
     document.documentElement.style.overflow = "hidden";
@@ -154,7 +210,8 @@
     DB.state.token = t;
     $("sync-token").value = "";
     updateSyncUi();
-    setError("sync-status", "Token guardado ✓", "#10b981");
+    setError("sync-status", "Token guardado ✓ · a partir de ahora se guarda solo", "#10b981");
+    if (hayPendiente()) await reintentarPendiente(); else pintarEstado("ok");
   }
   async function doPush() {
     if (!DB.state.token) { setError("sync-status", "Primero añade tu token"); return; }
@@ -214,10 +271,15 @@
     $("sync-pull").addEventListener("click", doPull);
     $("sync-export").addEventListener("click", doExport);
     $("sync-import").addEventListener("change", doImport);
+    // Reintentar lo pendiente al recuperar conexión o al volver a la pestaña
+    window.addEventListener("online", reintentarPendiente);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) reintentarPendiente(); });
     fetch("prices.json?" + Date.now())
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => { PRICES = p; render(); })
       .catch(() => {});
+    window.addEventListener("online", reintentarPendiente);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) reintentarPendiente(); });
     startBoot();
   }
 

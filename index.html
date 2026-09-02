@@ -6,9 +6,9 @@
   <meta name="robots" content="noindex, nofollow" />
   <title>Solvento v2</title>
   <link rel="icon" href="img/logo-solvento.png" />
-  <link rel="stylesheet" href="src/css/base.css?v=p16" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p16" />
-  <link rel="stylesheet" href="src/css/components.css?v=p16" />
+  <link rel="stylesheet" href="src/css/base.css?v=p17" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p17" />
+  <link rel="stylesheet" href="src/css/components.css?v=p17" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -90,6 +90,7 @@
         <button class="nav-tab" data-page="inmuebles" onclick="v2Tab('inmuebles')">Inmuebles</button>
         <button class="nav-tab" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
       </nav>
+      <span id="sync-estado" title="Estado del guardado" style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;padding:0 0.2rem;"></span>
       <button id="sync-btn" title="Sincronizar con GitHub">🔄 Sincronizar</button>
       <button id="logout-btn">🔒 Bloquear</button>
       <button class="nav-hamburger" id="nav-hamburger" onclick="v2ToggleMobileNav()" aria-label="Menú"><span></span><span></span><span></span></button>
@@ -137,14 +138,14 @@
   </div>
 </div>
 
-<script src="src/js/crypto.js?v=p16"></script>
-<script src="src/js/config.js?v=p16"></script>
-<script src="src/js/model.js?v=p16"></script>
-<script src="src/js/charts.js?v=p16"></script>
-<script src="src/js/render.js?v=p16"></script>
-<script src="src/js/db.js?v=p16"></script>
-<script src="src/js/sync.js?v=p16"></script>
-<script src="src/js/forms.js?v=p16"></script>
-<script src="src/js/boot.js?v=p16"></script>
+<script src="src/js/crypto.js?v=p17"></script>
+<script src="src/js/config.js?v=p17"></script>
+<script src="src/js/model.js?v=p17"></script>
+<script src="src/js/charts.js?v=p17"></script>
+<script src="src/js/render.js?v=p17"></script>
+<script src="src/js/db.js?v=p17"></script>
+<script src="src/js/sync.js?v=p17"></script>
+<script src="src/js/forms.js?v=p17"></script>
+<script src="src/js/boot.js?v=p17"></script>
 </body>
 </html>
