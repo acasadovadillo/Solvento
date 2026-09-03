@@ -211,32 +211,110 @@
 
   let CURRENT_DOC = null;
 
-  function movimientosList() {
+  // ── Listados con búsqueda y filtros (Fase 5) ────────────────────────
+  // El estado vive fuera del render para que los filtros sobrevivan a un
+  // repintado (p.ej. tras guardar). Y al teclear se repinta SOLO la lista: si
+  // se repintara la página entera, el buscador perdería el foco en cada letra.
+  const PAGINA = 30;
+  const MOV = { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", limite: PAGINA };
+  const OPS = { q: "", tipo: "", desde: "", hasta: "", limite: 40 };
+  let OPS_BANCO = "";
+
+  const estiloFiltro = "background:#12141d;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.82rem;padding:0.4rem 0.6rem;outline:none;font-family:inherit;";
+  const selFiltro = (id, opts, val, onchange) =>
+    `<select id="${id}" onchange="${onchange}" style="${estiloFiltro}">` +
+    opts.map((o) => `<option value="${esc(o[0])}" ${o[0] === val ? "selected" : ""}>${esc(o[1])}</option>`).join("") + `</select>`;
+  const enRango = (f, desde, hasta) => {
+    const t = parseFechaES(f).getTime();
+    if (desde && t < new Date(desde + "T00:00:00").getTime()) return false;
+    if (hasta && t > new Date(hasta + "T23:59:59").getTime()) return false;
+    return true;
+  };
+  const contiene = (texto, q) => !q || String(texto || "").toLowerCase().includes(q.toLowerCase());
+
+  function movimientosFiltrados() {
     const mov = (CURRENT_DOC && CURRENT_DOC.movimientos) || [];
-    const rows = mov.slice().sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha)).slice(0, 30).map((r) => {
+    return mov.filter((r) => {
+      if (MOV.tipo && r.tipo !== MOV.tipo) return false;
+      if (MOV.cuenta && r.cuenta_origen !== MOV.cuenta && r.cuenta_destino !== MOV.cuenta) return false;
+      if (MOV.cat && r.tipo_gasto !== MOV.cat && r.tipo_ingreso !== MOV.cat) return false;
+      if (!enRango(r.fecha, MOV.desde, MOV.hasta)) return false;
+      if (MOV.q && !contiene([r.detalle, r.tipo_gasto, r.tipo_ingreso, r.persona_prestamo,
+                              r.cuenta_origen, r.cuenta_destino, r.importe, r.fecha].join(" "), MOV.q)) return false;
+      return true;
+    }).sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha));
+  }
+
+  function movimientosTabla() {
+    const total = ((CURRENT_DOC && CURRENT_DOC.movimientos) || []).length;
+    const todos = movimientosFiltrados();
+    const visibles = todos.slice(0, MOV.limite);
+    const suma = todos.reduce((s, r) => {
+      const v = Number(r.importe) || 0;
+      return s + (r.tipo === "Ingreso" ? v : (r.tipo === "Gasto" ? -v : 0));
+    }, 0);
+    const rows = visibles.map((r) => {
       const signo = r.tipo === "Ingreso" ? "+" : (r.tipo === "Gasto" ? "−" : "");
       const color = r.tipo === "Ingreso" ? GREEN : (r.tipo === "Gasto" ? RED : "#9ca3af");
       const det = esc(r.detalle || r.tipo_gasto || r.tipo_ingreso || "—");
+      const cta = esc([r.cuenta_origen, r.cuenta_destino].filter(Boolean).join(" → "));
       return `<tr class="table-row">
         <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
-        <td style="text-align:left;"><span style="color:${color};font-weight:600;font-size:0.8rem;">${esc(r.tipo)}</span> <span style="color:#e5e7eb;">${det}</span></td>
+        <td style="text-align:left;"><span style="color:${color};font-weight:600;font-size:0.8rem;">${esc(r.tipo)}</span> <span style="color:#e5e7eb;">${det}</span>
+          ${cta ? `<div style="color:#4b5563;font-size:0.72rem;">${cta}</div>` : ""}</td>
         <td style="text-align:right;color:${color};font-weight:600;white-space:nowrap;">${signo}${fmtEur(Number(r.importe))}</td>
         ${rowActions(`v2EditMov('${r.id}')`, `v2DelMov('${r.id}')`)}</tr>`;
     }).join("");
+    const quedan = todos.length - visibles.length;
+    return `<div style="font-size:0.78rem;color:#6b7280;margin:0.35rem 0 0.5rem;">
+        ${todos.length}${todos.length !== total ? " de " + total : ""} ${todos.length === 1 ? "movimiento" : "movimientos"}
+        ${suma ? `· saldo del filtro <b style="color:${suma >= 0 ? GREEN : RED};">${suma >= 0 ? "+" : ""}${fmtEur(suma)}</b>` : ""}</div>
+      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Ningún movimiento coincide con el filtro</td></tr>'}</tbody></table>
+      ${quedan > 0 ? `<div style="text-align:center;margin-top:0.75rem;">${addBtn("Ver " + Math.min(quedan, PAGINA) + " más (quedan " + quedan + ")", "v2MovMas()")}</div>` : ""}`;
+  }
+
+  function movimientosList() {
+    const mov = (CURRENT_DOC && CURRENT_DOC.movimientos) || [];
+    const cuentas = [["", "Todas las cuentas"]].concat(CFG.cuentas().map((c) => [c.cuenta, c.cuenta]));
+    const cats = [["", "Todas las categorías"]].concat(
+      Array.from(new Set(mov.flatMap((r) => [r.tipo_gasto, r.tipo_ingreso]).filter((x) => x && String(x).trim())))
+        .sort().map((c) => [c, c]));
+    const tipos = [["", "Todos los tipos"], ["Gasto", "Gastos"], ["Ingreso", "Ingresos"], ["Traspaso", "Traspasos"], ["Préstamo", "Préstamos"]];
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Movimientos recientes</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Movimientos</div>
         ${addBtn("＋ Movimiento", "v2AddMov()")}
       </div>
-      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Sin movimientos</td></tr>'}</tbody></table>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
+        <input id="v2-mov-q" type="search" value="${esc(MOV.q)}" placeholder="Buscar por concepto, categoría, persona…"
+               oninput="v2MovFiltro()" style="${estiloFiltro}flex:1;min-width:190px;">
+        ${selFiltro("v2-mov-tipo", tipos, MOV.tipo, "v2MovFiltro()")}
+        ${selFiltro("v2-mov-cuenta", cuentas, MOV.cuenta, "v2MovFiltro()")}
+        ${selFiltro("v2-mov-cat", cats, MOV.cat, "v2MovFiltro()")}
+        <input id="v2-mov-desde" type="date" value="${esc(MOV.desde)}" onchange="v2MovFiltro()" title="Desde" style="${estiloFiltro}">
+        <input id="v2-mov-hasta" type="date" value="${esc(MOV.hasta)}" onchange="v2MovFiltro()" title="Hasta" style="${estiloFiltro}">
+        ${addBtn("Limpiar", "v2MovLimpiar()")}
+      </div>
+      <div id="v2-mov-lista">${movimientosTabla()}</div>
     </div></div>`;
   }
 
-  function operacionesList(banco) {
+  function operacionesFiltradas(banco) {
     let inv = (CURRENT_DOC && CURRENT_DOC.inversiones) || [];
     if (banco) inv = inv.filter((r) => String(r.cuenta || "").trim() === banco);
+    return inv.filter((r) => {
+      if (OPS.tipo && (r.tipo_movimiento || "Compra") !== OPS.tipo) return false;
+      if (!enRango(r.fecha, OPS.desde, OPS.hasta)) return false;
+      if (OPS.q && !contiene([r.nombre, r.isin, r.cuenta, r.fecha].join(" "), OPS.q)) return false;
+      return true;
+    }).sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha));
+  }
+
+  function operacionesTabla(banco) {
     const MC = { Compra: GREEN, Venta: RED, Traspaso: "#3b82f6" };
-    const rows = inv.slice().sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha)).slice(0, 40).map((r) => {
+    const todas = operacionesFiltradas(banco);
+    const visibles = todas.slice(0, OPS.limite);
+    const rows = visibles.map((r) => {
       const mov = r.tipo_movimiento || "Compra";
       const c = MC[mov] || "#6b7280";
       const coste = Number(r.coste);
@@ -247,12 +325,31 @@
         <td style="text-align:right;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${r.unidades !== "" && r.unidades != null ? Number(r.unidades).toLocaleString("es-ES", { maximumFractionDigits: 6 }) : "—"}</td>
         ${rowActions(`v2EditInv('${r.id}')`, `v2DelInv('${r.id}')`)}</tr>`;
     }).join("");
+    const quedan = todas.length - visibles.length;
+    const invertido = todas.reduce((s, r) => s + (Number(r.coste) || 0), 0);
+    return `<div style="font-size:0.78rem;color:#6b7280;margin:0.35rem 0 0.5rem;">
+        ${todas.length} ${todas.length === 1 ? "operación" : "operaciones"} · neto invertido <b style="color:#e5e7eb;">${fmtEur(invertido)}</b></div>
+      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Ninguna operación coincide con el filtro</td></tr>'}</tbody></table>
+      ${quedan > 0 ? `<div style="text-align:center;margin-top:0.75rem;">${addBtn("Ver 40 más (quedan " + quedan + ")", "v2OpsMas()")}</div>` : ""}`;
+  }
+
+  function operacionesList(banco) {
+    OPS_BANCO = banco || "";
+    const tipos = [["", "Todos los tipos"], ["Compra", "Compras"], ["Venta", "Ventas"], ["Traspaso", "Traspasos"]];
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
         <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Historial de operaciones</div>
         <div style="display:flex;gap:0.5rem;">${addBtn("＋ NAV", "v2AddNav()")}${addBtn("＋ Operación", "v2AddInv()")}</div>
       </div>
-      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Sin operaciones</td></tr>'}</tbody></table>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
+        <input id="v2-ops-q" type="search" value="${esc(OPS.q)}" placeholder="Buscar por activo o ISIN…"
+               oninput="v2OpsFiltro()" style="${estiloFiltro}flex:1;min-width:190px;">
+        ${selFiltro("v2-ops-tipo", tipos, OPS.tipo, "v2OpsFiltro()")}
+        <input id="v2-ops-desde" type="date" value="${esc(OPS.desde)}" onchange="v2OpsFiltro()" title="Desde" style="${estiloFiltro}">
+        <input id="v2-ops-hasta" type="date" value="${esc(OPS.hasta)}" onchange="v2OpsFiltro()" title="Hasta" style="${estiloFiltro}">
+        ${addBtn("Limpiar", "v2OpsLimpiar()")}
+      </div>
+      <div id="v2-ops-lista">${operacionesTabla(banco)}</div>
     </div></div>`;
   }
 
@@ -459,7 +556,7 @@
     const rows = cuentas.map((s) => {
       const icon = s.logo ? `<img src="${s.logo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:4px;">` : `<span style="font-size:1.1rem;">${s.emoji || ""}</span>`;
       const cuentaJs = String(s.cuenta).replace(/'/g, "\\'");
-      return `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<span style="color:#fff;font-weight:600;">${esc(s.cuenta)}</span></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
+      return `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
       donutPanel("Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", m.patrimonioLiquido) +
@@ -580,6 +677,7 @@
   // ── Entrada ──
   function render(doc, prices) {
     CURRENT_DOC = doc;
+    window.__PRICES = prices;
     CFG.usarDoc(doc);          // cuentas/activos/objetivo salen de tus datos
     const m = window.SolventoModel.build(doc, prices);
     window.__MODEL = m;
@@ -605,6 +703,41 @@
     if (document.getElementById("v2-page-cartera").classList.contains("active")) layoutTreemaps();
     if (!render._resizeBound) { render._resizeBound = true; window.addEventListener("resize", layoutTreemaps); }
   }
+
+  // Filtros: se repinta solo la lista para no perder el foco del buscador
+  const valDe = (id) => { const e = document.getElementById(id); return e ? e.value : ""; };
+  const pintarMov = () => { const c = document.getElementById("v2-mov-lista"); if (c) c.innerHTML = movimientosTabla(); };
+  const pintarOps = () => { const c = document.getElementById("v2-ops-lista"); if (c) c.innerHTML = operacionesTabla(OPS_BANCO); };
+  window.v2MovFiltro = () => {
+    MOV.q = valDe("v2-mov-q"); MOV.tipo = valDe("v2-mov-tipo"); MOV.cuenta = valDe("v2-mov-cuenta");
+    MOV.cat = valDe("v2-mov-cat"); MOV.desde = valDe("v2-mov-desde"); MOV.hasta = valDe("v2-mov-hasta");
+    MOV.limite = PAGINA;                 // al cambiar el filtro se vuelve al principio
+    pintarMov();
+  };
+  window.v2MovMas = () => { MOV.limite += PAGINA; pintarMov(); };
+  window.v2MovLimpiar = () => {
+    Object.assign(MOV, { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", limite: PAGINA });
+    render(CURRENT_DOC, window.__PRICES);   // repintado completo para vaciar los campos
+  };
+  window.v2OpsFiltro = () => {
+    OPS.q = valDe("v2-ops-q"); OPS.tipo = valDe("v2-ops-tipo");
+    OPS.desde = valDe("v2-ops-desde"); OPS.hasta = valDe("v2-ops-hasta");
+    OPS.limite = 40;
+    pintarOps();
+  };
+  window.v2OpsMas = () => { OPS.limite += 40; pintarOps(); };
+  window.v2OpsLimpiar = () => {
+    Object.assign(OPS, { q: "", tipo: "", desde: "", hasta: "", limite: 40 });
+    render(CURRENT_DOC, window.__PRICES);
+  };
+  // Clic en una cuenta de Caja: ver solo sus movimientos
+  window.v2VerCuenta = (cuenta) => {
+    Object.assign(MOV, { q: "", tipo: "", cuenta, cat: "", desde: "", hasta: "", limite: PAGINA });
+    render(CURRENT_DOC, window.__PRICES);
+    showPage("caja");
+    const l = document.getElementById("v2-mov-lista");
+    if (l) l.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   // Acciones de formularios (globales para onclick)
   const F = () => window.SolventoForms;
