@@ -261,6 +261,8 @@
         ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldos.length + " cuentas")}
         ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct))}
         ${hubCard("Inmuebles", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + " inmuebles")}
+        ${hubCard("Pasivos", fmtEur(m.pas.total), m.ratioPas, "#6b7280",
+                  m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas")}
       </div>` +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio") +
       donutPanel("Distribución del patrimonio",
@@ -473,9 +475,25 @@
         <table class="minimal-table"><thead><tr><th style="text-align:left;">Inmueble</th><th style="text-align:right;">Tasación</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
 
-  function pagePasivos() {
-    return header("Pasivos", "0,00 €") +
-      `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:3rem;">Sin deudas registradas</div></div>`;
+  function pagePasivos(m) {
+    const pas = (m && m.pas) || { items: [], n: 0, total: 0 };
+    if (!pas.n) {
+      return header("Pasivos", fmtEur(0)) +
+        `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;padding:3rem;">
+          <div style="color:#6b7280;font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Sin deudas registradas</div>
+          <div style="color:#374151;font-size:0.85rem;max-width:420px;margin:0 auto;">Hipotecas, préstamos, tarjetas… Cuando registres pasivos aquí, se descontarán de tu patrimonio neto.</div>
+        </div></div>`;
+    }
+    const rows = pas.items.map((d) => `<tr class="table-row">
+      <td style="text-align:left;"><span style="color:#fff;font-weight:600;">${esc(d.nombre)}</span>${d.entidad ? `<div style="color:#6b7280;font-size:0.78rem;">${esc(d.entidad)}</div>` : ""}</td>
+      <td style="text-align:left;color:#9ca3af;">${esc(d.tipo)}</td>
+      <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(d.importe)}</td>
+      <td style="text-align:right;color:#9ca3af;">${(pas.total ? d.importe / pas.total * 100 : 0).toFixed(2)}%</td>
+    </tr>`).join("");
+    return header("Pasivos", fmtEur(pas.total)) +
+      `<div class="v2-wrap"><div class="table-container"><table class="minimal-table">
+        <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th style="text-align:right;">Peso</th></tr></thead>
+        <tbody>${rows}</tbody></table></div></div>`;
   }
 
   // ── Navegación ──
@@ -546,7 +564,7 @@
     document.getElementById("v2-page-caja").innerHTML = pageCaja(m);
     document.getElementById("v2-page-cartera").innerHTML = pageCartera(m, prices);
     document.getElementById("v2-page-inmuebles").innerHTML = pageInmuebles(m);
-    document.getElementById("v2-page-pasivos").innerHTML = pagePasivos();
+    document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
     bindTreemapHover();
     // Gráficas de evolución (patrimonio neto + cartera)
     if (window.SolventoModel.buildSeries && window.SolventoCharts) {
