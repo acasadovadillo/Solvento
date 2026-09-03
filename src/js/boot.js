@@ -200,7 +200,23 @@
     const st = $("sync-token-status");
     if (st) { st.textContent = has ? "✅ Token guardado (cifrado) en este dispositivo" : "Sin token — necesario para guardar en GitHub"; st.style.color = has ? "#10b981" : "#6b7280"; }
   }
-  function openSync() { $("sync-modal").style.display = "flex"; setError("sync-status", ""); updateSyncUi(); }
+  function openSync() {
+    $("sync-modal").style.display = "flex";
+    setError("sync-status", "");
+    // Precargar el token que ya está guardado en este dispositivo, para que se
+    // vea que no hace falta volver a pegarlo. Va en un campo de contraseña, así
+    // que se muestra con puntos (seguro ante capturas de pantalla).
+    const inp = $("sync-token");
+    if (inp && DB.state.token) { inp.value = DB.state.token; inp.type = "password"; }
+    updateSyncUi();
+  }
+  function alternarVerToken() {
+    const inp = $("sync-token"), btn = $("sync-token-ver");
+    if (!inp) return;
+    const oculto = inp.type === "password";
+    inp.type = oculto ? "text" : "password";
+    if (btn) btn.textContent = oculto ? "🙈" : "👁";
+  }
   function closeSync() { $("sync-modal").style.display = "none"; }
 
   async function saveToken() {
@@ -208,7 +224,7 @@
     if (!t) { setError("sync-status", "Pega tu token de GitHub"); return; }
     await SYNC.storeToken(t, DB.state.password);
     DB.state.token = t;
-    $("sync-token").value = "";
+    $("sync-token").type = "password";   // se queda puesto, pero oculto
     updateSyncUi();
     setError("sync-status", "Token guardado ✓ · a partir de ahora se guarda solo", "#10b981");
     if (hayPendiente()) await reintentarPendiente(); else pintarEstado("ok");
@@ -267,6 +283,7 @@
     $("sync-btn").addEventListener("click", openSync);
     $("sync-close").addEventListener("click", closeSync);
     $("sync-save-token").addEventListener("click", saveToken);
+    $("sync-token-ver").addEventListener("click", alternarVerToken);
     $("sync-push").addEventListener("click", doPush);
     $("sync-pull").addEventListener("click", doPull);
     $("sync-export").addEventListener("click", doExport);
