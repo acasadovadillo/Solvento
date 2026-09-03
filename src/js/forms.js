@@ -388,6 +388,29 @@
     }, openAjustes);
   }
 
+  // ── Presupuesto por categoría ──
+  // Un tope mensual para una categoría de gasto. Se guarda con el resto de tu
+  // configuración, así que viaja contigo a cualquier dispositivo.
+  function openPresupuesto(cat) {
+    const doc = DB.state.doc;
+    if (!doc.config) doc.config = {};
+    if (!doc.config.presupuesto) doc.config.presupuesto = {};
+    const actual = doc.config.presupuesto[cat];
+    const body =
+      field("g-tope", `Tope mensual para "${esc(cat)}" (€)`, input("g-tope", "number", actual, 'step="1" min="0" placeholder="300"')) +
+      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Cuando el gasto del mes supere este tope, la categoría se marca en rojo. Déjalo vacío para quitar el presupuesto.</div>`;
+    shell("Presupuesto", body, () => {
+      const v = G("g-tope");
+      if (v === "") delete doc.config.presupuesto[cat];
+      else {
+        const n = parseFloat(v);
+        if (!isFinite(n) || n < 0) return "Introduce un importe válido";
+        doc.config.presupuesto[cat] = n;
+      }
+      return null;
+    });
+  }
+
   // ── Inmueble ──
   function openInmueble(existing) {
     const doc = DB.state.doc, e = existing || {};
@@ -446,7 +469,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openInmueble, openNav, openCuadrar, openPasivo,
-    openAjustes, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
+    openAjustes, openPresupuesto, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editInmueble: (id) => openInmueble(findById("inmuebles", id)),

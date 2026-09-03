@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p30" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p30" />
-  <link rel="stylesheet" href="src/css/components.css?v=p30" />
+  <link rel="stylesheet" href="src/css/base.css?v=p32" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p32" />
+  <link rel="stylesheet" href="src/css/components.css?v=p32" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -94,6 +94,7 @@
       <nav class="nav-tabs" id="v2-tabs">
         <button class="nav-tab active" data-page="patrimonio" onclick="v2Tab('patrimonio')">Patrimonio</button>
         <button class="nav-tab" data-page="caja" onclick="v2Tab('caja')">Caja</button>
+        <button class="nav-tab" data-page="gastos" onclick="v2Tab('gastos')">Gastos</button>
         <button class="nav-tab" data-page="cartera" onclick="v2Tab('cartera')">Cartera</button>
         <button class="nav-tab" data-page="inmuebles" onclick="v2Tab('inmuebles')">Inmuebles</button>
         <button class="nav-tab" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
@@ -108,6 +109,7 @@
   <nav class="bottom-nav" id="v2-bottom-nav" aria-label="Secciones">
     <button class="bottom-nav-item active" data-page="patrimonio" onclick="v2Tab('patrimonio')">Patrimonio</button>
     <button class="bottom-nav-item" data-page="caja" onclick="v2Tab('caja')">Caja</button>
+    <button class="bottom-nav-item" data-page="gastos" onclick="v2Tab('gastos')">Gastos</button>
     <button class="bottom-nav-item" data-page="cartera" onclick="v2Tab('cartera')">Cartera</button>
     <button class="bottom-nav-item" data-page="inmuebles" onclick="v2Tab('inmuebles')">Inmuebles</button>
     <button class="bottom-nav-item" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
@@ -116,6 +118,7 @@
 
   <div class="page active" id="v2-page-patrimonio"></div>
   <div class="page" id="v2-page-caja"></div>
+  <div class="page" id="v2-page-gastos"></div>
   <div class="page" id="v2-page-cartera"></div>
   <div class="page" id="v2-page-inmuebles"></div>
   <div class="page" id="v2-page-pasivos"></div>
@@ -152,15 +155,15 @@
   </div>
 </div>
 
-<script src="src/js/crypto.js?v=p30"></script>
-<script src="src/js/config.js?v=p30"></script>
-<script src="src/js/model.js?v=p30"></script>
-<script src="src/js/charts.js?v=p30"></script>
-<script src="src/js/render.js?v=p30"></script>
-<script src="src/js/db.js?v=p30"></script>
-<script src="src/js/sync.js?v=p30"></script>
-<script src="src/js/forms.js?v=p30"></script>
-<script src="src/js/boot.js?v=p30"></script>
+<script src="src/js/crypto.js?v=p32"></script>
+<script src="src/js/config.js?v=p32"></script>
+<script src="src/js/model.js?v=p32"></script>
+<script src="src/js/charts.js?v=p32"></script>
+<script src="src/js/render.js?v=p32"></script>
+<script src="src/js/db.js?v=p32"></script>
+<script src="src/js/sync.js?v=p32"></script>
+<script src="src/js/forms.js?v=p32"></script>
+<script src="src/js/boot.js?v=p32"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.
