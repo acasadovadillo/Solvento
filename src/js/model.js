@@ -240,6 +240,65 @@
     return { items, n: items.length, total: round2(items.reduce((s, x) => s + x.importe, 0)) };
   }
 
+  // ── Análisis de gastos (Fase 6) ──────────────────────────────────────
+  // Agrega ingresos y gastos por mes y categoría a partir de lo que ya
+  // registras. Qué se deja fuera, y por qué:
+  //   · Traspasos y préstamos: mueven dinero entre tus cuentas o hacia terceros,
+  //     pero no son gasto ni ingreso de verdad.
+  //   · Gastos de categoría "Inversiones": el dinero no se va, cambia de forma
+  //     (lo mueve la operación de compra).
+  //   · Cualquier apunte "de ajuste": son cuadres contables, no consumo real;
+  //     contarlos dispararía el gasto de un mes por un motivo ficticio.
+  const esAjuste = (m) =>
+    /ajuste/i.test(String(m.tipo_gasto || "")) || /ajuste/i.test(String(m.tipo_ingreso || ""));
+
+  function buildGastos(db) {
+    const porMes = {};
+    const mesDe = (f) => {
+      const d = parseFechaES(f);
+      return d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : null;
+    };
+    for (const m of db.movimientos || []) {
+      if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") continue;   // fuera traspasos y préstamos
+      if (esAjuste(m) || esMovInversion(m)) continue;
+      const ym = mesDe(m.fecha);
+      const imp = num(m.importe);
+      if (!ym || !isFinite(imp) || imp <= 0) continue;
+      const mes = porMes[ym] || (porMes[ym] = { ym, ingresos: 0, gastos: 0, catGasto: {}, catIngreso: {} });
+      if (m.tipo === "Gasto") {
+        mes.gastos += imp;
+        const c = String(m.tipo_gasto || "").trim() || "Sin categoría";
+        mes.catGasto[c] = (mes.catGasto[c] || 0) + imp;
+      } else {
+        mes.ingresos += imp;
+        const c = String(m.tipo_ingreso || "").trim() || "Sin categoría";
+        mes.catIngreso[c] = (mes.catIngreso[c] || 0) + imp;
+      }
+    }
+    const etiqueta = (ym) => {
+      const [a, mm] = ym.split("-");
+      return new Date(+a, +mm - 1, 1).toLocaleDateString("es-ES", { month: "short", year: "numeric" });
+    };
+    const meses = Object.values(porMes).sort((a, b) => a.ym.localeCompare(b.ym)).map((m) => {
+      const ahorro = round2(m.ingresos - m.gastos);
+      return {
+        ym: m.ym, label: etiqueta(m.ym),
+        ingresos: round2(m.ingresos), gastos: round2(m.gastos), ahorro,
+        tasa: m.ingresos > 0 ? ahorro / m.ingresos * 100 : NaN,
+        catGasto: m.catGasto, catIngreso: m.catIngreso,
+      };
+    });
+    // Media de los últimos 12 meses con actividad, para comparar un mes con "lo normal"
+    const ult = meses.slice(-12);
+    const media = ult.length ? {
+      ingresos: round2(ult.reduce((s, x) => s + x.ingresos, 0) / ult.length),
+      gastos: round2(ult.reduce((s, x) => s + x.gastos, 0) / ult.length),
+      meses: ult.length,
+    } : { ingresos: 0, gastos: 0, meses: 0 };
+    const categorias = Array.from(new Set(meses.flatMap((m) => Object.keys(m.catGasto)))).sort();
+    return { meses, media, categorias };
+  }
+
   // ── Analítica por activo: líneas temporales de unidades, coste y precio ──
   function _timelinesPorActivo(db, prices) {
     const byJk = buildRegistry(db.inversiones);
@@ -458,5 +517,5 @@
     return { cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
 })();
