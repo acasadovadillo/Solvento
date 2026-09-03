@@ -8,27 +8,19 @@
 
   // broker:true → su efectivo es de la cuenta de bróker (remunerada) y se muestra
   // en la página Cartera, no en Caja.
-  const CUENTAS = [
-    { cuenta: "Bankinter",      accent: "#FF6200", logo: "img/account-logo-bankinter.png" },
+  const CUENTAS_DEFECTO = [
+    { cuenta: "Bankinter",      accent: "#FF6200", logo: "img/account-logo-bankinter.png", cartera: "cero", etiquetaEfectivo: "Cuenta Broker" },
     { cuenta: "Santander",      accent: "#ec0000", logo: "img/account-logo-santander.png" },
-    { cuenta: "Trade Republic", accent: "#ffffff", logo: "img/account-logo-trade-republic.png", broker: true },
-    { cuenta: "MyInvestor",     accent: "#e12363", logo: "img/account-logo-myinvestor.png", broker: true },
+    { cuenta: "Trade Republic", accent: "#ffffff", logo: "img/account-logo-trade-republic.png", broker: true, cartera: "efectivo" },
+    { cuenta: "MyInvestor",     accent: "#e12363", logo: "img/account-logo-myinvestor.png", broker: true, cartera: "efectivo" },
     { cuenta: "Efectivo",       accent: "#2d9e5f", logo: null, emoji: "💵" },
   ];
 
-  // Brókers de la página Cartera (sub-navegación). Bankinter tiene una
-  // "Cuenta Broker" figurativa: siempre 0 €, solo agrupa sus fondos — el dinero
-  // de sus compras sale de la cuenta corriente de Bankinter (que vive en Caja).
-  const BROKERS = [
-    { cuenta: "Trade Republic", efectivo: "cuenta" },
-    { cuenta: "MyInvestor",     efectivo: "cuenta" },
-    { cuenta: "Bankinter",      efectivo: "cero", etiquetaEfectivo: "Cuenta Broker" },
-  ];
 
   // Activos conocidos (con ticker de Yahoo, o yf_ticker null si se valoran por NAV).
   // Los fondos Bankinter Premium/Horizonte NO están aquí: se derivan de los datos
   // y se valoran con su NAV (db.nav). yf_ticker null + sin NAV ⇒ "N/D".
-  const ACTIVOS = [
+  const ACTIVOS_DEFECTO = [
     { nombre: "US Aggregate Bond USD (Acc)",     isin: "IE00BYXYYM63", categoria: "Renta fija",     tipo: "ETF",                banco: "Trade Republic", yf: "IUAA.L" },
     { nombre: "Core MSCI World USD (Acc)",       isin: "IE00B4L5Y983", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "IWDA.AS" },
     { nombre: "Core S&P 500 USD (Acc)",          isin: "IE00B5BMR087", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "CSPX.AS" },
@@ -41,7 +33,7 @@
     { nombre: "MSCI ACWI USD (Acc)",             isin: "IE00B6R52259", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "SSAC.AS" },
   ];
 
-  const OBJETIVO_ASIGNACION = { "Renta variable": 60.0, "Renta fija": 40.0 };
+  const OBJETIVO_DEFECTO = { "Renta variable": 60.0, "Renta fija": 40.0 };
 
   const CAT_COLORES = { "Renta variable": "#3b82f6", "Renta fija": "#10b981" };
   const TIPO_COLORES = { "ETF": "#8b5cf6", "Criptoactivo": "#f59e0b", "Acciones": "#ec4899", "Fondo de inversión": "#14b8a6" };
@@ -84,8 +76,27 @@
   // (token fine-grained con permiso Contents: Read/Write solo en este repo).
   const SYNC = { owner: "acasadovadillo", repo: "Solvento", branch: "main", path: "data.enc" };
 
+
+  // ── Configuración editable ──────────────────────────────────────────
+  // Cuentas, activos y objetivo de asignación viven en TU documento cifrado
+  // (doc.config), no en el código. Lo de arriba es solo el valor de partida:
+  // en cuanto edites algo desde Ajustes, manda tu versión. Así puedes abrir una
+  // cuenta o dar de alta un ETF sin tocar código.
+  let DOC = null;
+  const usarDoc = (doc) => { DOC = doc; };
+  const cfgDoc = () => (DOC && DOC.config) || {};
+
+  const cuentas  = () => cfgDoc().cuentas  || CUENTAS_DEFECTO;
+  const activos  = () => cfgDoc().activos  || ACTIVOS_DEFECTO;
+  const objetivo = () => cfgDoc().objetivo || OBJETIVO_DEFECTO;
+  // Los brókers de la sub-navegación de Cartera se deducen de las cuentas:
+  // aparece ahí toda cuenta con `cartera` ("efectivo" si tiene saldo propio,
+  // "cero" si es figurativa como la Cuenta Broker de Bankinter).
+  const brokers  = () => cuentas().filter((c) => c.cartera);
+
   window.SolventoConfig = {
-    CUENTAS, BROKERS, ACTIVOS, OBJETIVO_ASIGNACION,
+    usarDoc, cuentas, activos, objetivo, brokers,
+    CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     assetLogo, SYNC,
   };

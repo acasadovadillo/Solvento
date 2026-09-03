@@ -116,6 +116,22 @@
     }
   }
 
+  // Si cambian los activos, el proceso que descarga precios necesita enterarse.
+  // Solo se sube cuando la lista cambia de verdad, para no gastar llamadas.
+  const TICKERS_KEY = "solvento_tickers_subidos";
+  async function sincronizarTickers() {
+    if (!DB.state.token || !DB.state.doc) return;
+    const activos = (DB.state.doc.config && DB.state.doc.config.activos) || [];
+    if (!activos.length) return;                       // sin config propia, manda la del código
+    const lista = activos.map((a) => a.yf).filter(Boolean).sort();
+    const firma = lista.join(",");
+    if (!firma || localStorage.getItem(TICKERS_KEY) === firma) return;
+    try {
+      await SYNC.pushTickers(lista, DB.state.token);
+      localStorage.setItem(TICKERS_KEY, firma);
+    } catch (e) { /* se reintentará en el siguiente guardado */ }
+  }
+
   // Guardar el documento tras una edición: cifra, guarda local y sube si se puede.
   async function saveDoc() {
     if (!DB.state.doc || !DB.state.password) return;
@@ -127,7 +143,7 @@
       toast("Guardado en este dispositivo · añade tu token para subirlo", "#fbbf24");
       return;
     }
-    if (await subir()) toast("Guardado y sincronizado ✓", "#10b981");
+    if (await subir()) { toast("Guardado y sincronizado ✓", "#10b981"); sincronizarTickers(); }
   }
 
   // Si quedaron cambios sin subir (fallo de red, token caducado, sha obsoleto),

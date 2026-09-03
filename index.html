@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p23" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p23" />
-  <link rel="stylesheet" href="src/css/components.css?v=p23" />
+  <link rel="stylesheet" href="src/css/base.css?v=p27" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p27" />
+  <link rel="stylesheet" href="src/css/components.css?v=p27" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -38,8 +38,8 @@
     .v2-hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; max-width: 1400px; margin: 0 auto; width: 100%; }
     .v2-prop-bar { height: 6px; border-radius: 4px; overflow: hidden; display: flex; margin: 0 auto 1.5rem; background: #1a1d27; max-width: 1400px; }
     .v2-wrap { max-width: 1400px; margin: 1.5rem auto 0; width: 100%; }
-    #logout-btn, #sync-btn { background: none; border: 1px solid #2a2d3a; color: #9ca3af; border-radius: 8px; font-size: 0.8rem; font-weight: 600; padding: 0.4rem 0.75rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
-    #logout-btn:hover, #sync-btn:hover { color: #fff; border-color: #4b5563; }
+    #logout-btn, #sync-btn, #ajustes-btn { background: none; border: 1px solid #2a2d3a; color: #9ca3af; border-radius: 8px; font-size: 0.8rem; font-weight: 600; padding: 0.4rem 0.75rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    #logout-btn:hover, #sync-btn:hover, #ajustes-btn:hover { color: #fff; border-color: #4b5563; }
     #sync-modal .modal-card { background: #171a24; border: 1px solid #232733; border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 440px; }
     #sync-modal input[type="password"] { width: 100%; background: #12141d; border: 1px solid #2a2d3a; border-radius: 10px; color: #e5e7eb; font-size: 0.9rem; padding: 0.7rem 0.9rem; outline: none; font-family: inherit; }
     #sync-modal button { border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.55rem 0.9rem; cursor: pointer; font-family: inherit; border: 1px solid #2a2d3a; background: #1e2130; color: #e5e7eb; }
@@ -99,6 +99,7 @@
         <button class="nav-tab" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
       </nav>
       <span id="sync-estado" title="Estado del guardado" style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;padding:0 0.2rem;"></span>
+      <button id="ajustes-btn" title="Ajustes" onclick="v2Ajustes()">⚙<span class="btn-txt"> Ajustes</span></button>
       <button id="sync-btn" title="Sincronizar con GitHub">🔄<span class="btn-txt"> Sincronizar</span></button>
       <button id="logout-btn" title="Bloquear">🔒<span class="btn-txt"> Bloquear</span></button>
     </div>
@@ -151,15 +152,15 @@
   </div>
 </div>
 
-<script src="src/js/crypto.js?v=p23"></script>
-<script src="src/js/config.js?v=p23"></script>
-<script src="src/js/model.js?v=p23"></script>
-<script src="src/js/charts.js?v=p23"></script>
-<script src="src/js/render.js?v=p23"></script>
-<script src="src/js/db.js?v=p23"></script>
-<script src="src/js/sync.js?v=p23"></script>
-<script src="src/js/forms.js?v=p23"></script>
-<script src="src/js/boot.js?v=p23"></script>
+<script src="src/js/crypto.js?v=p27"></script>
+<script src="src/js/config.js?v=p27"></script>
+<script src="src/js/model.js?v=p27"></script>
+<script src="src/js/charts.js?v=p27"></script>
+<script src="src/js/render.js?v=p27"></script>
+<script src="src/js/db.js?v=p27"></script>
+<script src="src/js/sync.js?v=p27"></script>
+<script src="src/js/forms.js?v=p27"></script>
+<script src="src/js/boot.js?v=p27"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

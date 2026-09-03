@@ -83,7 +83,7 @@ footer { text-align: center; margin-top: 5rem; font-size: 0.75rem; color: #3a3d4
   .navbar-date { display: none; }
   #sync-estado { font-size: 0.7rem !important; }
   /* Solo el icono: con el texto, "Bloquear" se salía de la pantalla */
-  #sync-btn, #logout-btn { padding: 0.4rem 0.55rem; font-size: 0.95rem; }
+  #sync-btn, #logout-btn, #ajustes-btn { padding: 0.4rem 0.5rem; font-size: 0.95rem; }
   .btn-txt { display: none; }
   /* El estado se reduce a su símbolo, que ya dice lo esencial de un vistazo */
   #sync-estado { font-size: 0.95rem !important; overflow: hidden; max-width: 1.4em; }

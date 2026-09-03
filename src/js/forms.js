@@ -9,7 +9,8 @@
   const CFG = window.SolventoConfig;
   const DB = window.SolventoDB;
 
-  const CUENTAS = CFG.CUENTAS.map((c) => c.cuenta);
+  // En vivo: si añades o renombras una cuenta, los formularios lo reflejan
+  const CUENTAS = () => CFG.cuentas().map((c) => c.cuenta);
   const ACTIVO_TIPOS = ["ETF", "Fondo de inversión", "Acciones", "Criptoactivo"];
   const RENTAS = ["Renta variable", "Renta fija"];
   const INMUEBLE_TIPOS = Object.keys(CFG.TIPO_COLORES_INMUEBLE);
@@ -43,7 +44,7 @@
   const selectKV = (id, pairs, val) => `<select id="${id}" style="${styleInput}">${pairs.map((p) => `<option value="${esc(p[0])}" ${p[0] === val ? "selected" : ""}>${esc(p[1])}</option>`).join("")}</select>`;
   const datalist = (id, opts, val) => `<input id="${id}" list="${id}-dl" value="${esc(val || "")}" style="${styleInput}"><datalist id="${id}-dl">${uniq(opts).map((o) => `<option value="${esc(o)}">`).join("")}</datalist>`;
 
-  function shell(titulo, bodyHtml, onSubmit) {
+  function shell(titulo, bodyHtml, onSubmit, despues) {
     const m = ensureModal();
     m.querySelector(".modal-card").innerHTML =
       `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
@@ -62,6 +63,7 @@
       if (err) { const e = document.getElementById("ff-error"); e.textContent = err; e.style.display = "block"; return; }
       close();
       if (window.SolventoBoot && window.SolventoBoot.saveDoc) await window.SolventoBoot.saveDoc();
+      if (despues) despues();
     });
   }
   const G = (id) => document.getElementById(id).value.trim();
@@ -79,8 +81,8 @@
       field("m-fecha", "Fecha", input("m-fecha", "date", toISO(e.fecha || hoyES()))) +
       field("m-tipo", "Tipo", select("m-tipo", ["Gasto", "Ingreso", "Traspaso", "Préstamo"], e.tipo || "Gasto")) +
       field("m-importe", "Importe (€)", input("m-importe", "number", e.importe, 'step="0.01" min="0"')) +
-      field("m-origen", "Cuenta origen", select("m-origen", CUENTAS, e.cuenta_origen || CUENTAS[0])) +
-      field("m-destino", "Cuenta destino", select("m-destino", CUENTAS, e.cuenta_destino || CUENTAS[0])) +
+      field("m-origen", "Cuenta origen", select("m-origen", CUENTAS(), e.cuenta_origen || CUENTAS()[0])) +
+      field("m-destino", "Cuenta destino", select("m-destino", CUENTAS(), e.cuenta_destino || CUENTAS()[0])) +
       field("m-catg", "Categoría de gasto", datalist("m-catg", catGasto, e.tipo_gasto)) +
       field("m-cati", "Categoría de ingreso", datalist("m-cati", catIngreso, e.tipo_ingreso)) +
       field("m-tpres", "Tipo de préstamo", select("m-tpres", ["Dinero prestado", "Devolución"], e.tipo_prestamo || "Dinero prestado")) +
@@ -126,7 +128,7 @@
   function openInversion(existing) {
     const doc = DB.state.doc, e = existing || {};
     const conocidos = {};
-    CFG.ACTIVOS.forEach((a) => (conocidos[a.nombre] = a));
+    CFG.activos().forEach((a) => (conocidos[a.nombre] = a));
     (doc.inversiones || []).forEach((r) => { if (r.nombre && !conocidos[r.nombre]) conocidos[r.nombre] = { nombre: r.nombre, isin: r.isin, categoria: r.renta, tipo: r.activo, banco: r.cuenta }; });
     const body =
       field("i-fecha", "Fecha", input("i-fecha", "date", toISO(e.fecha || hoyES()))) +
@@ -135,7 +137,7 @@
       field("i-isin", "ISIN", input("i-isin", "text", e.isin && e.isin !== "-" ? e.isin : "")) +
       field("i-renta", "Categoría", select("i-renta", RENTAS, e.renta || "Renta variable")) +
       field("i-activo", "Tipo de activo", select("i-activo", ACTIVO_TIPOS, e.activo || "ETF")) +
-      field("i-cuenta", "Cuenta / bróker", select("i-cuenta", CUENTAS, e.cuenta || "Trade Republic")) +
+      field("i-cuenta", "Cuenta / bróker", select("i-cuenta", CUENTAS(), e.cuenta || CUENTAS()[0])) +
       field("i-importe", "Importe (€)", input("i-importe", "number", absStr(e.coste), 'step="0.01" min="0"')) +
       field("i-unidades", "Unidades / participaciones", input("i-unidades", "number", absStr(e.unidades), 'step="any" min="0"'));
     shell(existing ? "Editar operación" : "Nueva operación", body, () => {
@@ -194,6 +196,198 @@
     });
   }
 
+  // ── Pasivo (deuda) ──
+  const PASIVO_TIPOS = ["Hipoteca", "Préstamo personal", "Préstamo coche",
+                        "Tarjeta de crédito", "Deuda con particular", "Otro"];
+  function openPasivo(existing) {
+    const doc = DB.state.doc, e = existing || {};
+    if (!Array.isArray(doc.pasivos)) doc.pasivos = [];
+    const body =
+      field("d-nombre", "Concepto", input("d-nombre", "text", e.nombre, 'placeholder="Hipoteca de la vivienda"')) +
+      field("d-tipo", "Tipo", select("d-tipo", PASIVO_TIPOS, e.tipo || PASIVO_TIPOS[0])) +
+      field("d-entidad", "Entidad", datalist("d-entidad", CUENTAS(), e.entidad)) +
+      field("d-importe", "Pendiente de pagar (€)", input("d-importe", "number", e.importe, 'step="0.01" min="0" placeholder="120000"')) +
+      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.</div>`;
+    shell(existing ? "Editar deuda" : "Nueva deuda", body, () => {
+      const nombre = G("d-nombre");
+      if (!nombre) return "Indica el concepto de la deuda";
+      const importe = parseFloat(G("d-importe"));
+      if (!isFinite(importe) || importe <= 0) return "Introduce el importe pendiente";
+      upsert(doc.pasivos, {
+        id: e.id || newId("d"), nombre, tipo: G("d-tipo"),
+        entidad: G("d-entidad"), importe: String(importe),
+      });
+      return null;
+    });
+  }
+  // ── Ajustes: cuentas, activos y objetivo de asignación ──────────────
+  // Todo esto vivía en el código. Ahora se guarda en tu documento cifrado, así
+  // que puedes abrir una cuenta o dar de alta un ETF sin que yo toque nada.
+  // La primera vez que editas algo, se copia la configuración actual a tus datos
+  // y a partir de ahí manda la tuya.
+  function cfgEditable() {
+    const doc = DB.state.doc;
+    if (!doc.config) doc.config = {};
+    if (!doc.config.cuentas)  doc.config.cuentas  = JSON.parse(JSON.stringify(CFG.CUENTAS_DEFECTO));
+    if (!doc.config.activos)  doc.config.activos  = JSON.parse(JSON.stringify(CFG.ACTIVOS_DEFECTO));
+    if (!doc.config.objetivo) doc.config.objetivo = Object.assign({}, CFG.OBJETIVO_DEFECTO);
+    CFG.usarDoc(doc);
+    return doc.config;
+  }
+
+  const filaAjuste = (izq, der, acciones) =>
+    `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;border-bottom:1px solid #232733;">
+      <div style="flex:1;min-width:0;"><div style="color:#e5e7eb;font-weight:600;font-size:0.88rem;">${izq}</div>
+        <div style="color:#6b7280;font-size:0.75rem;">${der}</div></div>${acciones}</div>`;
+  const miniBtn = (txt, onclick, color) =>
+    `<button type="button" onclick="${onclick}" style="background:none;border:none;color:${color || "#6b7280"};cursor:pointer;font-size:0.85rem;padding:0.2rem 0.35rem;font-family:inherit;">${txt}</button>`;
+
+  function openAjustes() {
+    const c = cfgEditable();
+    const obj = c.objetivo;
+    const cuentasHtml = c.cuentas.map((x, i) => filaAjuste(
+      `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(x.accent || "#6b7280")};margin-right:0.4rem;"></span>${esc(x.cuenta)}`,
+      [x.broker ? "efectivo en Cartera" : "efectivo en Caja",
+       x.cartera === "cero" ? "aparece en Cartera sin saldo" : (x.cartera ? "bróker en Cartera" : "")].filter(Boolean).join(" · "),
+      miniBtn("✎", `v2CfgCuenta(${i})`) + miniBtn("✕", `v2CfgDelCuenta(${i})`)
+    )).join("");
+    const activosHtml = c.activos.map((x, i) => filaAjuste(
+      esc(x.nombre),
+      `${esc(x.isin || "-")} · ${esc(x.banco || "")}${x.yf ? " · " + esc(x.yf) : " · sin precio automático"}`,
+      miniBtn("✎", `v2CfgActivo(${i})`) + miniBtn("✕", `v2CfgDelActivo(${i})`)
+    )).join("");
+
+    const body =
+      `<div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.3rem;">Cuentas</div>
+       ${cuentasHtml}
+       <div style="margin:0.6rem 0 1.4rem;">${miniBtn("＋ Añadir cuenta", "v2CfgCuenta(-1)", "#3b82f6")}</div>
+
+       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.3rem;">Activos</div>
+       ${activosHtml}
+       <div style="margin:0.6rem 0 1.4rem;">${miniBtn("＋ Añadir activo", "v2CfgActivo(-1)", "#3b82f6")}</div>
+
+       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.5rem;">Objetivo de asignación</div>
+       ${filaAjuste("Renta variable / Renta fija",
+                    `${(+obj["Renta variable"] || 0).toFixed(0)}% / ${(+obj["Renta fija"] || 0).toFixed(0)}%`,
+                    miniBtn("✎", "v2CfgObjetivo()"))}`;
+
+    const m = ensureModal();
+    m.querySelector(".modal-card").innerHTML =
+      `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+        <div style="font-size:1.1rem;font-weight:800;color:#fff;">Ajustes</div>
+        <button id="ff-close" style="border:none;background:none;color:#9ca3af;font-size:1.1rem;cursor:pointer;">✕</button>
+      </div>
+      <div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.75rem;">Tus cuentas, activos y objetivo. Se guardan cifrados con el resto de tus datos.</div>
+      ${body}`;
+    m.style.display = "flex";
+    document.getElementById("ff-close").addEventListener("click", close);
+  }
+
+  function openCuentaCfg(i) {
+    const c = cfgEditable();
+    const e = i >= 0 ? c.cuentas[i] : {};
+    const body =
+      field("c-nombre", "Nombre", input("c-nombre", "text", e.cuenta, 'placeholder="Revolut"')) +
+      field("c-color", "Color", input("c-color", "color", e.accent || "#3b82f6")) +
+      field("c-donde", "¿Dónde cuenta su efectivo?",
+        selectKV("c-donde", [["caja", "En Caja (cuenta corriente)"], ["cartera", "En Cartera (bróker remunerado)"]],
+                 e.broker ? "cartera" : "caja")) +
+      field("c-cartera", "¿Aparece en la pestaña Cartera?",
+        selectKV("c-cartera", [["no", "No"], ["efectivo", "Sí, con su efectivo"], ["cero", "Sí, pero sin efectivo propio"]],
+                 e.cartera || "no")) +
+      field("c-etiqueta", "Etiqueta en Cartera", input("c-etiqueta", "text", e.etiquetaEfectivo, 'placeholder="Cuenta Broker"'));
+    shell(i >= 0 ? "Editar cuenta" : "Nueva cuenta", body, () => {
+      const nombre = G("c-nombre");
+      if (!nombre) return "Indica el nombre de la cuenta";
+      const repetida = c.cuentas.some((x, k) => k !== i && x.cuenta === nombre);
+      if (repetida) return "Ya tienes una cuenta con ese nombre";
+      const cartera = G("c-cartera");
+      const rec = Object.assign({}, e, {
+        cuenta: nombre, accent: G("c-color"),
+        broker: G("c-donde") === "cartera",
+        cartera: cartera === "no" ? null : cartera,
+        etiquetaEfectivo: G("c-etiqueta") || undefined,
+      });
+      if (i >= 0) {
+        // Si se renombra, arrastrar el cambio a los datos que la referencian
+        const antes = c.cuentas[i].cuenta;
+        if (antes !== nombre) renombrarCuenta(antes, nombre);
+        c.cuentas[i] = rec;
+      } else c.cuentas.push(rec);
+      return null;
+    }, openAjustes);
+  }
+
+  // Renombrar una cuenta sin romper el histórico que la menciona
+  function renombrarCuenta(antes, ahora) {
+    const doc = DB.state.doc;
+    (doc.movimientos || []).forEach((m) => {
+      if (m.cuenta_origen === antes) m.cuenta_origen = ahora;
+      if (m.cuenta_destino === antes) m.cuenta_destino = ahora;
+    });
+    (doc.inversiones || []).forEach((r) => { if (r.cuenta === antes) r.cuenta = ahora; });
+    ((doc.config && doc.config.activos) || []).forEach((a) => { if (a.banco === antes) a.banco = ahora; });
+  }
+
+  function borrarCuentaCfg(i) {
+    const c = cfgEditable();
+    const nombre = c.cuentas[i] && c.cuentas[i].cuenta;
+    const doc = DB.state.doc;
+    const usos = (doc.movimientos || []).filter((m) => m.cuenta_origen === nombre || m.cuenta_destino === nombre).length
+               + (doc.inversiones || []).filter((r) => r.cuenta === nombre).length;
+    if (usos && !confirm(`"${nombre}" aparece en ${usos} registros. Si la borras, esos importes dejarán de contar en tu patrimonio. ¿Seguir?`)) return;
+    if (!usos && !confirm(`¿Borrar la cuenta "${nombre}"?`)) return;
+    c.cuentas.splice(i, 1);
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(openAjustes);
+  }
+
+  function openActivoCfg(i) {
+    const c = cfgEditable();
+    const e = i >= 0 ? c.activos[i] : {};
+    const body =
+      field("a-nombre", "Nombre", input("a-nombre", "text", e.nombre, 'placeholder="Vanguard FTSE All-World"')) +
+      field("a-isin", "ISIN", input("a-isin", "text", e.isin, 'placeholder="IE00BK5BQT80"')) +
+      field("a-renta", "Categoría", select("a-renta", RENTAS, e.categoria || RENTAS[0])) +
+      field("a-tipo", "Tipo", select("a-tipo", ACTIVO_TIPOS, e.tipo || ACTIVO_TIPOS[0])) +
+      field("a-banco", "Cuenta / bróker", select("a-banco", CUENTAS(), e.banco || CUENTAS()[0])) +
+      field("a-yf", "Ticker de Yahoo Finance", input("a-yf", "text", e.yf, 'placeholder="VWCE.DE"')) +
+      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">El ticker es lo que da el precio automático. Compruébalo en finance.yahoo.com y verifica que el precio se parece a lo que pagaste por unidad: un ticker equivocado infla la rentabilidad sin avisar. Déjalo vacío si el activo se valora por su valor liquidativo.</div>`;
+    shell(i >= 0 ? "Editar activo" : "Nuevo activo", body, () => {
+      const nombre = G("a-nombre");
+      if (!nombre) return "Indica el nombre del activo";
+      const rec = Object.assign({}, e, {
+        nombre, isin: G("a-isin") || "-", categoria: G("a-renta"),
+        tipo: G("a-tipo"), banco: G("a-banco"), yf: G("a-yf") || null,
+      });
+      if (i >= 0) c.activos[i] = rec; else c.activos.push(rec);
+      return null;
+    }, openAjustes);
+  }
+
+  function borrarActivoCfg(i) {
+    const c = cfgEditable();
+    const a = c.activos[i];
+    if (!a || !confirm(`¿Quitar "${a.nombre}" de tus activos? Las operaciones que ya tengas registradas no se borran.`)) return;
+    c.activos.splice(i, 1);
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(openAjustes);
+  }
+
+  function openObjetivoCfg() {
+    const c = cfgEditable();
+    const o = c.objetivo;
+    const body =
+      field("o-rv", "Renta variable (%)", input("o-rv", "number", o["Renta variable"], 'step="1" min="0" max="100"')) +
+      field("o-rf", "Renta fija (%)", input("o-rf", "number", o["Renta fija"], 'step="1" min="0" max="100"')) +
+      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Es el reparto al que quieres tender. La página Cartera te muestra cuánto te desvías.</div>`;
+    shell("Objetivo de asignación", body, () => {
+      const rv = parseFloat(G("o-rv")), rf = parseFloat(G("o-rf"));
+      if (!isFinite(rv) || !isFinite(rf)) return "Introduce ambos porcentajes";
+      if (Math.abs(rv + rf - 100) > 0.01) return `Los dos deben sumar 100 % (ahora suman ${(rv + rf).toFixed(0)} %)`;
+      c.objetivo = { "Renta variable": rv, "Renta fija": rf };
+      return null;
+    }, openAjustes);
+  }
+
   // ── Inmueble ──
   function openInmueble(existing) {
     const doc = DB.state.doc, e = existing || {};
@@ -224,7 +418,7 @@
     const doc = DB.state.doc;
     doc.nav = doc.nav || {};
     const funds = {};
-    CFG.ACTIVOS.forEach((a) => { if (!a.yf && a.isin && a.isin !== "-") funds[a.isin] = a.nombre; });
+    CFG.activos().forEach((a) => { if (!a.yf && a.isin && a.isin !== "-") funds[a.isin] = a.nombre; });
     (doc.inversiones || []).forEach((r) => { if (r.isin && r.isin !== "-" && !funds[r.isin]) funds[r.isin] = r.nombre; });
     Object.keys(doc.nav).forEach((isin) => { if (!funds[isin]) funds[isin] = isin; });
     const pairs = Object.keys(funds).map((isin) => [isin, funds[isin]]);
@@ -251,12 +445,15 @@
   const findById = (coll, id) => (DB.state.doc[coll] || []).find((x) => x.id === id);
 
   window.SolventoForms = {
-    openMovimiento, openInversion, openInmueble, openNav, openCuadrar,
+    openMovimiento, openInversion, openInmueble, openNav, openCuadrar, openPasivo,
+    openAjustes, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editInmueble: (id) => openInmueble(findById("inmuebles", id)),
+    editPasivo: (id) => openPasivo(findById("pasivos", id)),
     deleteMovimiento: (id) => del("movimientos", id),
     deleteInversion: (id) => del("inversiones", id),
     deleteInmueble: (id) => del("inmuebles", id),
+    deletePasivo: (id) => del("pasivos", id),
   };
 })();

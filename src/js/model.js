@@ -50,7 +50,7 @@
   // automáticamente, sin doble apunte.
   function computeSaldos(movimientos, inversiones) {
     const bal = {};
-    CFG.CUENTAS.forEach((c) => (bal[c.cuenta] = 0));
+    CFG.cuentas().forEach((c) => (bal[c.cuenta] = 0));
     const isC = (c) => c && c !== "-" && (c in bal);
     for (const m of movimientos || []) {
       if (esMovInversion(m)) continue; // el efectivo lo mueve la operación, no este apunte
@@ -74,7 +74,7 @@
       const cuenta = String(r.cuenta || "").trim();
       if (isFinite(coste) && isC(cuenta)) bal[cuenta] -= coste; // Compra(+coste)→resta, Venta(−coste)→suma
     }
-    const saldos = CFG.CUENTAS.map((c) => ({
+    const saldos = CFG.cuentas().map((c) => ({
       cuenta: c.cuenta, accent: c.accent, logo: c.logo, emoji: c.emoji,
       broker: !!c.broker, saldo: round2(bal[c.cuenta]),
     }));
@@ -95,7 +95,7 @@
   // ── Registro de activos: conocidos + derivados de los datos ──
   function buildRegistry(inversiones) {
     const byJk = {};
-    CFG.ACTIVOS.forEach((a) => (byJk[jkOf(a.nombre, a.isin)] = a));
+    CFG.activos().forEach((a) => (byJk[jkOf(a.nombre, a.isin)] = a));
     for (const r of inversiones || []) {
       const jk = jkOf(r.nombre, r.isin);
       if (!byJk[jk]) {
@@ -410,7 +410,7 @@
     }
 
     // Deltas de líquido por fecha (mismas cuentas que el saldo) + acumulado
-    const cuentas = new Set(CFG.CUENTAS.map((c) => c.cuenta));
+    const cuentas = new Set(CFG.cuentas().map((c) => c.cuenta));
     const isC = (c) => c && c !== "-" && cuentas.has(c);
     const deltaByDate = {};
     for (const m of db.movimientos || []) {

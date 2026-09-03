@@ -99,8 +99,36 @@
     }
   }
 
+
+  // ── Lista pública de tickers ──
+  // Cuando das de alta un activo, su ticker debe llegar al proceso que descarga
+  // precios (que corre en GitHub y no puede leer tus datos cifrados). Se publica
+  // en tickers.json, que no es información nueva: prices.json ya expone
+  // exactamente los mismos símbolos. Sin valores, sin cantidades.
+  const TICKERS_PATH = "tickers.json";
+  const tickersUrl = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${TICKERS_PATH}`;
+
+  async function pushTickers(tickers, token) {
+    const contenido = JSON.stringify(
+      { generated: new Date().toISOString(), tickers: tickers.slice().sort() }, null, 1);
+    const headers = { Accept: "application/vnd.github+json", Authorization: "Bearer " + token,
+                      "X-GitHub-Api-Version": "2022-11-28" };
+    let sha = null;
+    const cur = await fetch(tickersUrl() + "?ref=" + encodeURIComponent(SYNC.branch) + "&_=" + Date.now(), { headers });
+    if (cur.ok) sha = (await cur.json()).sha;
+    const body = { message: "Solvento: actualizar lista de activos", content: b64enc(contenido), branch: SYNC.branch };
+    if (sha) body.sha = sha;
+    const r = await fetch(tickersUrl(), {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, headers),
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error("GitHub PUT tickers " + r.status);
+    return true;
+  }
+
   window.SolventoSync = {
     ghGet, ghPut, storeToken, loadToken, hasToken, clearToken,
-    fetchRemoteBlob, push, getSha, setSha,
+    fetchRemoteBlob, push, pushTickers, getSha, setSha,
   };
 })();
