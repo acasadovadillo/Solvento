@@ -19,6 +19,24 @@ from datetime import datetime, timezone
 # yf_ticker → moneda de cotización (el resto cotiza en EUR)
 YF_TICKERS = ["IUAA.L", "IWDA.AS", "CSPX.AS", "HEMA.L", "IGLN.L",
               "BTC-EUR", "AAPL", "0P000168OI.F", "SSAC.AS"]
+
+# La app escribe tickers.json cuando das de alta un activo desde Ajustes, para
+# que sus precios se descarguen sin tocar este fichero. Si no existe (o está
+# mal), se usa la lista de arriba. No es dato personal: prices.json ya publica
+# exactamente los mismos tickers.
+def tickers():
+    try:
+        with open("tickers.json", encoding="utf-8") as f:
+            t = json.load(f).get("tickers")
+        t = [x for x in t if isinstance(x, str) and x.strip()]
+        if t:
+            print(f"   Usando tickers.json ({len(t)} activos)")
+            return t
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(f"   tickers.json ilegible ({e}); uso la lista interna")
+    return YF_TICKERS
 MONEDA = {"IUAA.L": "USD", "AAPL": "USD"}  # AGGG.L cotiza en USD pese al sufijo .L
 
 
@@ -87,7 +105,7 @@ def fetch_hist_eur(ticker, fx):
 def main():
     fx = fetch_fx()
     eur, hist = {}, {}
-    for t in YF_TICKERS:
+    for t in tickers():
         p = fetch_precio_eur(t, fx)
         eur[t] = p
         h = fetch_hist_eur(t, fx)

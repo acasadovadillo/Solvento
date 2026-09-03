@@ -146,7 +146,7 @@
 
   // ── Panel de asignación actual vs objetivo (RV/RF) ──
   function asignacionPanel(inv) {
-    const OBJ = CFG.OBJETIVO_ASIGNACION;
+    const OBJ = CFG.objetivo();
     const CATC = CFG.CAT_COLORES;
     const base = Object.keys(OBJ).reduce((s, c) => s + (inv.porCat[c] || 0), 0);
     const costeCat = {};
@@ -356,7 +356,7 @@
 
   function subNavCartera() {
     const tabs = [{ id: "agregado", label: "Agregado" }]
-      .concat(CFG.BROKERS.map((b) => ({ id: b.cuenta, label: b.cuenta })));
+      .concat(CFG.brokers().map((b) => ({ id: b.cuenta, label: b.cuenta })));
     return `<div class="v2-wrap" style="margin-top:0.5rem;"><div style="display:flex;gap:0.25rem;border-bottom:1px solid #2a2d3a;overflow-x:auto;">` +
       tabs.map((t) => {
         const on = CARTERA_TAB === t.id;
@@ -367,15 +367,15 @@
 
   // Efectivo de un bróker: el saldo de su cuenta, o 0 fijo (Bankinter, cuenta figurativa)
   function efectivoBroker(m, cuenta) {
-    const cfg = CFG.BROKERS.find((b) => b.cuenta === cuenta);
+    const cfg = CFG.brokers().find((b) => b.cuenta === cuenta);
     if (!cfg) return { valor: 0, etiqueta: "Efectivo" };
-    if (cfg.efectivo === "cero") return { valor: 0, etiqueta: cfg.etiquetaEfectivo || "Cuenta Broker", fijo: true };
+    if (cfg.cartera === "cero") return { valor: 0, etiqueta: cfg.etiquetaEfectivo || "Cuenta Broker", fijo: true };
     const s = (m.saldos || []).find((x) => x.cuenta === cuenta);
     return { valor: s ? s.saldo : 0, etiqueta: cfg.etiquetaEfectivo || "Efectivo sin invertir" };
   }
 
   function tarjetaEfectivo(m, cuenta) {
-    const cta = CFG.CUENTAS.find((c) => c.cuenta === cuenta) || {};
+    const cta = CFG.cuentas().find((c) => c.cuenta === cuenta) || {};
     const ef = efectivoBroker(m, cuenta);
     const icon = cta.logo ? `<img src="${cta.logo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:4px;">` : `<span style="font-size:1.05rem;">${cta.emoji || ""}</span>`;
     return `<div class="dashboard-panel" style="border-left:3px solid ${cta.accent || "#6b7280"};">
@@ -416,7 +416,7 @@
 
     if (CARTERA_TAB === "agregado") {
       const tarjetas = `<div class="v2-wrap"><div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1rem;">Cuentas de bróker</div>
-        <div class="v2-hub-grid">${CFG.BROKERS.map((b) => tarjetaEfectivo(m, b.cuenta)).join("")}</div></div>`;
+        <div class="v2-hub-grid">${CFG.brokers().map((b) => tarjetaEfectivo(m, b.cuenta)).join("")}</div></div>`;
       return aviso + heroCartera(m.carteraTotal, inv, "Valor total (posiciones + efectivo)") + tarjetas +
         chartPanel("Evolución de la cartera", "v2-chart-cartera") +
         asignacionPanel(inv) +
@@ -491,7 +491,8 @@
       return header("Pasivos", fmtEur(0)) +
         `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;padding:3rem;">
           <div style="color:#6b7280;font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Sin deudas registradas</div>
-          <div style="color:#374151;font-size:0.85rem;max-width:420px;margin:0 auto;">Hipotecas, préstamos, tarjetas… Cuando registres pasivos aquí, se descontarán de tu patrimonio neto.</div>
+          <div style="color:#374151;font-size:0.85rem;max-width:420px;margin:0 auto 1.25rem;">Hipotecas, préstamos, tarjetas… Lo que registres aquí se descuenta de tu patrimonio neto.</div>
+          ${addBtn("＋ Deuda", "v2AddPas()")}
         </div></div>`;
     }
     const rows = pas.items.map((d) => `<tr class="table-row">
@@ -499,10 +500,15 @@
       <td style="text-align:left;color:#9ca3af;">${esc(d.tipo)}</td>
       <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(d.importe)}</td>
       <td style="text-align:right;color:#9ca3af;">${(pas.total ? d.importe / pas.total * 100 : 0).toFixed(2)}%</td>
-    </tr>`).join("");
+      ${rowActions(`v2EditPas('${d.id}')`, `v2DelPas('${d.id}')`)}</tr>`).join("");
     return header("Pasivos", fmtEur(pas.total)) +
-      `<div class="v2-wrap"><div class="table-container"><table class="minimal-table">
-        <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th style="text-align:right;">Peso</th></tr></thead>
+      `<div class="v2-wrap"><div class="table-container">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Deudas</div>
+          ${addBtn("＋ Deuda", "v2AddPas()")}
+        </div>
+        <table class="minimal-table">
+        <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th style="text-align:right;">Peso</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div></div>`;
   }
 
@@ -523,7 +529,7 @@
     caja:       () => F() && F().openMovimiento(),
     cartera:    () => F() && F().openInversion(),
     inmuebles:  () => F() && F().openInmueble(),
-    pasivos:    () => F() && F().openMovimiento(),
+    pasivos:    () => F() && F().openPasivo(),
   };
   window.v2AddAqui = function () {
     const activa = document.querySelector("#app .page.active");
@@ -574,6 +580,7 @@
   // ── Entrada ──
   function render(doc, prices) {
     CURRENT_DOC = doc;
+    CFG.usarDoc(doc);          // cuentas/activos/objetivo salen de tus datos
     const m = window.SolventoModel.build(doc, prices);
     window.__MODEL = m;
     try { window.__ANALITICA = window.SolventoModel.buildAnalitica(doc, prices); }
@@ -606,6 +613,15 @@
   window.v2AddInm = () => F() && F().openInmueble();
   window.v2AddNav = () => F() && F().openNav();
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
+  window.v2AddPas = () => F() && F().openPasivo();
+  window.v2Ajustes = () => F() && F().openAjustes();
+  window.v2CfgCuenta = (i) => F() && F().openCuentaCfg(i);
+  window.v2CfgDelCuenta = (i) => F() && F().borrarCuentaCfg(i);
+  window.v2CfgActivo = (i) => F() && F().openActivoCfg(i);
+  window.v2CfgDelActivo = (i) => F() && F().borrarActivoCfg(i);
+  window.v2CfgObjetivo = () => F() && F().openObjetivoCfg();
+  window.v2EditPas = (id) => F() && F().editPasivo(id);
+  window.v2DelPas = (id) => { if (F() && confirm("¿Borrar esta deuda?")) F().deletePasivo(id); };
   window.v2CarteraTab = (id) => {
     CARTERA_TAB = id;
     const pg = document.getElementById("v2-page-cartera");
