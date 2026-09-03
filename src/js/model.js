@@ -209,14 +209,36 @@
     const inm = valuateInmuebles(db.inmuebles);
     // La Cartera incluye el efectivo sin invertir de los brókers.
     const carteraTotal = round2(inv.total + efectivoBroker);
-    const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total);
+    const pas = valuatePasivos(db.pasivos);
+    // Patrimonio NETO = lo que tienes menos lo que debes.
+    const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total - pas.total);
     const ratioInv = patrimonioNeto ? carteraTotal / patrimonioNeto * 100 : 0;
     const ratioInm = patrimonioNeto ? inm.total / patrimonioNeto * 100 : 0;
+    const ratioPas = patrimonioNeto ? pas.total / patrimonioNeto * 100 : 0;
     const pctLiquidez = 100 - ratioInv - ratioInm;
     return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker,
-             inv, inm, carteraTotal, patrimonioNeto, ratioInv, ratioInm, pctLiquidez };
+             inv, inm, pas, carteraTotal, patrimonioNeto,
+             ratioInv, ratioInm, ratioPas, pctLiquidez };
   }
 
+
+  // ── Pasivos (deudas: hipotecas, préstamos, tarjetas…) ──
+  // Aún no hay formulario para darlos de alta, pero el cálculo ya es real: en
+  // cuanto el documento tenga db.pasivos, la tarjeta y la página los reflejan y
+  // el patrimonio neto los descuenta.
+  function valuatePasivos(pasivos) {
+    const items = (pasivos || [])
+      .map((r) => ({
+        id: r.id,
+        nombre: r.nombre || r.concepto || "Deuda",
+        tipo: r.tipo || "Préstamo",
+        entidad: r.entidad || "",
+        importe: num(r.importe ?? r.pendiente ?? r.saldo),
+      }))
+      .filter((x) => isFinite(x.importe) && x.importe > 0)
+      .sort((a, b) => b.importe - a.importe);
+    return { items, n: items.length, total: round2(items.reduce((s, x) => s + x.importe, 0)) };
+  }
 
   // ── Analítica por activo: líneas temporales de unidades, coste y precio ──
   function _timelinesPorActivo(db, prices) {
