@@ -18,32 +18,6 @@
 .nav-tab.active { background: #2a2d3a; color: #fff; font-weight: 600; }
 
 /* ── Hamburger (mobile only) ── */
-.nav-hamburger {
-  display: none; flex-direction: column; justify-content: center; gap: 5px;
-  background: none; border: none; cursor: pointer; padding: 0.4rem; outline: none;
-}
-.nav-hamburger span {
-  display: block; width: 22px; height: 2px; background: #e5e7eb; border-radius: 2px;
-  transition: transform 0.2s, opacity 0.2s;
-}
-.nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.nav-hamburger.open span:nth-child(2) { opacity: 0; }
-.nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-#mobile-nav-panel {
-  display: none; position: fixed; top: 64px; left: 0; right: 0;
-  background: #1a1d27; border-bottom: 1px solid #2a2d3a;
-  flex-direction: column; z-index: 999; padding: 0.5rem;
-}
-#mobile-nav-panel.open { display: flex; }
-.mobile-nav-item {
-  background: none; border: none; color: #9ca3af; font-family: inherit;
-  font-size: 1rem; font-weight: 500; text-align: left;
-  padding: 0.85rem 1rem; border-radius: 8px; cursor: pointer; outline: none;
-  transition: background 0.15s, color 0.15s;
-}
-.mobile-nav-item:hover { background: #2a2d3a; color: #fff; }
-.mobile-nav-item.active { color: #fff; font-weight: 700; background: #2a2d3a; }
 
 /* ── Pages (SPA) ── */
 .page { display: none; }
@@ -65,10 +39,62 @@
 
 footer { text-align: center; margin-top: 5rem; font-size: 0.75rem; color: #3a3d4a; }
 
+/* ── Barra de pestañas inferior (móvil) ──
+   En el móvil la navegación vive abajo, al alcance del pulgar, como en una app.
+   En escritorio no existe: allí mandan las pestañas de la barra superior. */
+.bottom-nav { display: none; }
+@media (max-width: 640px) {
+  .bottom-nav {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1100;
+    background: #161a22; border-top: 1px solid #2a2d3a;
+    padding-bottom: env(safe-area-inset-bottom);   /* respeta la barra del iPhone */
+  }
+  .bottom-nav-item {
+    flex: 1; background: none; border: none; cursor: pointer; font-family: inherit;
+    color: #6b7280; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.01em;
+    padding: 0.7rem 0.1rem 0.75rem; display: flex; flex-direction: column;
+    align-items: center; gap: 0.3rem; -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-nav-item::before {
+    content: ""; width: 18px; height: 3px; border-radius: 2px; background: transparent;
+  }
+  .bottom-nav-item.active { color: #fff; }
+  .bottom-nav-item.active::before { background: currentColor; }
+
+  /* Botón flotante para registrar sin buscar el formulario */
+  .fab {
+    position: fixed; right: 1rem; z-index: 1101;
+    bottom: calc(4.4rem + env(safe-area-inset-bottom));
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #2563eb; color: #fff; border: none; cursor: pointer;
+    font-size: 1.6rem; line-height: 1; font-family: inherit;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fab:active { transform: scale(0.94); }
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .nav-tabs { display: none; }
-  .nav-hamburger { display: flex; }
+  /* La marca no debe partirse en varias líneas ni empujar los botones fuera */
+  .navbar { padding: 0 0.85rem; gap: 0.5rem; }
+  .navbar-brand h1 { font-size: 1rem; white-space: nowrap; }
+  .navbar-date { display: none; }
+  #sync-estado { font-size: 0.7rem !important; }
+  /* Solo el icono: con el texto, "Bloquear" se salía de la pantalla */
+  #sync-btn, #logout-btn { padding: 0.4rem 0.55rem; font-size: 0.95rem; }
+  .btn-txt { display: none; }
+  /* El estado se reduce a su símbolo, que ya dice lo esencial de un vistazo */
+  #sync-estado { font-size: 0.95rem !important; overflow: hidden; max-width: 1.4em; }
+  /* Hueco para la barra inferior */
+  body { padding-bottom: 5.5rem !important; }
+}
+
+/* iOS amplía la pantalla al enfocar un campo de menos de 16px.
+   Con 16px exactos, el zoom no se dispara. */
+@media (max-width: 900px) {
+  input, select, textarea { font-size: 16px !important; }
 }
 
 @media (max-width: 900px) {
