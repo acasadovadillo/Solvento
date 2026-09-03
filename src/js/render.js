@@ -190,12 +190,22 @@
     const seg = (p, c, l) => `<div title="${l}: ${pct1(p)}%" style="width:${Math.max(0, p).toFixed(2)}%;background:${c};"></div>`;
     return `<div class="v2-prop-bar">${seg(m.pctLiquidez, "#3b82f6", "Caja")}${seg(m.ratioInv, "#10b981", "Cartera")}${seg(m.ratioInm, "#a16207", "Inmuebles")}</div>`;
   }
-  function hubCard(titulo, valor, pct, color, sub, subColor) {
-    return `<div class="dashboard-panel" style="border-left:3px solid ${color};">
+  // Tarjeta del panel de Patrimonio. Si se le pasa `pagina`, es clicable y
+  // navega a esa sección (con realce al pasar el cursor y una flecha de pista).
+  function hubCard(titulo, valor, pct, color, sub, subColor, pagina) {
+    const clicable = pagina
+      ? ` role="link" tabindex="0" onclick="v2Tab('${pagina}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();v2Tab('${pagina}');}"`
+        + ` onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''"`
+        + ` title="Ir a ${esc(titulo)}"`
+      : "";
+    const flecha = pagina
+      ? `<span style="color:${color};font-weight:700;margin-left:0.35rem;">&nbsp;→</span>`
+      : "";
+    return `<div class="dashboard-panel" style="border-left:3px solid ${color};${pagina ? "cursor:pointer;transition:background 0.2s;" : ""}"${clicable}>
       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:${color};margin-bottom:0.6rem;">${esc(titulo)}</div>
       <div style="font-size:1.7rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">${valor}</div>
       <div style="font-size:0.82rem;color:${subColor || "#9ca3af"};font-weight:600;margin-top:0.3rem;">${sub}</div>
-      <div style="font-size:0.78rem;color:#6b7280;margin-top:0.15rem;">${pct.toFixed(2)}% del patrimonio</div>
+      <div style="font-size:0.78rem;color:#6b7280;margin-top:0.15rem;">${pct.toFixed(2)}% del patrimonio${flecha}</div>
     </div>`;
   }
 
@@ -258,11 +268,11 @@
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
       propBar(m) +
       `<div class="v2-hub-grid">
-        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldos.length + " cuentas")}
-        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct))}
-        ${hubCard("Inmuebles", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + " inmuebles")}
+        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja")}
+        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera")}
+        ${hubCard("Inmuebles", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + " inmuebles", null, "inmuebles")}
         ${hubCard("Pasivos", fmtEur(m.pas.total), m.ratioPas, "#6b7280",
-                  m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas")}
+                  m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas", null, "pasivos")}
       </div>` +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio") +
       donutPanel("Distribución del patrimonio",
