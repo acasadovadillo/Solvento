@@ -41,10 +41,17 @@
     $("app").style.display = "block";
     render();
     try { DB.state.token = await SYNC.loadToken(password); } catch (e) { DB.state.token = null; }
+    // Si elegiste que el token viaje con tus datos, en un dispositivo nuevo se
+    // recoge de ahí y no hay que volver a pegarlo.
+    if (!DB.state.token && doc && doc.config && doc.config.token) {
+      DB.state.token = doc.config.token;
+      try { await SYNC.storeToken(DB.state.token, password); } catch (e) {}
+    }
     updateSyncUi();
     if (!DB.state.token) pintarEstado("sintoken", "Añade tu token en 🔄 Sincronizar y el guardado será automático");
     else if (hayPendiente()) reintentarPendiente();
     else pintarEstado("ok", "Tus cambios se guardan solos en GitHub");
+    avisarCopiaSiToca();
   }
   function render() {
     if (DB.state.doc && window.SolventoRender) window.SolventoRender.render(DB.state.doc, PRICES);
@@ -154,11 +161,82 @@
   }
   function lock() {
     pintarEstado("");
+    quitarBandaCopia();
     DB.state.doc = null; DB.state.password = null; DB.state.token = null;
     $("app").style.display = "none";
     document.documentElement.style.overflow = "hidden";
     startBoot();
   }
+
+  // ── Cambiar la contraseña ───────────────────────────────────────────
+  // La operación más delicada de la app: si falla a medias, te quedas fuera de
+  // tus propios datos. Por eso el orden es paranoico: primero se comprueba la
+  // contraseña actual, después se cifra con la nueva y se VUELVE A DESCIFRAR
+  // para confirmar que el resultado se puede abrir, y solo entonces se sustituye
+  // nada. Si la subida a GitHub falla, en este dispositivo ya vale la nueva y
+  // queda pendiente de subir (se avisa, porque los demás dispositivos seguirán
+  // pidiendo la vieja hasta que suba).
+  async function cambiarPassword(actual, nueva) {
+    const blob = DB.getStoredBlob();
+    if (!blob) throw new Error("no hay datos en este dispositivo");
+
+    // 1. ¿Es correcta la actual?
+    let doc;
+    try { doc = await C.decryptDoc(blob, actual); }
+    catch (e) { const err = new Error("La contraseña actual no es correcta"); err.code = "ACTUAL"; throw err; }
+
+    // 2. Cifrar con la nueva y comprobar que se puede volver a abrir
+    const nuevoBlob = await C.encryptDoc(doc, nueva);
+    const comprobacion = await C.decryptDoc(nuevoBlob, nueva);
+    if (!comprobacion || typeof comprobacion !== "object") throw new Error("la comprobación del cifrado falló");
+
+    // 3. Recifrar el token con la nueva contraseña (si lo había)
+    const token = DB.state.token;
+
+    // 4. Sustituir de verdad
+    DB.storeBlob(nuevoBlob);
+    DB.state.password = nueva;
+    DB.state.doc = doc;
+    if (token) await SYNC.storeToken(token, nueva);
+
+    // 5. Subir, para que los demás dispositivos usen ya la nueva
+    let subido = false;
+    if (token) subido = await subir("Solvento: cambio de contraseña");
+    else marcarPendiente(true);
+    return { subido };
+  }
+
+  // ── Recordatorio de copia de seguridad ──────────────────────────────
+  // Sin contraseña no hay recuperación posible, así que una copia cifrada
+  // guardada aparte es la única red de seguridad real.
+  const COPIA_KEY = "solvento_ultima_copia";
+  const DIAS_AVISO = 30;
+  function marcarCopiaHecha() { localStorage.setItem(COPIA_KEY, String(Date.now())); quitarBandaCopia(); }
+  // Un aviso de 3 segundos es demasiado fugaz para algo que evita perderlo todo:
+  // se muestra como banda fija hasta que hagas la copia o la descartes.
+  function avisarCopiaSiToca() {
+    const ultima = Number(localStorage.getItem(COPIA_KEY)) || 0;
+    const dias = ultima ? (Date.now() - ultima) / 864e5 : Infinity;
+    if (dias < DIAS_AVISO) { quitarBandaCopia(); return; }
+    if ($("v2-banda-copia")) return;
+    const b = document.createElement("div");
+    b.id = "v2-banda-copia";
+    b.style.cssText = "background:#3f2d0a;border-bottom:1px solid #a16207;color:#fbbf24;font-size:0.82rem;font-weight:600;padding:0.6rem 1rem;display:flex;align-items:center;justify-content:center;gap:0.75rem;flex-wrap:wrap;text-align:center;";
+    b.innerHTML =
+      `<span>${ultima ? `Hace ${Math.floor(dias)} días de tu última copia de seguridad.` : "Aún no has hecho ninguna copia de seguridad."}
+        Sin tu contraseña no hay forma de recuperar los datos.</span>
+       <button id="v2-copia-ya" style="background:#fbbf24;color:#1a1200;border:none;border-radius:7px;font-size:0.78rem;font-weight:700;padding:0.35rem 0.8rem;cursor:pointer;font-family:inherit;">Exportar copia</button>
+       <button id="v2-copia-luego" style="background:none;border:none;color:#a16207;font-size:0.78rem;cursor:pointer;font-family:inherit;">Ahora no</button>`;
+    const app = $("app");
+    app.insertBefore(b, app.firstChild);
+    $("v2-copia-ya").addEventListener("click", () => { doExport(); quitarBandaCopia(); });
+    $("v2-copia-luego").addEventListener("click", () => {
+      // Se recuerda dentro de una semana, no en cada arranque
+      localStorage.setItem(COPIA_KEY, String(Date.now() - (DIAS_AVISO - 7) * 864e5));
+      quitarBandaCopia();
+    });
+  }
+  function quitarBandaCopia() { const b = $("v2-banda-copia"); if (b) b.remove(); }
 
   // ── Login / importación ──
   async function handleLogin(ev) {
@@ -210,6 +288,16 @@
     }
   }
 
+  // El token puede viajar dentro del documento cifrado (opcional, lo decides tú
+  // con la casilla del modal). Así un dispositivo nuevo no tiene que pegarlo.
+  function aplicarTokenViajero(t) {
+    const cb = $("sync-token-viaja");
+    if (!cb || !DB.state.doc) return;
+    if (!DB.state.doc.config) DB.state.doc.config = {};
+    if (cb.checked) DB.state.doc.config.token = t != null ? t : DB.state.token;
+    else delete DB.state.doc.config.token;
+  }
+
   // ── Sincronización (UI) ──
   function updateSyncUi() {
     const has = SYNC.hasToken();
@@ -224,6 +312,8 @@
     // que se muestra con puntos (seguro ante capturas de pantalla).
     const inp = $("sync-token");
     if (inp && DB.state.token) { inp.value = DB.state.token; inp.type = "password"; }
+    const cb = $("sync-token-viaja");
+    if (cb) cb.checked = !!(DB.state.doc && DB.state.doc.config && DB.state.doc.config.token);
     updateSyncUi();
   }
   function alternarVerToken() {
@@ -240,6 +330,7 @@
     if (!t) { setError("sync-status", "Pega tu token de GitHub"); return; }
     await SYNC.storeToken(t, DB.state.password);
     DB.state.token = t;
+    aplicarTokenViajero(t);
     $("sync-token").type = "password";   // se queda puesto, pero oculto
     updateSyncUi();
     setError("sync-status", "Token guardado ✓ · a partir de ahora se guarda solo", "#10b981");
@@ -275,6 +366,7 @@
     a.download = "solvento-data.enc";
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(a.href);
+    marcarCopiaHecha();
     setError("sync-status", "Copia cifrada descargada ✓", "#10b981");
   }
   async function doImport(ev) {
@@ -300,6 +392,7 @@
     $("sync-close").addEventListener("click", closeSync);
     $("sync-save-token").addEventListener("click", saveToken);
     $("sync-token-ver").addEventListener("click", alternarVerToken);
+    $("sync-token-viaja").addEventListener("change", () => { aplicarTokenViajero(); saveDoc(); });
     $("sync-push").addEventListener("click", doPush);
     $("sync-pull").addEventListener("click", doPull);
     $("sync-export").addEventListener("click", doExport);
@@ -316,6 +409,6 @@
     startBoot();
   }
 
-  window.SolventoBoot = { lock, openSync, saveDoc, toast };
+  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword };
   document.addEventListener("DOMContentLoaded", init);
 })();

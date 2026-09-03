@@ -411,6 +411,37 @@
     });
   }
 
+  // ── Cambiar la contraseña ──
+  function openPassword() {
+    const body =
+      `<div style="background:#3f2d0a;border:1px solid #a16207;border-radius:10px;padding:0.7rem 0.9rem;font-size:0.8rem;color:#fbbf24;margin:0.5rem 0 0.25rem;">
+         Antes de seguir, exporta una copia cifrada (🔄 → Exportar copia). Si algo va mal, es tu única red de seguridad.
+       </div>` +
+      field("pw-actual", "Contraseña actual", input("pw-actual", "password", "", 'autocomplete="current-password"')) +
+      field("pw-nueva", "Contraseña nueva", input("pw-nueva", "password", "", 'autocomplete="new-password"')) +
+      field("pw-nueva2", "Repite la nueva", input("pw-nueva2", "password", "", 'autocomplete="new-password"')) +
+      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Tus datos se descifran con la actual y se vuelven a cifrar con la nueva. Tendrás que usar la nueva en <b>todos</b> tus dispositivos, también en el móvil.</div>`;
+    shell("Cambiar contraseña", body, () => {
+      const actual = document.getElementById("pw-actual").value;
+      const n1 = document.getElementById("pw-nueva").value;
+      const n2 = document.getElementById("pw-nueva2").value;
+      if (!actual) return "Escribe tu contraseña actual";
+      if (n1.length < 6) return "La nueva debe tener al menos 6 caracteres";
+      if (n1 !== n2) return "Las dos nuevas no coinciden";
+      if (n1 === actual) return "La nueva es igual que la actual";
+      // El cambio real es asíncrono: se lanza aquí y se informa por aviso
+      window.SolventoBoot.cambiarPassword(actual, n1).then((r) => {
+        window.SolventoBoot.toast(
+          r.subido ? "Contraseña cambiada y subida ✓ · úsala ya en todos tus dispositivos"
+                   : "Contraseña cambiada en este dispositivo · pendiente de subir: los demás seguirán pidiendo la anterior",
+          r.subido ? "#10b981" : "#fbbf24");
+      }).catch((e) => {
+        window.SolventoBoot.toast(e.code === "ACTUAL" ? "La contraseña actual no es correcta" : ("No se pudo cambiar: " + e.message), "#ef4444");
+      });
+      return null;
+    });
+  }
+
   // ── Inmueble ──
   function openInmueble(existing) {
     const doc = DB.state.doc, e = existing || {};
@@ -469,7 +500,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openInmueble, openNav, openCuadrar, openPasivo,
-    openAjustes, openPresupuesto, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
+    openAjustes, openPresupuesto, openPassword, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editInmueble: (id) => openInmueble(findById("inmuebles", id)),
