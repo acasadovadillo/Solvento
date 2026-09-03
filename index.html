@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p32" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p32" />
-  <link rel="stylesheet" href="src/css/components.css?v=p32" />
+  <link rel="stylesheet" href="src/css/base.css?v=p35" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p35" />
+  <link rel="stylesheet" href="src/css/components.css?v=p35" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -140,7 +140,12 @@
         style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#9ca3af;font-size:0.9rem;padding:0 0.7rem;cursor:pointer;font-family:inherit;">👁</button>
     </div>
     <small style="display:block;margin:0.4rem 0 0.5rem;">Token <b>fine-grained</b> con permiso <b>Contents: Read and write</b> solo en este repo. Se guarda cifrado con tu contraseña; nunca se sube.</small>
-    <div id="sync-token-status" style="font-size:0.78rem;margin-bottom:0.75rem;"></div>
+    <div id="sync-token-status" style="font-size:0.78rem;margin-bottom:0.5rem;"></div>
+    <label style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.78rem;color:#9ca3af;margin-bottom:0.75rem;cursor:pointer;">
+      <input type="checkbox" id="sync-token-viaja" style="margin-top:0.15rem;flex-shrink:0;">
+      <span>Guardar el token <b>con mis datos</b>, para no pegarlo en cada dispositivo.
+        <span style="color:#6b7280;display:block;margin-top:0.15rem;">Viajará cifrado con tu contraseña. Contrapartida: si esa contraseña fuese débil y alguien descifrara la copia del repositorio, tendría además permiso de escritura sobre él. Actívalo solo si tu contraseña es sólida.</span></span>
+    </label>
     <button id="sync-save-token" class="primary" style="width:100%;margin-bottom:1.25rem;">Guardar token</button>
 
     <div style="display:flex;gap:0.6rem;margin-bottom:0.75rem;">
@@ -151,19 +156,22 @@
       <button id="sync-export" style="flex:1;">Exportar copia</button>
       <label class="filebtn" style="flex:1;text-align:center;">Importar copia<input id="sync-import" type="file" accept=".enc,application/octet-stream,application/json" style="display:none;" /></label>
     </div>
+    <div style="display:flex;gap:0.6rem;margin-top:0.75rem;">
+      <button id="sync-password" style="flex:1;" onclick="v2Password()">🔑 Cambiar contraseña</button>
+    </div>
     <div id="sync-status" style="font-size:0.82rem;font-weight:600;margin-top:1rem;text-align:center;display:none;"></div>
   </div>
 </div>
 
-<script src="src/js/crypto.js?v=p32"></script>
-<script src="src/js/config.js?v=p32"></script>
-<script src="src/js/model.js?v=p32"></script>
-<script src="src/js/charts.js?v=p32"></script>
-<script src="src/js/render.js?v=p32"></script>
-<script src="src/js/db.js?v=p32"></script>
-<script src="src/js/sync.js?v=p32"></script>
-<script src="src/js/forms.js?v=p32"></script>
-<script src="src/js/boot.js?v=p32"></script>
+<script src="src/js/crypto.js?v=p35"></script>
+<script src="src/js/config.js?v=p35"></script>
+<script src="src/js/model.js?v=p35"></script>
+<script src="src/js/charts.js?v=p35"></script>
+<script src="src/js/render.js?v=p35"></script>
+<script src="src/js/db.js?v=p35"></script>
+<script src="src/js/sync.js?v=p35"></script>
+<script src="src/js/forms.js?v=p35"></script>
+<script src="src/js/boot.js?v=p35"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

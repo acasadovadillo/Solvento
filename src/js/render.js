@@ -857,6 +857,7 @@
     document.getElementById("v2-page-gastos").innerHTML = pageGastos(window.__MODEL);
   };
   window.v2Presupuesto = (cat) => F() && F().openPresupuesto(cat);
+  window.v2Password = () => F() && F().openPassword();
   window.v2CfgCuenta = (i) => F() && F().openCuentaCfg(i);
   window.v2CfgDelCuenta = (i) => F() && F().borrarCuentaCfg(i);
   window.v2CfgActivo = (i) => F() && F().openActivoCfg(i);
