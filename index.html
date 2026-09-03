@@ -6,9 +6,9 @@
   <meta name="robots" content="noindex, nofollow" />
   <title>Solvento v2</title>
   <link rel="icon" href="img/logo-solvento.png" />
-  <link rel="stylesheet" href="src/css/base.css?v=p17" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p17" />
-  <link rel="stylesheet" href="src/css/components.css?v=p17" />
+  <link rel="stylesheet" href="src/css/base.css?v=p18" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p18" />
+  <link rel="stylesheet" href="src/css/components.css?v=p18" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -121,7 +121,11 @@
     <p style="font-size:0.82rem;color:#9ca3af;margin:0 0 1.25rem;">Guarda tu bloque cifrado en tu repo de GitHub para tenerlo en el móvil y el Mac. Los datos viajan siempre cifrados con tu contraseña.</p>
 
     <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;font-weight:700;margin-bottom:0.5rem;">Token de GitHub</div>
-    <input id="sync-token" type="password" placeholder="github_pat_..." autocomplete="off" />
+    <div style="display:flex;gap:0.4rem;align-items:stretch;">
+      <input id="sync-token" type="password" placeholder="github_pat_..." autocomplete="off" style="flex:1;" />
+      <button id="sync-token-ver" type="button" title="Mostrar u ocultar el token"
+        style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#9ca3af;font-size:0.9rem;padding:0 0.7rem;cursor:pointer;font-family:inherit;">👁</button>
+    </div>
     <small style="display:block;margin:0.4rem 0 0.5rem;">Token <b>fine-grained</b> con permiso <b>Contents: Read and write</b> solo en este repo. Se guarda cifrado con tu contraseña; nunca se sube.</small>
     <div id="sync-token-status" style="font-size:0.78rem;margin-bottom:0.75rem;"></div>
     <button id="sync-save-token" class="primary" style="width:100%;margin-bottom:1.25rem;">Guardar token</button>
@@ -138,14 +142,14 @@
   </div>
 </div>
 
-<script src="src/js/crypto.js?v=p17"></script>
-<script src="src/js/config.js?v=p17"></script>
-<script src="src/js/model.js?v=p17"></script>
-<script src="src/js/charts.js?v=p17"></script>
-<script src="src/js/render.js?v=p17"></script>
-<script src="src/js/db.js?v=p17"></script>
-<script src="src/js/sync.js?v=p17"></script>
-<script src="src/js/forms.js?v=p17"></script>
-<script src="src/js/boot.js?v=p17"></script>
+<script src="src/js/crypto.js?v=p18"></script>
+<script src="src/js/config.js?v=p18"></script>
+<script src="src/js/model.js?v=p18"></script>
+<script src="src/js/charts.js?v=p18"></script>
+<script src="src/js/render.js?v=p18"></script>
+<script src="src/js/db.js?v=p18"></script>
+<script src="src/js/sync.js?v=p18"></script>
+<script src="src/js/forms.js?v=p18"></script>
+<script src="src/js/boot.js?v=p18"></script>
 </body>
 </html>
