@@ -6,9 +6,17 @@
   <meta name="robots" content="noindex, nofollow" />
   <title>Solvento v2</title>
   <link rel="icon" href="img/logo-solvento.png" />
-  <link rel="stylesheet" href="src/css/base.css?v=p20" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p20" />
-  <link rel="stylesheet" href="src/css/components.css?v=p20" />
+  <!-- Instalable: icono en la pantalla de inicio y ventana sin barra de navegador -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="img/app/icon-180.png" />
+  <meta name="theme-color" content="#12141d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Solvento" />
+  <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
+  <link rel="stylesheet" href="src/css/base.css?v=p23" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p23" />
+  <link rel="stylesheet" href="src/css/components.css?v=p23" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -91,18 +99,19 @@
         <button class="nav-tab" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
       </nav>
       <span id="sync-estado" title="Estado del guardado" style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;padding:0 0.2rem;"></span>
-      <button id="sync-btn" title="Sincronizar con GitHub">🔄 Sincronizar</button>
-      <button id="logout-btn">🔒 Bloquear</button>
-      <button class="nav-hamburger" id="nav-hamburger" onclick="v2ToggleMobileNav()" aria-label="Menú"><span></span><span></span><span></span></button>
+      <button id="sync-btn" title="Sincronizar con GitHub">🔄<span class="btn-txt"> Sincronizar</span></button>
+      <button id="logout-btn" title="Bloquear">🔒<span class="btn-txt"> Bloquear</span></button>
     </div>
   </nav>
-  <div id="mobile-nav-panel">
-    <button class="mobile-nav-item active" data-page="patrimonio" onclick="v2Tab('patrimonio');v2ToggleMobileNav()">Patrimonio</button>
-    <button class="mobile-nav-item" data-page="caja" onclick="v2Tab('caja');v2ToggleMobileNav()">Caja</button>
-    <button class="mobile-nav-item" data-page="cartera" onclick="v2Tab('cartera');v2ToggleMobileNav()">Cartera</button>
-    <button class="mobile-nav-item" data-page="inmuebles" onclick="v2Tab('inmuebles');v2ToggleMobileNav()">Inmuebles</button>
-    <button class="mobile-nav-item" data-page="pasivos" onclick="v2Tab('pasivos');v2ToggleMobileNav()">Pasivos</button>
-  </div>
+
+  <nav class="bottom-nav" id="v2-bottom-nav" aria-label="Secciones">
+    <button class="bottom-nav-item active" data-page="patrimonio" onclick="v2Tab('patrimonio')">Patrimonio</button>
+    <button class="bottom-nav-item" data-page="caja" onclick="v2Tab('caja')">Caja</button>
+    <button class="bottom-nav-item" data-page="cartera" onclick="v2Tab('cartera')">Cartera</button>
+    <button class="bottom-nav-item" data-page="inmuebles" onclick="v2Tab('inmuebles')">Inmuebles</button>
+    <button class="bottom-nav-item" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
+  </nav>
+  <button class="fab" id="v2-fab" onclick="v2AddAqui()" aria-label="Añadir">＋</button>
 
   <div class="page active" id="v2-page-patrimonio"></div>
   <div class="page" id="v2-page-caja"></div>
@@ -142,14 +151,23 @@
   </div>
 </div>
 
-<script src="src/js/crypto.js?v=p20"></script>
-<script src="src/js/config.js?v=p20"></script>
-<script src="src/js/model.js?v=p20"></script>
-<script src="src/js/charts.js?v=p20"></script>
-<script src="src/js/render.js?v=p20"></script>
-<script src="src/js/db.js?v=p20"></script>
-<script src="src/js/sync.js?v=p20"></script>
-<script src="src/js/forms.js?v=p20"></script>
-<script src="src/js/boot.js?v=p20"></script>
+<script src="src/js/crypto.js?v=p23"></script>
+<script src="src/js/config.js?v=p23"></script>
+<script src="src/js/model.js?v=p23"></script>
+<script src="src/js/charts.js?v=p23"></script>
+<script src="src/js/render.js?v=p23"></script>
+<script src="src/js/db.js?v=p23"></script>
+<script src="src/js/sync.js?v=p23"></script>
+<script src="src/js/forms.js?v=p23"></script>
+<script src="src/js/boot.js?v=p23"></script>
+  <script>
+    // Registro del service worker: si falla (navegador antiguo, http://), la app
+    // funciona igual, solo que sin instalación ni modo sin conexión.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("sw.js").catch(function () {});
+      });
+    }
+  </script>
 </body>
 </html>

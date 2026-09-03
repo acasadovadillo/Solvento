@@ -511,16 +511,24 @@
     document.querySelectorAll("#app .page").forEach((p) => p.classList.remove("active"));
     const pg = document.getElementById("v2-page-" + id);
     if (pg) pg.classList.add("active");
-    document.querySelectorAll('.nav-tab, .mobile-nav-item').forEach((b) => b.classList.toggle("active", b.dataset.page === id));
+    document.querySelectorAll('.nav-tab, .bottom-nav-item').forEach((b) => b.classList.toggle("active", b.dataset.page === id));
     window.scrollTo({ top: 0, behavior: "auto" });
     if (id === "cartera") layoutTreemaps();
   }
   window.v2Tab = showPage;
-  window.v2ToggleMobileNav = function () {
-    const panel = document.getElementById("mobile-nav-panel");
-    const btn = document.getElementById("nav-hamburger");
-    const open = panel.classList.toggle("open");
-    btn.classList.toggle("open", open);
+  // El botón flotante añade lo que corresponde a la página que estás viendo,
+  // para registrar sin tener que ir a buscar el formulario.
+  const ALTA_POR_PAGINA = {
+    patrimonio: () => F() && F().openMovimiento(),
+    caja:       () => F() && F().openMovimiento(),
+    cartera:    () => F() && F().openInversion(),
+    inmuebles:  () => F() && F().openInmueble(),
+    pasivos:    () => F() && F().openMovimiento(),
+  };
+  window.v2AddAqui = function () {
+    const activa = document.querySelector("#app .page.active");
+    const id = activa ? activa.id.replace("v2-page-", "") : "patrimonio";
+    (ALTA_POR_PAGINA[id] || ALTA_POR_PAGINA.patrimonio)();
   };
 
   // ── Treemap: ajustar texto al tamaño real + hover (port de la v1) ──
