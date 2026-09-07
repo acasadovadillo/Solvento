@@ -537,15 +537,26 @@
   // Dos preguntas distintas, dos series. Por defecto se muestra la que de verdad
   // compara: el comportamiento del precio con todas las líneas partiendo de 0 %.
   let COMP_MODO = "comportamiento";
+  // Iconos del selector: varias líneas (el mercado, comparado) frente a una
+  // silueta (lo tuyo). La frase de debajo sigue explicando en palabras qué
+  // se está viendo, que es lo que de verdad desambigua los dos modos.
+  const ICONO_COMP = {
+    comportamiento: `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <path d="M2 8.6 L6 4.6 L9.5 6.6 L14 2.2"/><path d="M2 14 L6 12 L9.5 13.6 L14 10"/></svg>`,
+    mia: `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <circle cx="8" cy="5.3" r="2.7"/><path d="M2.9 13.9 a5.1 5.1 0 0 1 10.2 0"/></svg>`,
+  };
   function comparativaPanel() {
-    const btn = (modo, txt, ayuda) => `<button onclick="v2CompModo('${modo}')" title="${esc(ayuda)}"
+    const btn = (modo, txt, ayuda) => `<button onclick="v2CompModo('${modo}')" title="${esc(txt)}: ${esc(ayuda)}"
+      aria-label="${esc(txt)}" aria-pressed="${COMP_MODO === modo}"
       style="background:${COMP_MODO === modo ? "#2a2d3a" : "transparent"};border:1px solid ${COMP_MODO === modo ? "#4b5563" : "#2a2d3a"};
-      color:${COMP_MODO === modo ? "#fff" : "#9ca3af"};border-radius:6px;font-size:0.72rem;font-weight:600;
-      padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;">${txt}</button>`;
+      color:${COMP_MODO === modo ? "#fff" : "#9ca3af"};border-radius:6px;
+      display:inline-flex;align-items:center;justify-content:center;line-height:0;
+      padding:0.32rem 0.55rem;cursor:pointer;font-family:inherit;">${ICONO_COMP[modo]}</button>`;
     const explicacion = COMP_MODO === "comportamiento"
       ? "Cuánto se ha movido el precio de cada activo desde que lo tienes. Todas parten de 0 %, así que se pueden comparar entre sí."
       : "Cuánto has ganado sobre lo que pagaste por cada uno. Es tu resultado real, pero no compara: un activo comprado hace años parte de un acumulado que otro reciente no puede tener.";
-    return `<div class="v2-wrap"><div class="dashboard-panel">
+    return `<div class="v2-wrap" id="v2-comparativa"><div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
         <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Comparativa de rentabilidad</div>
         <div style="display:flex;gap:0.25rem;">
@@ -1182,8 +1193,14 @@
   window.v2Password = () => F() && F().openPassword();
   window.v2CompModo = (modo) => {
     COMP_MODO = modo;
-    render(CURRENT_DOC, window.__PRICES);
-    showPage("cartera");
+    // Solo cambia esta gráfica, así que se repinta solo su panel. Antes se
+    // hacía un render() completo seguido de showPage(), y ese showPage subía
+    // la ventana al principio: alternar entre los dos modos te sacaba del
+    // gráfico que estabas mirando.
+    const panel = document.getElementById("v2-comparativa");
+    if (!panel) { render(CURRENT_DOC, window.__PRICES); return; }
+    panel.outerHTML = comparativaPanel();
+    montarComparativa();
   };
   window.v2Vista = (id, modo) => {
     VISTA[id] = modo;
