@@ -51,7 +51,12 @@
         </div>
       </div>`;
   }
-  function legend(items, total, targets) {
+  // fila = true: los ítems se ciñen a su contenido para poder ir uno al lado de
+  // otro; en columna conservan el ancho fijo que alinea las cifras a la derecha.
+  function legend(items, total, targets, fila) {
+    const estiloItem = fila
+      ? "display:flex;align-items:center;gap:0.55rem;font-size:0.85rem;"
+      : "display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.85rem;width:100%;max-width:280px;margin:0.3rem 0;";
     return items.map((it) => {
       const p = total > 0 ? it.value / total * 100 : 0;
       let badge = "";
@@ -60,7 +65,7 @@
         const dc = dev >= 0 ? GREEN : RED;
         badge = `<span style="font-size:0.68rem;color:${dc};background:${dc}22;padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;margin-left:0.3rem;" title="Objetivo: ${targets[it.label].toFixed(0)}%">${dev >= 0 ? "+" : ""}${dev.toFixed(1)}pp</span>`;
       }
-      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.85rem;width:100%;max-width:280px;margin:0.3rem 0;">
+      return `<div class="${fila ? "leg-it" : ""}" style="${estiloItem}">
         <div style="display:flex;align-items:center;gap:0.5rem;"><span style="width:9px;height:9px;background:${it.accent};border-radius:50%;flex-shrink:0;"></span><span style="color:#9ca3af;font-weight:500;">${esc(it.label)}</span>${badge}</div>
         <span style="text-align:right;"><span style="color:#fff;font-weight:600;display:block;line-height:1.2;">${fmtPct(p)}</span><span style="color:#6b7280;font-size:0.72rem;display:block;line-height:1.2;">${fmtEur(it.value)}</span></span>
       </div>`;
@@ -132,7 +137,7 @@
            <div style="display:flex;flex-direction:column;align-items:stretch;">${legend(positivos, total, targets)}</div>
          </div>`
       : `${barraDistribucion(positivos, total)}
-         <div style="display:flex;flex-direction:column;align-items:stretch;margin-top:1rem;">${legend(positivos, total, targets)}</div>`;
+         <div class="leg-fila">${legend(positivos, total, targets, true)}</div>`;
     return cuerpo + aviso;
   }
 

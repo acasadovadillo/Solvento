@@ -138,3 +138,17 @@
   background: rgba(245,158,11,0.15); color: #f59e0b;
   padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;
 }
+
+/* ── Leyenda en fila (vista de barra) ──
+   En la vista circular la leyenda va en columna, al lado del dónut. En la de
+   barra va en fila bajo la barra; cuando la pantalla no da para una fila los
+   ítems pasan a ocupar el ancho y las cifras se vuelven a alinear a la derecha,
+   que es como se leen sin esfuerzo en el móvil. */
+.leg-fila {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 0.5rem 1.75rem; margin-top: 1rem;
+}
+@media (max-width: 640px) {
+  .leg-fila { gap: 0.15rem 0; }
+  .leg-fila > .leg-it { width: 100%; max-width: 280px; justify-content: space-between; }
+}
