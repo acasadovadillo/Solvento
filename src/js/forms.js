@@ -444,6 +444,26 @@
     if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
   }
 
+  // ── Objetivos de la regla 50/30/20 ──
+  function openRegla() {
+    const doc = DB.state.doc;
+    if (!doc.config) doc.config = {};
+    const r = doc.config.regla || CFG_MODELO().REGLA_DEFECTO;
+    const body =
+      field("r-nec", "Necesario (%)", input("r-nec", "number", r.necesario, 'step="1" min="0" max="100"')) +
+      field("r-des", "Deseos (%)", input("r-des", "number", r.deseo, 'step="1" min="0" max="100"')) +
+      field("r-aho", "Ahorro e inversión (%)", input("r-aho", "number", r.ahorro, 'step="1" min="0" max="100"')) +
+      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">El reparto clásico es 50/30/20, pero puedes ajustarlo a lo que te encaje. Los tres deben sumar 100.</div>`;
+    shell("Objetivos del reparto", body, () => {
+      const n = parseFloat(G("r-nec")), d = parseFloat(G("r-des")), a = parseFloat(G("r-aho"));
+      if (![n, d, a].every(isFinite)) return "Introduce los tres porcentajes";
+      if (Math.abs(n + d + a - 100) > 0.01) return `Los tres deben sumar 100 % (ahora suman ${(n + d + a).toFixed(0)} %)`;
+      doc.config.regla = { necesario: n, deseo: d, ahorro: a };
+      return null;
+    });
+  }
+  const CFG_MODELO = () => window.SolventoModel;
+
   // ── Presupuesto por categoría ──
   // Un tope mensual para una categoría de gasto. Se guarda con el resto de tu
   // configuración, así que viaja contigo a cualquier dispositivo.
@@ -592,7 +612,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo,
-    fragmentosAjustes, openPresupuesto, openPassword, openCategoriaNueva, borrarCategoriaCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
+    fragmentosAjustes, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editPropiedad: (id) => openPropiedad(findById("propiedades", id) || findById("inmuebles", id)),

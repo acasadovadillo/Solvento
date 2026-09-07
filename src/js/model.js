@@ -314,6 +314,44 @@
       .sort((a, b) => b.total - a.total);
   }
 
+  // ── Regla 50/30/20 ───────────────────────────────────────────────────
+  // Cada categoría se marca como necesaria (luz, alquiler, comida) o como deseo
+  // (ropa, cenas fuera). El ahorro NO se clasifica: es lo que sobra, y como
+  // comprar un fondo es una operación y no un gasto, el dinero que va a
+  // inversión ya cuenta aquí como ahorro sin hacer nada más.
+  //
+  // Una subcategoría hereda la marca de su madre salvo que tenga la suya, así
+  // que basta clasificar "Ocio" para que caigan todas sus hijas.
+  const REGLA_DEFECTO = { necesario: 50, deseo: 30, ahorro: 20 };
+
+  function clasificarCategoria(cat, clasificacion) {
+    if (!clasificacion) return null;
+    if (clasificacion[cat]) return clasificacion[cat];
+    const { madre } = partirCategoria(cat);
+    return clasificacion[madre] || null;
+  }
+
+  // Reparto del mes según la regla, sobre los ingresos (que es la base del 50/30/20)
+  function repartoRegla(mes, clasificacion) {
+    let necesario = 0, deseo = 0, sinClasificar = 0;
+    for (const c in mes.catGasto) {
+      const k = clasificarCategoria(c, clasificacion);
+      if (k === "necesario") necesario += mes.catGasto[c];
+      else if (k === "deseo") deseo += mes.catGasto[c];
+      else sinClasificar += mes.catGasto[c];
+    }
+    const ahorro = mes.ingresos - mes.gastos;
+    const base = mes.ingresos;
+    const pct = (v) => (base > 0 ? v / base * 100 : NaN);
+    return {
+      necesario: round2(necesario), deseo: round2(deseo),
+      sinClasificar: round2(sinClasificar), ahorro: round2(ahorro),
+      pctNecesario: pct(necesario), pctDeseo: pct(deseo),
+      pctSinClasificar: pct(sinClasificar), pctAhorro: pct(ahorro),
+      base: round2(base),
+    };
+  }
+
   // ── Análisis de gastos (Fase 6) ──────────────────────────────────────
   // Agrega ingresos y gastos por mes y categoría a partir de lo que ya
   // registras. Qué se deja fuera, y por qué:
@@ -620,5 +658,5 @@
     return { cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, agruparCategorias, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, agruparCategorias, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

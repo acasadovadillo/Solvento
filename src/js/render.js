@@ -781,6 +781,68 @@
     return g.meses.find((m) => m.ym === GASTO_MES) || g.meses[g.meses.length - 1];
   };
 
+  // ── Panel 50/30/20 ───────────────────────────────────────────────────
+  const COL_REGLA = { necesario: "#3b82f6", deseo: "#a855f7", ahorro: "#10b981", sin: "#4b5563" };
+  function panelRegla(mes) {
+    const cls = (CURRENT_DOC && CURRENT_DOC.config && CURRENT_DOC.config.clasificacion) || {};
+    const meta = (CURRENT_DOC && CURRENT_DOC.config && CURRENT_DOC.config.regla) || window.SolventoModel.REGLA_DEFECTO;
+    const r = window.SolventoModel.repartoRegla(mes, cls);
+    if (!(r.base > 0)) {
+      return `<div class="v2-wrap"><div class="dashboard-panel" style="color:#6b7280;font-size:0.85rem;">
+        Sin ingresos registrados en ${esc(mes.label)}, así que no se puede repartir el 50/30/20.</div></div>`;
+    }
+    const fila = (clave, etiqueta, real, objetivo, importe) => {
+      const desvio = real - objetivo;
+      // En gastos pasarse es malo; en ahorro, quedarse corto
+      const bien = clave === "ahorro" ? desvio >= -1 : desvio <= 1;
+      return `<div style="margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;margin-bottom:0.3rem;">
+          <div style="font-size:0.85rem;color:#e5e7eb;font-weight:600;">${esc(etiqueta)}
+            <span style="color:#6b7280;font-weight:500;">· objetivo ${objetivo}%</span></div>
+          <div style="text-align:right;white-space:nowrap;">
+            <b style="color:${bien ? GREEN : "#fbbf24"};font-size:0.95rem;">${isFinite(real) ? real.toFixed(0) : "—"}%</b>
+            <span style="color:#6b7280;font-size:0.78rem;"> · ${fmtEur(importe)}</span></div>
+        </div>
+        <div style="position:relative;height:9px;background:#232733;border-radius:5px;overflow:hidden;">
+          <div style="width:${Math.max(0, Math.min(100, real)).toFixed(1)}%;height:100%;background:${COL_REGLA[clave]};"></div>
+          <div style="position:absolute;left:${objetivo}%;top:-3px;bottom:-3px;width:2px;background:#e5e7eb;opacity:0.7;" title="Objetivo ${objetivo}%"></div>
+        </div>
+        <div style="font-size:0.72rem;color:${bien ? "#6b7280" : "#fbbf24"};margin-top:0.25rem;">
+          ${!isFinite(real) ? "" : bien ? "Dentro de objetivo"
+            : (clave === "ahorro" ? `Te faltan ${Math.abs(desvio).toFixed(0)} puntos para llegar`
+                                  : `Te pasas ${desvio.toFixed(0)} puntos del objetivo`)}</div>
+      </div>`;
+    };
+    const aviso = r.sinClasificar > 0
+      ? `<div style="font-size:0.78rem;color:#fbbf24;margin-top:0.25rem;">
+           ${fmtEur(r.sinClasificar)} sin clasificar (${r.pctSinClasificar.toFixed(0)}%). Marca cada categoría como necesaria o deseo en la tabla de abajo para que el reparto cuadre.</div>`
+      : "";
+    return `<div class="v2-wrap"><div class="dashboard-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Regla 50/30/20 · ${esc(mes.label)}</div>
+        ${addBtn("Ajustar objetivos", "v2Regla()")}
+      </div>
+      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1.1rem;">Sobre tus ingresos del mes (${fmtEur(r.base)}). Lo que va a inversión cuenta como ahorro.</div>
+      ${fila("necesario", "Necesario", r.pctNecesario, meta.necesario, r.necesario)}
+      ${fila("deseo", "Deseos", r.pctDeseo, meta.deseo, r.deseo)}
+      ${fila("ahorro", "Ahorro e inversión", r.pctAhorro, meta.ahorro, r.ahorro)}
+      ${aviso}
+    </div></div>`;
+  }
+
+  // Chip para clasificar una categoría con un clic
+  function chipClase(cat, heredada) {
+    const cls = (CURRENT_DOC && CURRENT_DOC.config && CURRENT_DOC.config.clasificacion) || {};
+    const propia = cls[cat] || null;
+    const efectiva = propia || heredada;
+    const txt = efectiva === "necesario" ? "Necesario" : (efectiva === "deseo" ? "Deseo" : "Sin clasificar");
+    const col = efectiva === "necesario" ? COL_REGLA.necesario : (efectiva === "deseo" ? COL_REGLA.deseo : COL_REGLA.sin);
+    const js = String(cat).replace(/'/g, "\\'");
+    return `<button onclick="v2Clase('${js}')" title="Clic para cambiar entre necesario, deseo y sin clasificar"
+      style="background:${col}22;border:1px solid ${col}55;color:${col};border-radius:999px;font-size:0.66rem;font-weight:700;
+      padding:0.1rem 0.45rem;cursor:pointer;font-family:inherit;white-space:nowrap;${!propia && heredada ? "opacity:0.6;" : ""}">${txt}</button>`;
+  }
+
   // Categorías desplegadas por madre: "Educación > Formaciones" se agrupa bajo
   // "Educación", que suma sus hijas. Los presupuestos valen en los dos niveles.
   const ABIERTAS = {};
@@ -823,7 +885,7 @@
         <td style="text-align:left;">
           <div style="display:flex;align-items:center;gap:0.5rem;">
             ${tieneHijas ? `<button onclick="v2CatToggle('${jsN}')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>` : '<span style="width:1rem;display:inline-block;"></span>'}
-            <div style="flex:1;"><div style="color:#e5e7eb;font-weight:600;">${esc(gr.nombre)}</div>
+            <div style="flex:1;"><div style="color:#e5e7eb;font-weight:600;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">${esc(gr.nombre)} ${chipClase(gr.nombre, null)}</div>
               ${barraPresupuesto(gr.total, Number(presupuesto[gr.nombre]))}</div>
           </div></td>
         <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(gr.total)}<div>${comparativa(gr.total, mediaDe(gr.nombre))}</div></td>
@@ -833,7 +895,7 @@
       const hijas = gr.hijas.map((h) => {
         const jsC = String(h.completa).replace(/'/g, "\\'");
         return `<tr class="table-row" style="background:#14171f;">
-          <td style="text-align:left;padding-left:2.4rem;"><div style="color:#9ca3af;font-size:0.85rem;">${esc(h.esPropia ? "(sin subcategoría)" : h.nombre)}</div>
+          <td style="text-align:left;padding-left:2.4rem;"><div style="color:#9ca3af;font-size:0.85rem;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">${esc(h.esPropia ? "(sin subcategoría)" : h.nombre)} ${chipClase(h.completa, window.SolventoModel.clasificarCategoria(gr.nombre, (CURRENT_DOC.config || {}).clasificacion))}</div>
             ${barraPresupuesto(h.total, Number(presupuesto[h.completa]))}</td>
           <td style="text-align:right;color:#e5e7eb;white-space:nowrap;">${fmtEur(h.total)}</td>
           <td style="text-align:right;color:#6b7280;white-space:nowrap;">${(gr.total ? h.total / gr.total * 100 : 0).toFixed(1)}%</td>
@@ -874,6 +936,7 @@
       accent: CFG.SERIE_COLORES[i % CFG.SERIE_COLORES.length],
     }));
     return header("Balance", fmtEur(mes.ahorro)) + hero +
+      panelRegla(mes) +
       barrasIngresoGasto(g) +
       (itemsCat.length ? vistaPanel("categorias", "En qué se va el dinero · " + mes.label,
                                     itemsCat, fmtEur(mes.gastos), "Gasto") : "") +
@@ -1067,6 +1130,18 @@
     document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
   };
   window.v2Presupuesto = (cat) => F() && F().openPresupuesto(cat);
+  window.v2Clase = (cat) => {
+    const doc = CURRENT_DOC;
+    if (!doc.config) doc.config = {};
+    if (!doc.config.clasificacion) doc.config.clasificacion = {};
+    const ciclo = { necesario: "deseo", deseo: "", "": "necesario" };
+    const actual = doc.config.clasificacion[cat] || "";
+    const siguiente = ciclo[actual];
+    if (siguiente) doc.config.clasificacion[cat] = siguiente;
+    else delete doc.config.clasificacion[cat];
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc();
+  };
+  window.v2Regla = () => F() && F().openRegla();
   window.v2CatToggle = (nombre) => {
     ABIERTAS[nombre] = !ABIERTAS[nombre];
     document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
