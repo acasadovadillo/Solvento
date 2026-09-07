@@ -530,28 +530,64 @@
   }
 
   // ── Inmueble ──
-  function openInmueble(existing) {
+  function openPropiedad(existing) {
     const doc = DB.state.doc, e = existing || {};
+    if (!Array.isArray(doc.propiedades)) doc.propiedades = doc.inmuebles || [];
+    const tipos = Object.keys(CFG.TIPO_COLORES_INMUEBLE);
     const body =
-      field("p-dir", "Dirección / nombre", input("p-dir", "text", e.direccion)) +
-      field("p-tipo", "Tipo", datalist("p-tipo", INMUEBLE_TIPOS, e.tipo || INMUEBLE_TIPOS[0])) +
-      field("p-tasacion", "Tasación / valor de mercado (€)", input("p-tasacion", "number", e.tasacion, 'step="0.01" min="0"')) +
-      field("p-ftas", "Fecha de tasación", input("p-ftas", "date", toISO(e.fecha_tasacion || hoyES()))) +
+      field("p-nombre", "Nombre o dirección", input("p-nombre", "text", e.nombre || e.direccion, 'placeholder="Reloj Omega Seamaster"')) +
+      field("p-tipo", "Tipo", select("p-tipo", tipos, e.tipo || tipos[0])) +
+      `<div id="p-porpeso" style="display:none;">
+        ${field("p-metal", "Metal", selectKV("p-metal", [["oro", "Oro"], ["plata", "Plata"]], String(e.metal || "oro")))}
+        ${field("p-peso", "Peso (gramos)", input("p-peso", "number", e.peso_g, 'step="0.01" min="0" placeholder="31.1"'))}
+        <div style="font-size:0.75rem;color:#6b7280;margin-top:0.4rem;">El valor se calcula solo con el precio del metal, que se actualiza a diario.</div>
+      </div>` +
+      `<div id="p-portasacion">
+        ${field("p-valor", "Valor actual (€)", input("p-valor", "number", e.valor != null ? e.valor : e.tasacion, 'step="0.01" min="0"'))}
+      </div>` +
       field("p-compra", "Valor de compra (€)", input("p-compra", "number", e.valor_compra, 'step="0.01" min="0"')) +
-      field("p-fadq", "Fecha de adquisición", input("p-fadq", "date", toISO(e.fecha_adquisicion || hoyES()))) +
-      field("p-uds", "Unidades", input("p-uds", "number", e.unidades_compra || "1", 'step="1" min="1"'));
-    shell(existing ? "Editar inmueble" : "Nuevo inmueble", body, () => {
-      if (!G("p-dir")) return "Indica la dirección o nombre";
-      const tas = parseFloat(G("p-tasacion"));
-      if (!isFinite(tas) || tas < 0) return "Introduce una tasación válida";
-      upsert(doc.inmuebles, {
-        id: e.id || newId("p"), direccion: G("p-dir"), tipo: G("p-tipo"),
-        tasacion: G("p-tasacion"), fecha_tasacion: fromISO(G("p-ftas")),
-        fecha_adquisicion: fromISO(G("p-fadq")), valor_compra: G("p-compra") || "0",
-        unidades_compra: G("p-uds") || "1",
-      });
+      field("p-fecha", "Fecha de adquisición", input("p-fecha", "date", toISO(e.fecha_adquisicion))) +
+      `<label style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:#9ca3af;margin-top:0.9rem;cursor:pointer;">
+         <input type="checkbox" id="p-alq" ${e.alquilada ? "checked" : ""}> Está alquilada</label>` +
+      `<div id="p-alquiler" style="display:none;">
+        ${field("p-renta", "Renta mensual (€)", input("p-renta", "number", e.renta_mensual, 'step="0.01" min="0"'))}
+        ${field("p-gastos", "Gastos mensuales (€)", input("p-gastos", "number", e.gastos_mensuales, 'step="0.01" min="0" placeholder="comunidad, IBI, seguro…"'))}
+        <div style="font-size:0.75rem;color:#6b7280;margin-top:0.4rem;">Con esto calculo la rentabilidad del alquiler sobre lo que pagaste.</div>
+      </div>`;
+    shell(existing ? "Editar propiedad" : "Nueva propiedad", body, () => {
+      const nombre = G("p-nombre");
+      if (!nombre) return "Indica el nombre o la dirección";
+      const tipo = G("p-tipo");
+      const porPeso = CFG.TIPOS_POR_PESO.includes(tipo);
+      const rec = {
+        id: e.id || newId("p"), nombre, tipo,
+        valor_compra: G("p-compra"), fecha_adquisicion: fromISO(G("p-fecha")),
+        alquilada: document.getElementById("p-alq").checked,
+        renta_mensual: G("p-renta"), gastos_mensuales: G("p-gastos"),
+      };
+      if (porPeso) {
+        const peso = parseFloat(G("p-peso"));
+        if (!isFinite(peso) || peso <= 0) return "Introduce el peso en gramos";
+        rec.metal = G("p-metal"); rec.peso_g = String(peso);
+      } else {
+        const v = parseFloat(G("p-valor"));
+        if (!isFinite(v) || v < 0) return "Introduce un valor válido";
+        rec.valor = String(v);
+      }
+      if (rec.alquilada && !(parseFloat(rec.renta_mensual) > 0)) return "Indica la renta mensual del alquiler";
+      upsert(doc.propiedades, rec);
       return null;
     });
+    // Los campos se muestran según lo que hayas elegido
+    const refrescar = () => {
+      const porPeso = CFG.TIPOS_POR_PESO.includes(document.getElementById("p-tipo").value);
+      document.getElementById("p-porpeso").style.display = porPeso ? "block" : "none";
+      document.getElementById("p-portasacion").style.display = porPeso ? "none" : "block";
+      document.getElementById("p-alquiler").style.display = document.getElementById("p-alq").checked ? "block" : "none";
+    };
+    document.getElementById("p-tipo").addEventListener("change", refrescar);
+    document.getElementById("p-alq").addEventListener("change", refrescar);
+    refrescar();
   }
 
   // ── Valor liquidativo (NAV) de un fondo manual ──
@@ -586,15 +622,15 @@
   const findById = (coll, id) => (DB.state.doc[coll] || []).find((x) => x.id === id);
 
   window.SolventoForms = {
-    openMovimiento, openInversion, openInmueble, openNav, openCuadrar, openPasivo,
+    openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo,
     openAjustes, openPresupuesto, openPassword, openCategorias, openCategoriaNueva, borrarCategoriaCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
-    editInmueble: (id) => openInmueble(findById("inmuebles", id)),
+    editPropiedad: (id) => openPropiedad(findById("propiedades", id) || findById("inmuebles", id)),
     editPasivo: (id) => openPasivo(findById("pasivos", id)),
     deleteMovimiento: (id) => del("movimientos", id),
     deleteInversion: (id) => del("inversiones", id),
-    deleteInmueble: (id) => del("inmuebles", id),
+    deletePropiedad: (id) => del("propiedades", id),
     deletePasivo: (id) => del("pasivos", id),
   };
 })();

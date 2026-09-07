@@ -187,20 +187,62 @@
   }
 
   // ── Inmuebles ──
-  function valuateInmuebles(inmuebles) {
-    const arr = (inmuebles || []).map((r) => {
-      const importe = num(r.tasacion);
+  // ── Propiedades ──────────────────────────────────────────────────────
+  // Ya no son solo inmuebles: caben coche, arte, relojes o metales. Tres formas
+  // de valorar, según lo que tengas:
+  //   · por tasación (un piso, un cuadro): el valor lo pones tú
+  //   · por peso (oro, plata): gramos × precio del metal, que se actualiza solo
+  //   · alquilada: además calcula lo que renta al año sobre lo que te costó
+  //
+  // Se lee tanto el formato nuevo como el antiguo (direccion/tasacion), así que
+  // los inmuebles que ya tenías siguen valiendo sin migrar nada.
+  function valuatePropiedades(propiedades, prices) {
+    const metales = (prices && prices.metales) || {};
+    const arr = (propiedades || []).map((r) => {
+      const nombre = r.nombre || r.direccion || "Sin nombre";
+      const tipo = r.tipo || "Otro";
+      const peso = num(r.peso_g);
+      const metal = String(r.metal || "").toLowerCase();
+      const precioGramo = metales[metal];
+
+      // El peso manda cuando lo hay: es el valor de mercado, no una estimación
+      let importe, porPeso = false;
+      if (isFinite(peso) && peso > 0 && precioGramo) {
+        importe = round2(peso * precioGramo);
+        porPeso = true;
+      } else {
+        importe = num(r.valor != null ? r.valor : r.tasacion);
+      }
+
       const coste = num(r.valor_compra);
       const fechaCompra = parseFechaES(r.fecha_adquisicion);
       const ganancia = (isFinite(importe) && isFinite(coste)) ? round2(importe - coste) : NaN;
       const rentPct = (coste > 0 && isFinite(importe)) ? (importe / coste - 1) * 100 : NaN;
-      const accent = CFG.TIPO_COLORES_INMUEBLE[r.tipo] || CFG.INMUEBLE_ACCENT_DEFAULT;
-      return { id: r.id, nombre: r.direccion, tipo: r.tipo, importe, coste, fechaCompra, ganancia, rentPct, cagr: cagr(importe, coste, fechaCompra, 0.25), accent };
+
+      // Alquiler: rentabilidad anual sobre lo pagado (bruta y neta de gastos)
+      const renta = num(r.renta_mensual), gastos = num(r.gastos_mensuales) || 0;
+      const alquilada = !!r.alquilada && isFinite(renta) && renta > 0;
+      const rentaAnual = alquilada ? round2(renta * 12) : NaN;
+      const netoAnual = alquilada ? round2((renta - gastos) * 12) : NaN;
+      const base = coste > 0 ? coste : importe;   // sin precio de compra, sobre el valor actual
+      const yieldBruto = alquilada && base > 0 ? rentaAnual / base * 100 : NaN;
+      const yieldNeto  = alquilada && base > 0 ? netoAnual / base * 100 : NaN;
+
+      return {
+        id: r.id, nombre, tipo, importe, coste, fechaCompra, ganancia, rentPct,
+        cagr: cagr(importe, coste, fechaCompra, 0.25),
+        accent: CFG.TIPO_COLORES_INMUEBLE[tipo] || CFG.INMUEBLE_ACCENT_DEFAULT,
+        porPeso, peso, metal, precioGramo,
+        alquilada, renta, gastos, rentaAnual, netoAnual, yieldBruto, yieldNeto,
+        baseYield: base,
+      };
     });
     arr.sort((a, b) => (isFinite(b.importe) ? b.importe : 0) - (isFinite(a.importe) ? a.importe : 0));
     const total = round2(arr.reduce((s, x) => s + (isFinite(x.importe) ? x.importe : 0), 0));
     const totalCoste = round2(arr.reduce((s, x) => s + (isFinite(x.coste) && x.coste > 0 ? x.coste : 0), 0));
-    return { items: arr, total, totalCoste, n: arr.length };
+    const alquiladas = arr.filter((x) => x.alquilada);
+    const rentaAnualTotal = round2(alquiladas.reduce((s, x) => s + (x.netoAnual || 0), 0));
+    return { items: arr, total, totalCoste, n: arr.length, alquiladas: alquiladas.length, rentaAnualTotal };
   }
 
   // ── Modelo completo ──
@@ -208,7 +250,7 @@
     const { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker } =
       computeSaldos(db.movimientos, db.inversiones);
     const inv = valuate(db, prices);
-    const inm = valuateInmuebles(db.inmuebles);
+    const inm = valuatePropiedades(db.propiedades || db.inmuebles, prices);
     // La Cartera incluye el efectivo sin invertir de los brókers.
     // La Cartera es solo lo invertido; el efectivo de bróker ya cuenta en Caja.
     const carteraTotal = inv.total;
@@ -549,5 +591,5 @@
     return { cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, agruparCategorias, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, agruparCategorias, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

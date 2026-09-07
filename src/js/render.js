@@ -1,6 +1,6 @@
 /*
  * Solvento v2 — Render (Fase 2): navegación por pestañas + páginas
- * (Patrimonio, Caja, Cartera, Inmuebles, Pasivos) con donuts, treemap y panel
+ * (Patrimonio, Caja, Balance, Cartera, Propiedades, Pasivos) con donuts, treemap
  * de asignación, pintado desde el modelo (datos descifrados + prices.json).
  * Las gráficas de EVOLUCIÓN temporal llegan en el siguiente incremento (necesitan
  * histórico de precios).
@@ -69,7 +69,7 @@
 
   // ── Panel de distribución con vista intercambiable ───────────────────
   // Un único componente para "cómo se reparte esto", usado en Patrimonio, Caja,
-  // Cartera e Inmuebles. Dos vistas de los mismos datos: barra apilada con
+  // Cartera y Propiedades. Dos vistas de los mismos datos: barra apilada con
   // etiquetas dentro, o gráfico circular. La elección se recuerda por panel.
   //
   // Los saldos NEGATIVOS (una cuenta en descubierto) no se pueden repartir en
@@ -434,14 +434,14 @@
       `<div class="v2-hub-grid">
         ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja")}
         ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera")}
-        ${hubCard("Inmuebles", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + " inmuebles", null, "inmuebles")}
+        ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades")}
         ${hubCard("Pasivos", fmtEur(m.pas.total), m.ratioPas, "#6b7280",
                   m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas", null, "pasivos")}
       </div>` +
       vistaPanel("patrimonio", "Distribución del patrimonio",
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
          { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
-         { label: "Inmuebles", value: m.inm.total, accent: "#a16207" }],
+         { label: "Propiedades", value: m.inm.total, accent: "#a16207" }],
         fmtEur(m.patrimonioNeto), "Neto") +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio");
   }
@@ -650,20 +650,53 @@
       movimientosList();
   }
 
-  function pageInmuebles(m) {
+  function pagePropiedades(m) {
     const inm = m.inm;
-    const porTipo = {};
-    inm.items.forEach((r) => { if (isFinite(r.importe)) porTipo[r.tipo] = (porTipo[r.tipo] || 0) + r.importe; });
-    const items = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES_INMUEBLE[t] || CFG.INMUEBLE_ACCENT_DEFAULT })).sort((a, b) => b.value - a.value);
-    const rows = inm.items.map((r) => `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span><div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(r.tipo)}</div></div></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>${rowActions(`v2EditInm('${r.id}')`, `v2DelInm('${r.id}')`)}</tr>`).join("");
-    return header("Inmuebles", fmtEur(inm.total)) +
-      vistaPanel("inmuebles", "Distribución por tipo", items, fmtEur(inm.total), "Total") +
+    const items = {};
+    inm.items.forEach((r) => { if (isFinite(r.importe)) items[r.tipo] = (items[r.tipo] || 0) + r.importe; });
+    const donutItems = Object.keys(items).map((t) => ({ label: t, value: items[t], accent: CFG.TIPO_COLORES_INMUEBLE[t] || CFG.INMUEBLE_ACCENT_DEFAULT }));
+
+    const rows = inm.items.map((r) => {
+      const detalle = r.porPeso
+        ? `${Number(r.peso).toLocaleString("es-ES", { maximumFractionDigits: 2 })} g de ${esc(r.metal)} · ${fmtEur(r.precioGramo)}/g`
+        : esc(r.tipo);
+      const alquiler = r.alquilada
+        ? `<div style="font-size:0.74rem;color:${GREEN};margin-top:0.15rem;">Alquilada · ${fmtEur(r.renta)}/mes${isFinite(r.yieldNeto) ? " · " + r.yieldNeto.toFixed(1).replace(".", ",") + "% neto anual" : ""}</div>`
+        : "";
+      const revalorizacion = (r.coste > 0 && isFinite(r.ganancia))
+        ? `<div style="color:${rc(r.ganancia)};font-weight:600;">${r.ganancia >= 0 ? "+" : ""}${fmtEur(r.ganancia)}</div><div style="color:${rc(r.rentPct)};font-size:0.76rem;">${fmtPct(r.rentPct)}</div>`
+        : `<span style="color:#4b5563;">—</span>`;
+      return `<tr class="table-row">
+        <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
+          <span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span>
+          <div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div>
+            <div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}</div></div></td>
+        <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>
+        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
+        <td style="text-align:right;white-space:nowrap;">${revalorizacion}</td>
+        ${rowActions(`v2EditProp('${r.id}')`, `v2DelProp('${r.id}')`)}</tr>`;
+    }).join("");
+
+    const rentaPanel = inm.alquiladas
+      ? `<div class="v2-wrap"><div class="dashboard-panel">
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.75rem;">Alquileres</div>
+          <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+            <div><div style="font-size:0.75rem;color:#6b7280;">En alquiler</div><div style="font-size:1.3rem;font-weight:800;color:#fff;">${inm.alquiladas}</div></div>
+            <div><div style="font-size:0.75rem;color:#6b7280;">Renta neta al año</div><div style="font-size:1.3rem;font-weight:800;color:${GREEN};">${fmtEur(inm.rentaAnualTotal)}</div></div>
+          </div></div></div>`
+      : "";
+
+    return header("Propiedades", fmtEur(inm.total)) +
+      (donutItems.length ? vistaPanel("propiedades", "Distribución por tipo", donutItems, fmtEur(inm.total), "Total") : "") +
+      rentaPanel +
       `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Inmuebles</div>
-          ${addBtn("＋ Inmueble", "v2AddInm()")}
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Propiedades</div>
+          ${addBtn("＋ Propiedad", "v2AddProp()")}
         </div>
-        <table class="minimal-table"><thead><tr><th style="text-align:left;">Inmueble</th><th style="text-align:right;">Tasación</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+        <table class="minimal-table"><thead><tr><th style="text-align:left;">Propiedad</th><th style="text-align:right;">Valor actual</th><th style="text-align:right;">Compra</th><th style="text-align:right;">Revalorización</th><th></th></tr></thead>
+        <tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Sin propiedades</td></tr>'}</tbody></table>
+      </div></div>`;
   }
 
   function pagePasivos(m) {
@@ -870,7 +903,7 @@
     caja:       () => F() && F().openMovimiento(),
     balance:    () => F() && F().openMovimiento(),
     cartera:    () => F() && F().openInversion(),
-    inmuebles:  () => F() && F().openInmueble(),
+    propiedades: () => F() && F().openPropiedad(),
     pasivos:    () => F() && F().openPasivo(),
   };
   window.v2AddAqui = function () {
@@ -934,7 +967,7 @@
     document.getElementById("v2-page-caja").innerHTML = pageCaja(m);
     document.getElementById("v2-page-balance").innerHTML = pageBalance(m);
     document.getElementById("v2-page-cartera").innerHTML = pageCartera(m, prices);
-    document.getElementById("v2-page-inmuebles").innerHTML = pageInmuebles(m);
+    document.getElementById("v2-page-propiedades").innerHTML = pagePropiedades(m);
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
     document.getElementById("v2-page-operaciones").innerHTML = pageOperaciones(m);
     document.getElementById("v2-page-reporte").innerHTML = pageReporte(m);
@@ -993,7 +1026,7 @@
   const F = () => window.SolventoForms;
   window.v2AddMov = () => F() && F().openMovimiento();
   window.v2AddInv = () => F() && F().openInversion();
-  window.v2AddInm = () => F() && F().openInmueble();
+  window.v2AddProp = () => F() && F().openPropiedad();
   window.v2AddNav = () => F() && F().openNav();
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
   window.v2AddPas = () => F() && F().openPasivo();
@@ -1051,10 +1084,10 @@
   }
   window.v2EditMov = (id) => F() && F().editMovimiento(id);
   window.v2EditInv = (id) => F() && F().editInversion(id);
-  window.v2EditInm = (id) => F() && F().editInmueble(id);
+  window.v2EditProp = (id) => F() && F().editPropiedad(id);
   window.v2DelMov = (id) => { if (F() && confirm("¿Borrar este movimiento?")) F().deleteMovimiento(id); };
   window.v2DelInv = (id) => { if (F() && confirm("¿Borrar esta operación?")) F().deleteInversion(id); };
-  window.v2DelInm = (id) => { if (F() && confirm("¿Borrar este inmueble?")) F().deleteInmueble(id); };
+  window.v2DelProp = (id) => { if (F() && confirm("¿Borrar esta propiedad?")) F().deletePropiedad(id); };
 
   window.SolventoRender = { render, showPage };
 })();

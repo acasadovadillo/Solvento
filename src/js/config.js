@@ -43,7 +43,15 @@
 
   const CAT_COLORES = { "Renta variable": "#3b82f6", "Renta fija": "#10b981" };
   const TIPO_COLORES = { "ETF": "#8b5cf6", "Criptoactivo": "#f59e0b", "Acciones": "#ec4899", "Fondo de inversión": "#14b8a6" };
-  const TIPO_COLORES_INMUEBLE = { "Apartamento": "#a16207", "Plaza de garaje": "#78716c", "Terreno rústico": "#65a30d" };
+  // Tipos de propiedad: inmuebles y todo lo demás que tenga valor
+  const TIPO_COLORES_INMUEBLE = {
+    "Apartamento": "#a16207", "Plaza de garaje": "#78716c", "Terreno rústico": "#65a30d",
+    "Casa": "#b45309", "Local": "#92400e",
+    "Vehículo": "#0ea5e9", "Obra de arte": "#d946ef", "Reloj": "#f59e0b",
+    "Metal precioso": "#eab308", "Coleccionable": "#8b5cf6", "Otro": "#6b7280",
+  };
+  // Los que se valoran por peso piden gramos y metal en vez de tasación
+  const TIPOS_POR_PESO = ["Metal precioso"];
   const INMUEBLE_ACCENT_DEFAULT = "#a16207";
 
   // Paleta para la comparativa de rentabilidad (una línea por activo).
@@ -103,7 +111,7 @@
   window.SolventoConfig = {
     usarDoc, cuentas, activos, objetivo, brokers,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO,
-    CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
+    CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     assetLogo, SYNC,
   };
 })();

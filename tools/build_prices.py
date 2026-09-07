@@ -102,6 +102,28 @@ def fetch_hist_eur(ticker, fx):
         return []
 
 
+
+# Metales preciosos: para valorar por peso lo que se guarda en gramos (una
+# moneda de oro, un lingote). Yahoo los cotiza en dólares por onza troy, así
+# que se convierte a euros por gramo, que es como se pesa en casa.
+ONZA_TROY_EN_GRAMOS = 31.1034768
+METALES = {"oro": "GC=F", "plata": "SI=F"}
+
+
+def fetch_metales(fx):
+    """€ por gramo de cada metal. fetch_precio_eur ya devuelve el precio en euros
+    (aquí, por onza troy), así que solo queda pasarlo a gramos."""
+    out = {}
+    for nombre, ticker in METALES.items():
+        eur_onza = fetch_precio_eur(ticker, fx)
+        if eur_onza:
+            out[nombre] = round(eur_onza / ONZA_TROY_EN_GRAMOS, 4)
+            print(f"   {nombre:14s} → {out[nombre]:.4f} €/g")
+        else:
+            print(f"   {nombre:14s} → sin precio")
+    return out
+
+
 def main():
     fx = fetch_fx()
     eur, hist = {}, {}
@@ -111,11 +133,13 @@ def main():
         h = fetch_hist_eur(t, fx)
         hist[t] = h
         print(f"   {t:14s} → {('%.4f €' % p) if p else 'sin precio':>12s}  · histórico {len(h)} puntos")
+    metales = fetch_metales(fx)
     doc = {
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "fx_eur": fx,
         "eur": eur,
         "hist": hist,
+        "metales": metales,   # € por gramo
     }
     with open("prices.json", "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
