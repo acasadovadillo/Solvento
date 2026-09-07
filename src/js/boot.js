@@ -95,6 +95,11 @@
     el.textContent = txt;
     el.style.color = col;
     el.title = detalle || "Estado del guardado";
+    // Punto de aviso sobre el avatar: así se ve que algo pasa sin abrir el menú
+    const badge = $("user-badge");
+    if (badge) badge.hidden = !(estado === "pendiente" || estado === "sintoken");
+    const btn = $("user-btn");
+    if (btn) btn.title = txt ? "Tu cuenta · " + txt : "Tu cuenta";
   }
 
   // Cifra y guarda en este dispositivo (siempre, pase lo que pase con la red).
@@ -160,6 +165,7 @@
     if (await subir("Solvento: subir cambios pendientes")) toast("Cambios pendientes subidos ✓", "#10b981");
   }
   function lock() {
+    const menu = $("user-menu"); if (menu) menu.hidden = true;
     pintarEstado("");
     quitarBandaCopia();
     DB.state.doc = null; DB.state.password = null; DB.state.token = null;

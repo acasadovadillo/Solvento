@@ -965,6 +965,28 @@
         `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:3rem;">Todavía no hay meses que reportar.</div></div>`);
   }
 
+  // ── Menú de usuario ──────────────────────────────────────────────────
+  // Recoge lo que antes ocupaba tres huecos en la barra: el estado del guardado,
+  // Ajustes y Bloquear. Se cierra al pulsar fuera o con Escape, como se espera
+  // de un desplegable.
+  function cerrarUserMenu() {
+    const m = document.getElementById("user-menu"), b = document.getElementById("user-btn");
+    if (m) m.hidden = true;
+    if (b) b.setAttribute("aria-expanded", "false");
+  }
+  window.v2UserMenu = () => {
+    const m = document.getElementById("user-menu"), b = document.getElementById("user-btn");
+    if (!m) return;
+    const abrir = m.hidden;
+    m.hidden = !abrir;
+    b.setAttribute("aria-expanded", String(abrir));
+  };
+  window.v2UserIr = (pagina) => { cerrarUserMenu(); showPage(pagina); };
+  document.addEventListener("click", (ev) => {
+    if (!ev.target.closest || !ev.target.closest(".user-wrap")) cerrarUserMenu();
+  });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") cerrarUserMenu(); });
+
   // ── Navegación ──
   function showPage(id) {
     document.querySelectorAll("#app .page").forEach((p) => p.classList.remove("active"));
