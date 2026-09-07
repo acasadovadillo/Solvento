@@ -243,49 +243,49 @@
   const miniBtn = (txt, onclick, color) =>
     `<button type="button" onclick="${onclick}" style="background:none;border:none;color:${color || "#6b7280"};cursor:pointer;font-size:0.85rem;padding:0.2rem 0.35rem;font-family:inherit;">${txt}</button>`;
 
-  function openAjustes() {
+
+  // Fragmentos que rellena la página de Ajustes. Se devuelven como HTML para
+  // que render.js los coloque en su sección, en vez de vivir en un modal.
+  const refrescarAjustes = () => { if (window.v2AjPintar) window.v2AjPintar(); };
+
+  function fragmentosAjustes() {
     const c = cfgEditable();
     const obj = c.objetivo;
-    const cuentasHtml = c.cuentas.map((x, i) => filaAjuste(
+    const cuentas = c.cuentas.map((x, i) => filaAjuste(
       `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(x.accent || "#6b7280")};margin-right:0.4rem;"></span>${esc(x.cuenta)}`,
-      [x.broker ? "efectivo en Cartera" : "efectivo en Caja",
-       x.cartera === "cero" ? "aparece en Cartera sin saldo" : (x.cartera ? "bróker en Cartera" : "")].filter(Boolean).join(" · "),
+      [x.cartera === "cero" ? "aparece en Cartera sin efectivo propio"
+                            : (x.cartera ? "agrupa posiciones en Cartera" : "")].filter(Boolean).join(" · ") || "cuenta de efectivo",
       miniBtn("✎", `v2CfgCuenta(${i})`) + miniBtn("✕", `v2CfgDelCuenta(${i})`)
-    )).join("");
-    const activosHtml = c.activos.map((x, i) => filaAjuste(
+    )).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir cuenta", "v2CfgCuenta(-1)", "#3b82f6")}</div>`;
+
+    const activos = c.activos.map((x, i) => filaAjuste(
       esc(x.nombre),
       `${esc(x.isin || "-")} · ${esc(x.banco || "")}${x.yf ? " · " + esc(x.yf) : " · sin precio automático"}`,
       miniBtn("✎", `v2CfgActivo(${i})`) + miniBtn("✕", `v2CfgDelActivo(${i})`)
-    )).join("");
+    )).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir activo", "v2CfgActivo(-1)", "#3b82f6")}</div>`;
 
-    const body =
-      `<div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.3rem;">Cuentas</div>
-       ${cuentasHtml}
-       <div style="margin:0.6rem 0 1.4rem;">${miniBtn("＋ Añadir cuenta", "v2CfgCuenta(-1)", "#3b82f6")}</div>
+    const objetivo = filaAjuste("Renta variable / Renta fija",
+      `${(+obj["Renta variable"] || 0).toFixed(0)}% / ${(+obj["Renta fija"] || 0).toFixed(0)}%`,
+      miniBtn("✎", "v2CfgObjetivo()"));
 
-       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.3rem;">Activos</div>
-       ${activosHtml}
-       <div style="margin:0.6rem 0 1.4rem;">${miniBtn("＋ Añadir activo", "v2CfgActivo(-1)", "#3b82f6")}</div>
+    const cats = categoriasCfg();
+    const madres = uniq(cats.map(madreDe)).sort();
+    const categorias = madres.map((m) => {
+      const hijas = cats.filter((x) => madreDe(x) === m && hijaDe(x));
+      const jsM = String(m).replace(/'/g, "\\'");
+      const filasHijas = hijas.map((h) => {
+        const jsH = String(h).replace(/'/g, "\\'");
+        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0 0.35rem 1.4rem;border-bottom:1px solid #1e222c;">
+          <div style="flex:1;color:#9ca3af;font-size:0.84rem;">${esc(hijaDe(h))}</div>${miniBtn("✕", `v2CatBorrar('${jsH}')`)}</div>`;
+      }).join("");
+      return `<div style="padding:0.5rem 0;border-bottom:1px solid #232733;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <div style="flex:1;color:#e5e7eb;font-weight:600;font-size:0.9rem;">${esc(m)}</div>
+          ${miniBtn("＋ sub", `v2CatNueva('${jsM}')`, "#3b82f6")}${miniBtn("✕", `v2CatBorrar('${jsM}')`)}</div>
+        ${filasHijas}</div>`;
+    }).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría", "v2CatNueva('')", "#3b82f6")}</div>`;
 
-       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.3rem;">Categorías de gasto</div>
-       ${filaAjuste("Categorías y subcategorías", categoriasCfg().length + " en tu catálogo", miniBtn("✎", "v2Categorias()"))}
-       <div style="margin:0.6rem 0 1.4rem;"></div>
-
-       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.5rem;">Objetivo de asignación</div>
-       ${filaAjuste("Renta variable / Renta fija",
-                    `${(+obj["Renta variable"] || 0).toFixed(0)}% / ${(+obj["Renta fija"] || 0).toFixed(0)}%`,
-                    miniBtn("✎", "v2CfgObjetivo()"))}`;
-
-    const m = ensureModal();
-    m.querySelector(".modal-card").innerHTML =
-      `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-        <div style="font-size:1.1rem;font-weight:800;color:#fff;">Ajustes</div>
-        <button id="ff-close" style="border:none;background:none;color:#9ca3af;font-size:1.1rem;cursor:pointer;">✕</button>
-      </div>
-      <div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.75rem;">Tus cuentas, activos y objetivo. Se guardan cifrados con el resto de tus datos.</div>
-      ${body}`;
-    m.style.display = "flex";
-    document.getElementById("ff-close").addEventListener("click", close);
+    return { cuentas, activos, objetivo, categorias };
   }
 
   function openCuentaCfg(i) {
@@ -320,7 +320,7 @@
         c.cuentas[i] = rec;
       } else c.cuentas.push(rec);
       return null;
-    }, openAjustes);
+    }, refrescarAjustes);
   }
 
   // Renombrar una cuenta sin romper el histórico que la menciona
@@ -343,7 +343,7 @@
     if (usos && !confirm(`"${nombre}" aparece en ${usos} registros. Si la borras, esos importes dejarán de contar en tu patrimonio. ¿Seguir?`)) return;
     if (!usos && !confirm(`¿Borrar la cuenta "${nombre}"?`)) return;
     c.cuentas.splice(i, 1);
-    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(openAjustes);
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
   }
 
   function openActivoCfg(i) {
@@ -366,7 +366,7 @@
       });
       if (i >= 0) c.activos[i] = rec; else c.activos.push(rec);
       return null;
-    }, openAjustes);
+    }, refrescarAjustes);
   }
 
   function borrarActivoCfg(i) {
@@ -374,7 +374,7 @@
     const a = c.activos[i];
     if (!a || !confirm(`¿Quitar "${a.nombre}" de tus activos? Las operaciones que ya tengas registradas no se borran.`)) return;
     c.activos.splice(i, 1);
-    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(openAjustes);
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
   }
 
   function openObjetivoCfg() {
@@ -390,7 +390,7 @@
       if (Math.abs(rv + rf - 100) > 0.01) return `Los dos deben sumar 100 % (ahora suman ${(rv + rf).toFixed(0)} %)`;
       c.objetivo = { "Renta variable": rv, "Renta fija": rf };
       return null;
-    }, openAjustes);
+    }, refrescarAjustes);
   }
 
   // ── Categorías de gasto (con subcategorías) ──────────────────────────
@@ -412,37 +412,6 @@
   const madreDe = (c) => { const i = String(c).indexOf(">"); return i < 0 ? String(c).trim() : String(c).slice(0, i).trim(); };
   const hijaDe  = (c) => { const i = String(c).indexOf(">"); return i < 0 ? null : String(c).slice(i + 1).trim(); };
 
-  function openCategorias() {
-    const cats = categoriasCfg();
-    const madres = uniq(cats.map(madreDe)).sort();
-    const bloques = madres.map((m) => {
-      const hijas = cats.filter((c) => madreDe(c) === m && hijaDe(c));
-      const jsM = String(m).replace(/'/g, "\\'");
-      const filasHijas = hijas.map((h) => {
-        const jsH = String(h).replace(/'/g, "\\'");
-        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0 0.35rem 1.4rem;border-bottom:1px solid #1e222c;">
-          <div style="flex:1;color:#9ca3af;font-size:0.84rem;">${esc(hijaDe(h))}</div>
-          ${miniBtn("✕", `v2CatBorrar('${jsH}')`)}</div>`;
-      }).join("");
-      return `<div style="padding:0.5rem 0;border-bottom:1px solid #232733;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <div style="flex:1;color:#e5e7eb;font-weight:600;font-size:0.9rem;">${esc(m)}</div>
-          ${miniBtn("＋ sub", `v2CatNueva('${jsM}')`, "#3b82f6")}
-          ${miniBtn("✕", `v2CatBorrar('${jsM}')`)}</div>
-        ${filasHijas}</div>`;
-    }).join("");
-    const m = ensureModal();
-    m.querySelector(".modal-card").innerHTML =
-      `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-        <div style="font-size:1.1rem;font-weight:800;color:#fff;">Categorías de gasto</div>
-        <button id="ff-close" style="border:none;background:none;color:#9ca3af;font-size:1.1rem;cursor:pointer;">✕</button>
-      </div>
-      <div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.75rem;">Las que uses al registrar un gasto. Borrar una de aquí no toca los movimientos que ya la usan.</div>
-      ${bloques || '<div style="color:#6b7280;padding:1rem 0;">Aún no hay categorías.</div>'}
-      <div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría", "v2CatNueva('')", "#3b82f6")}</div>`;
-    m.style.display = "flex";
-    document.getElementById("ff-close").addEventListener("click", close);
-  }
 
   function openCategoriaNueva(madre) {
     const cats = categoriasCfg();
@@ -459,7 +428,7 @@
       cats.push(completa);
       cats.sort();
       return null;
-    }, openCategorias);
+    }, refrescarAjustes);
   }
 
   function borrarCategoriaCfg(cat) {
@@ -472,7 +441,7 @@
     if (!confirm(aviso)) return;
     // Al borrar una madre se van con ella sus subcategorías del catálogo
     doc.config.categorias = cats.filter((c) => c !== cat && madreDe(c) !== cat);
-    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(openCategorias);
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
   }
 
   // ── Presupuesto por categoría ──
@@ -623,7 +592,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo,
-    openAjustes, openPresupuesto, openPassword, openCategorias, openCategoriaNueva, borrarCategoriaCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
+    fragmentosAjustes, openPresupuesto, openPassword, openCategoriaNueva, borrarCategoriaCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editPropiedad: (id) => openPropiedad(findById("propiedades", id) || findById("inmuebles", id)),

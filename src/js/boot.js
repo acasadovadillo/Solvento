@@ -48,7 +48,7 @@
       try { await SYNC.storeToken(DB.state.token, password); } catch (e) {}
     }
     updateSyncUi();
-    if (!DB.state.token) pintarEstado("sintoken", "Añade tu token en 🔄 Sincronizar y el guardado será automático");
+    if (!DB.state.token) pintarEstado("sintoken", "Añade tu token en ⚙ Ajustes → Sincronización y el guardado será automático");
     else if (hayPendiente()) reintentarPendiente();
     else pintarEstado("ok", "Tus cambios se guardan solos en GitHub");
     avisarCopiaSiToca();
@@ -116,9 +116,9 @@
       marcarPendiente(true);
       const auth = e.code === "AUTH";
       pintarEstado("pendiente", auth
-        ? "El token no vale o ha caducado: ponlo de nuevo en 🔄 Sincronizar"
+        ? "El token no vale o ha caducado: ponlo de nuevo en ⚙ Ajustes → Sincronización"
         : "No se pudo subir (" + e.message + "). Se reintentará solo.");
-      toast(auth ? "El token no vale o ha caducado · ponlo de nuevo en 🔄" : "Sin conexión con GitHub · se reintentará solo", "#fbbf24");
+      toast(auth ? "El token no vale o ha caducado · ponlo de nuevo en ⚙ Ajustes" : "Sin conexión con GitHub · se reintentará solo", "#fbbf24");
       return false;
     }
   }
@@ -146,7 +146,7 @@
     await guardarLocal();
     if (!DB.state.token) {
       marcarPendiente(true);
-      pintarEstado("sintoken", "Guardado en este dispositivo. Añade tu token en 🔄 Sincronizar para subirlo solo.");
+      pintarEstado("sintoken", "Guardado en este dispositivo. Añade tu token en ⚙ Ajustes para subirlo solo.");
       toast("Guardado en este dispositivo · añade tu token para subirlo", "#fbbf24");
       return;
     }
@@ -305,7 +305,8 @@
     if (st) { st.textContent = has ? "✅ Token guardado (cifrado) en este dispositivo" : "Sin token — necesario para guardar en GitHub"; st.style.color = has ? "#10b981" : "#6b7280"; }
   }
   function openSync() {
-    $("sync-modal").style.display = "flex";
+    if (window.v2Tab) window.v2Tab("ajustes");
+    if (window.v2AjSec) window.v2AjSec("sync");
     setError("sync-status", "");
     // Precargar el token que ya está guardado en este dispositivo, para que se
     // vea que no hace falta volver a pegarlo. Va en un campo de contraseña, así
@@ -323,7 +324,7 @@
     inp.type = oculto ? "text" : "password";
     if (btn) btn.textContent = oculto ? "🙈" : "👁";
   }
-  function closeSync() { $("sync-modal").style.display = "none"; }
+
 
   async function saveToken() {
     const t = $("sync-token").value.trim();
@@ -388,8 +389,6 @@
     $("login-form").addEventListener("submit", handleLogin);
     $("import-form").addEventListener("submit", handleImport);
     $("logout-btn").addEventListener("click", lock);
-    $("sync-btn").addEventListener("click", openSync);
-    $("sync-close").addEventListener("click", closeSync);
     $("sync-save-token").addEventListener("click", saveToken);
     $("sync-token-ver").addEventListener("click", alternarVerToken);
     $("sync-token-viaja").addEventListener("change", () => { aplicarTokenViajero(); saveDoc(); });

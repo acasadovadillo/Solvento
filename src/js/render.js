@@ -971,6 +971,7 @@
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
     document.getElementById("v2-page-operaciones").innerHTML = pageOperaciones(m);
     document.getElementById("v2-page-reporte").innerHTML = pageReporte(m);
+    if (window.v2AjPintar) window.v2AjPintar();
     bindTreemapHover();
     // Gráficas de evolución (patrimonio neto + cartera)
     if (window.SolventoModel.buildSeries && window.SolventoCharts) {
@@ -1030,7 +1031,21 @@
   window.v2AddNav = () => F() && F().openNav();
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
   window.v2AddPas = () => F() && F().openPasivo();
-  window.v2Ajustes = () => F() && F().openAjustes();
+  // Página de Ajustes: la parte estática vive en el HTML (para que sus
+  // manejadores no se pierdan al repintar) y aquí solo se rellenan las listas.
+  window.v2AjPintar = () => {
+    if (!F() || !CURRENT_DOC) return;
+    const fr = F().fragmentosAjustes();
+    const poner = (id, html) => { const e = document.getElementById(id); if (e) e.innerHTML = html; };
+    poner("aj-cuentas", fr.cuentas);
+    poner("aj-activos", fr.activos);
+    poner("aj-objetivo", fr.objetivo);
+    poner("aj-categorias", fr.categorias);
+  };
+  window.v2AjSec = (sec) => {
+    document.querySelectorAll(".aj-sec").forEach((e) => e.classList.toggle("active", e.id === "aj-sec-" + sec));
+    document.querySelectorAll(".aj-tab").forEach((b) => b.classList.toggle("active", b.dataset.sec === sec));
+  };
   window.v2GastoMes = (ym) => {
     GASTO_MES = ym;
     document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
@@ -1051,7 +1066,6 @@
   window.v2CfgActivo = (i) => F() && F().openActivoCfg(i);
   window.v2CfgDelActivo = (i) => F() && F().borrarActivoCfg(i);
   window.v2CfgObjetivo = () => F() && F().openObjetivoCfg();
-  window.v2Categorias = () => F() && F().openCategorias();
   window.v2CatNueva = (madre) => F() && F().openCategoriaNueva(madre);
   window.v2CatBorrar = (cat) => F() && F().borrarCategoriaCfg(cat);
   window.v2EditPas = (id) => F() && F().editPasivo(id);
