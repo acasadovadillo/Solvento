@@ -66,13 +66,72 @@
       </div>`;
     }).join("");
   }
-  function donutPanel(titulo, items, centerValue, centerLabel, total, targets) {
+
+  // ── Panel de distribución con vista intercambiable ───────────────────
+  // Un único componente para "cómo se reparte esto", usado en Patrimonio, Caja,
+  // Cartera e Inmuebles. Dos vistas de los mismos datos: barra apilada con
+  // etiquetas dentro, o gráfico circular. La elección se recuerda por panel.
+  //
+  // Los saldos NEGATIVOS (una cuenta en descubierto) no se pueden repartir en
+  // una tarta: darían un porcentaje negativo y un trazo inválido en el SVG. Se
+  // excluyen del reparto y se avisa aparte, en vez de dibujar algo sin sentido.
+  const VISTA = {};
+  const vistaDe = (id) => VISTA[id] || "barra";
+
+  function repartoValido(items) {
+    const positivos = items.filter((i) => i.value > 0);
+    const negativos = items.filter((i) => i.value < 0);
+    return { positivos, negativos, total: positivos.reduce((a, i) => a + i.value, 0) };
+  }
+
+  function barraDistribucion(items, total) {
+    const segs = items.map((it) => {
+      const p = total > 0 ? it.value / total * 100 : 0;
+      // La etiqueta solo cabe si el tramo es ancho; si no, queda en el tooltip
+      const etiqueta = p >= 11
+        ? `<span style="font-size:0.68rem;font-weight:700;color:#0b0d12;white-space:nowrap;padding:0 0.35rem;overflow:hidden;text-overflow:ellipsis;">${esc(it.label)} ${p.toFixed(0)}%</span>`
+        : "";
+      return `<div title="${esc(it.label)}: ${fmtEur(it.value)} (${p.toFixed(1)}%)"
+        style="width:${p.toFixed(2)}%;background:${it.accent};display:flex;align-items:center;justify-content:center;overflow:hidden;">${etiqueta}</div>`;
+    }).join("");
+    return `<div style="display:flex;height:30px;border-radius:8px;overflow:hidden;background:#1a1d27;">${segs}</div>`;
+  }
+
+  function selectorVista(id) {
+    const v = vistaDe(id);
+    const btn = (modo, txt) => `<button onclick="v2Vista('${id}','${modo}')" title="Ver en ${txt.toLowerCase()}"
+      style="background:${v === modo ? "#2a2d3a" : "transparent"};border:1px solid ${v === modo ? "#4b5563" : "#2a2d3a"};
+      color:${v === modo ? "#fff" : "#9ca3af"};border-radius:6px;font-size:0.72rem;font-weight:600;
+      padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;">${txt}</button>`;
+    return `<div style="display:flex;gap:0.25rem;">${btn("barra", "Barra")}${btn("circular", "Circular")}</div>`;
+  }
+
+  function cuerpoVista(id, items, centroValor, centroEtiqueta, targets) {
+    const { positivos, negativos, total } = repartoValido(items);
+    if (!positivos.length) {
+      return `<div style="color:#6b7280;text-align:center;padding:2rem;font-size:0.85rem;">Nada que repartir todavía</div>`;
+    }
+    const aviso = negativos.length
+      ? `<div style="font-size:0.75rem;color:#fbbf24;margin-top:0.9rem;">
+           ${negativos.map((n) => esc(n.label) + " está en negativo (" + fmtEur(n.value) + ")").join(" · ")}, así que no entra en el reparto.</div>`
+      : "";
+    const cuerpo = vistaDe(id) === "circular"
+      ? `<div style="display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;">
+           ${donut(positivos, centroValor, centroEtiqueta)}
+           <div style="display:flex;flex-direction:column;align-items:stretch;">${legend(positivos, total, targets)}</div>
+         </div>`
+      : `${barraDistribucion(positivos, total)}
+         <div style="display:flex;flex-direction:column;align-items:stretch;margin-top:1rem;">${legend(positivos, total, targets)}</div>`;
+    return cuerpo + aviso;
+  }
+
+  function vistaPanel(id, titulo, items, centroValor, centroEtiqueta, targets) {
     return `<div class="v2-wrap"><div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">${esc(titulo)}</div>
-      <div style="display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;">
-        ${donut(items, centerValue, centerLabel)}
-        <div style="display:flex;flex-direction:column;align-items:stretch;">${legend(items, total, targets)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.1rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
+        ${selectorVista(id)}
       </div>
+      <div id="vista-${id}">${cuerpoVista(id, items, centroValor, centroEtiqueta, targets)}</div>
     </div></div>`;
   }
 
@@ -139,7 +198,7 @@
     }).join("");
     return `<div class="v2-wrap"><div class="dashboard-panel">
       <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1rem;">Mapa de la cartera · tamaño = peso, color = rentabilidad</div>
-      <div class="tm-container" style="position:relative;width:100%;height:420px;border-radius:10px;overflow:hidden;">${tiles}
+      <div class="tm-container" style="position:relative;width:100%;height:clamp(200px,42vw,320px);border-radius:10px;overflow:hidden;">${tiles}
         <div class="tm-tooltip" style="position:absolute;display:none;background:#000;color:#fff;font-size:0.78rem;font-weight:600;padding:0.45rem 0.7rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;white-space:nowrap;z-index:20;box-shadow:0 4px 14px rgba(0,0,0,0.4);"></div>
       </div></div></div>`;
   }
@@ -185,10 +244,6 @@
 
   function header(title, subtitle) {
     return `<div class="header-block"><h2 class="section-title">${esc(title)}</h2><div class="section-subtitle">${subtitle}</div></div>`;
-  }
-  function propBar(m) {
-    const seg = (p, c, l) => `<div title="${l}: ${pct1(p)}%" style="width:${Math.max(0, p).toFixed(2)}%;background:${c};"></div>`;
-    return `<div class="v2-prop-bar">${seg(m.pctLiquidez, "#3b82f6", "Caja")}${seg(m.ratioInv, "#10b981", "Cartera")}${seg(m.ratioInm, "#a16207", "Inmuebles")}</div>`;
   }
   // Tarjeta del panel de Patrimonio. Si se le pasa `pagina`, es clicable y
   // navega a esa sección (con realce al pasar el cursor y una flecha de pista).
@@ -363,7 +418,6 @@
   // ── Páginas ──
   function pagePatrimonio(m) {
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
-      propBar(m) +
       `<div class="v2-hub-grid">
         ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja")}
         ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera")}
@@ -371,12 +425,12 @@
         ${hubCard("Pasivos", fmtEur(m.pas.total), m.ratioPas, "#6b7280",
                   m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas", null, "pasivos")}
       </div>` +
-      chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio") +
-      donutPanel("Distribución del patrimonio",
+      vistaPanel("patrimonio", "Distribución del patrimonio",
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
          { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
          { label: "Inmuebles", value: m.inm.total, accent: "#a16207" }],
-        fmtEur(m.patrimonioNeto), "Neto", m.patrimonioNeto);
+        fmtEur(m.patrimonioNeto), "Neto") +
+      chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio");
   }
 
   function tablaCartera(inv) {
@@ -503,7 +557,7 @@
     const porTipo = {};
     assets.forEach((a) => { if (isFinite(a.importe)) porTipo[a.tipo] = (porTipo[a.tipo] || 0) + a.importe; });
     const items = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES[t] || "#6b7280" })).sort((a, b) => b.value - a.value);
-    return items.length ? donutPanel("Distribución por activos", items, fmtEur(total), "Activos", total) : "";
+    return items.length ? vistaPanel("activos", "Distribución por activos", items, fmtEur(total), "Activos") : "";
   }
 
   // Contenido de la pestaña activa (se re-renderiza al cambiar de bróker)
@@ -560,7 +614,7 @@
       return `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
-      donutPanel("Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", m.patrimonioLiquido) +
+      vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total") +
       `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
       </div></div>` +
@@ -574,7 +628,7 @@
     const items = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES_INMUEBLE[t] || CFG.INMUEBLE_ACCENT_DEFAULT })).sort((a, b) => b.value - a.value);
     const rows = inm.items.map((r) => `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span><div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(r.tipo)}</div></div></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>${rowActions(`v2EditInm('${r.id}')`, `v2DelInm('${r.id}')`)}</tr>`).join("");
     return header("Inmuebles", fmtEur(inm.total)) +
-      donutPanel("Distribución por tipo", items, fmtEur(inm.total), "Total", inm.total) +
+      vistaPanel("inmuebles", "Distribución por tipo", items, fmtEur(inm.total), "Total") +
       `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Inmuebles</div>
@@ -859,6 +913,11 @@
   };
   window.v2Presupuesto = (cat) => F() && F().openPresupuesto(cat);
   window.v2Password = () => F() && F().openPassword();
+  window.v2Vista = (id, modo) => {
+    VISTA[id] = modo;
+    // Repintado completo: cada panel reconstruye su cuerpo con la vista elegida
+    render(CURRENT_DOC, window.__PRICES);
+  };
   window.v2CfgCuenta = (i) => F() && F().openCuentaCfg(i);
   window.v2CfgDelCuenta = (i) => F() && F().borrarCuentaCfg(i);
   window.v2CfgActivo = (i) => F() && F().openActivoCfg(i);
