@@ -12,6 +12,7 @@ on:
     paths-ignore:
       - "data.enc"      # los guardados cifrados del usuario no disparan rebuild
       - "prices.json"   # evita re-disparo por el propio commit de precios
+      - "fundamentals.json"
   schedule:
     - cron: "59 23 * * *"  # todos los días a las 23:59 UTC
 
@@ -47,6 +48,13 @@ jobs:
       - name: Generar prices.json
         run: python tools/build_prices.py
 
+      - name: Descargar fundamentales (si hay clave)
+        # Sin el secreto configurado el script avisa y sale sin error, para que
+        # los precios se publiquen igual.
+        env:
+          ALPHAVANTAGE_KEY: ${{ secrets.ALPHAVANTAGE_KEY }}
+        run: python tools/build_fundamentals.py
+
       - name: Validar prices.json
         run: |
           BYTES=$(wc -c < prices.json)
@@ -61,9 +69,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add prices.json
+          git add prices.json fundamentals.json 2>/dev/null || git add prices.json
           if git diff --cached --quiet; then
-            echo "Sin cambios en prices.json"
+            echo "Sin cambios que publicar"
           else
             git commit -m "Actualizar precios $(date +%Y-%m-%d)"
             git push
