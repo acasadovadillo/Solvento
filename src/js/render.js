@@ -732,47 +732,78 @@
     return g.meses.find((m) => m.ym === GASTO_MES) || g.meses[g.meses.length - 1];
   };
 
+  // Categorías desplegadas por madre: "Educación > Formaciones" se agrupa bajo
+  // "Educación", que suma sus hijas. Los presupuestos valen en los dos niveles.
+  const ABIERTAS = {};
   function tablaCategorias(g, mes, presupuesto) {
-    const cats = Object.entries(mes.catGasto).sort((a, b) => b[1] - a[1]);
-    if (!cats.length) return `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:2.5rem;">Sin gastos registrados en ${esc(mes.label)}</div></div>`;
-    // Media de esa categoría en los meses anteriores, para saber si te has pasado
+    const grupos = window.SolventoModel.agruparCategorias(mes.catGasto);
+    if (!grupos.length) return `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:2.5rem;">Sin gastos registrados en ${esc(mes.label)}</div></div>`;
     const previos = g.meses.filter((m) => m.ym < mes.ym).slice(-6);
-    const mediaDe = (c) => previos.length ? previos.reduce((s, m) => s + (m.catGasto[c] || 0), 0) / previos.length : NaN;
+    const mediaDe = (clave) => {
+      if (!previos.length) return NaN;
+      return previos.reduce((s, m) => {
+        // La media de una madre suma también lo de sus hijas
+        let t = 0;
+        for (const c in m.catGasto) {
+          const p = window.SolventoModel.partirCategoria(c);
+          if (c === clave || p.madre === clave) t += m.catGasto[c];
+        }
+        return s + t;
+      }, 0) / previos.length;
+    };
 
-    const rows = cats.map(([c, v]) => {
-      const pres = Number(presupuesto[c]);
-      const media = mediaDe(c);
-      let barra = "";
-      if (isFinite(pres) && pres > 0) {
-        const pct = Math.min(100, v / pres * 100);
-        const col = v > pres ? RED : (v > pres * 0.85 ? "#f59e0b" : GREEN);
-        barra = `<div style="margin-top:0.35rem;height:5px;background:#232733;border-radius:3px;overflow:hidden;">
-            <div style="width:${pct.toFixed(1)}%;height:100%;background:${col};"></div></div>
-          <div style="font-size:0.7rem;color:${v > pres ? RED : "#6b7280"};margin-top:0.2rem;">
-            ${v > pres ? `Te has pasado ${fmtEur(v - pres)} del presupuesto` : `Te quedan ${fmtEur(pres - v)} de ${fmtEur(pres)}`}</div>`;
-      }
-      const cmp = isFinite(media) && media > 0
-        ? `<span style="color:${v > media * 1.15 ? RED : (v < media * 0.85 ? GREEN : "#6b7280")};font-size:0.72rem;">
-             ${v > media ? "+" : ""}${((v / media - 1) * 100).toFixed(0)}% vs media</span>` : "";
-      const cJs = String(c).replace(/'/g, "\\'");
-      return `<tr class="table-row">
-        <td style="text-align:left;"><div style="color:#e5e7eb;font-weight:600;">${esc(c)}</div>${barra}</td>
-        <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(v)}<div>${cmp}</div></td>
-        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${(mes.gastos ? v / mes.gastos * 100 : 0).toFixed(1)}%</td>
-        <td style="text-align:right;width:1%;"><button onclick="v2Presupuesto('${cJs}')" title="Poner presupuesto" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">🎯</button></td>
-      </tr>`;
+    const barraPresupuesto = (v, pres) => {
+      if (!(isFinite(pres) && pres > 0)) return "";
+      const pct = Math.min(100, v / pres * 100);
+      const col = v > pres ? RED : (v > pres * 0.85 ? "#f59e0b" : GREEN);
+      return `<div style="margin-top:0.35rem;height:5px;background:#232733;border-radius:3px;overflow:hidden;">
+          <div style="width:${pct.toFixed(1)}%;height:100%;background:${col};"></div></div>
+        <div style="font-size:0.7rem;color:${v > pres ? RED : "#6b7280"};margin-top:0.2rem;">
+          ${v > pres ? `Te has pasado ${fmtEur(v - pres)} del presupuesto` : `Te quedan ${fmtEur(pres - v)} de ${fmtEur(pres)}`}</div>`;
+    };
+    const comparativa = (v, media) => (isFinite(media) && media > 0
+      ? `<span style="color:${v > media * 1.15 ? RED : (v < media * 0.85 ? GREEN : "#6b7280")};font-size:0.72rem;">
+           ${v > media ? "+" : ""}${((v / media - 1) * 100).toFixed(0)}% vs media</span>` : "");
+
+    const filas = grupos.map((gr) => {
+      const jsN = String(gr.nombre).replace(/'/g, "\\'");
+      // Solo hay algo que desplegar si tiene subcategorías de verdad
+      const tieneHijas = gr.hijas.some((h) => !h.esPropia);
+      const abierta = ABIERTAS[gr.nombre];
+      const cabecera = `<tr class="table-row">
+        <td style="text-align:left;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            ${tieneHijas ? `<button onclick="v2CatToggle('${jsN}')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>` : '<span style="width:1rem;display:inline-block;"></span>'}
+            <div style="flex:1;"><div style="color:#e5e7eb;font-weight:600;">${esc(gr.nombre)}</div>
+              ${barraPresupuesto(gr.total, Number(presupuesto[gr.nombre]))}</div>
+          </div></td>
+        <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(gr.total)}<div>${comparativa(gr.total, mediaDe(gr.nombre))}</div></td>
+        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${(mes.gastos ? gr.total / mes.gastos * 100 : 0).toFixed(1)}%</td>
+        <td style="text-align:right;width:1%;"><button onclick="v2Presupuesto('${jsN}')" title="Poner presupuesto" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">🎯</button></td></tr>`;
+      if (!tieneHijas || !abierta) return cabecera;
+      const hijas = gr.hijas.map((h) => {
+        const jsC = String(h.completa).replace(/'/g, "\\'");
+        return `<tr class="table-row" style="background:#14171f;">
+          <td style="text-align:left;padding-left:2.4rem;"><div style="color:#9ca3af;font-size:0.85rem;">${esc(h.esPropia ? "(sin subcategoría)" : h.nombre)}</div>
+            ${barraPresupuesto(h.total, Number(presupuesto[h.completa]))}</td>
+          <td style="text-align:right;color:#e5e7eb;white-space:nowrap;">${fmtEur(h.total)}</td>
+          <td style="text-align:right;color:#6b7280;white-space:nowrap;">${(gr.total ? h.total / gr.total * 100 : 0).toFixed(1)}%</td>
+          <td style="text-align:right;width:1%;"><button onclick="v2Presupuesto('${jsC}')" title="Poner presupuesto" style="background:none;border:none;color:#4b5563;cursor:pointer;font-size:0.8rem;padding:0.2rem 0.4rem;">🎯</button></td></tr>`;
+      }).join("");
+      return cabecera + hijas;
     }).join("");
+
     return `<div class="v2-wrap"><div class="table-container">
       <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.35rem;">Gasto por categoría · ${esc(mes.label)}</div>
-      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.5rem;">🎯 pon un presupuesto a una categoría y te aviso cuando te pases.</div>
-      <table class="minimal-table"><tbody>${rows}</tbody></table>
+      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.5rem;">▸ despliega las subcategorías · 🎯 pon un presupuesto y te aviso cuando te pases.</div>
+      <table class="minimal-table"><tbody>${filas}</tbody></table>
     </div></div>`;
   }
 
-  function pageGastos(m) {
+  function pageBalance(m) {
     const g = window.__GASTOS || { meses: [], media: { ingresos: 0, gastos: 0, meses: 0 }, categorias: [] };
     if (!g.meses.length) {
-      return header("Gastos", fmtEur(0)) +
+      return header("Balance", fmtEur(0)) +
         `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:3rem;">
           Aún no hay gastos ni ingresos que analizar. Registra movimientos y aquí verás en qué se te va el dinero.</div></div>`;
     }
@@ -788,8 +819,15 @@
         <div class="hero-item"><span class="hero-item-label">Ahorro</span><span class="hero-item-value" style="color:${rc(mes.ahorro)};">${mes.ahorro >= 0 ? "+" : ""}${fmtEur(mes.ahorro)}</span></div>
         <div class="hero-item"><span class="hero-item-label">Tasa de ahorro</span><span class="hero-item-value" style="color:${rc(mes.tasa)};">${isFinite(mes.tasa) ? mes.tasa.toFixed(1).replace(".", ",") + "%" : "—"}</span></div>
       </div></div></div>`;
-    return header("Gastos", fmtEur(mes.gastos)) + hero +
+    const grupos = window.SolventoModel.agruparCategorias(mes.catGasto);
+    const itemsCat = grupos.map((gr, i) => ({
+      label: gr.nombre, value: gr.total,
+      accent: CFG.SERIE_COLORES[i % CFG.SERIE_COLORES.length],
+    }));
+    return header("Balance", fmtEur(mes.ahorro)) + hero +
       barrasIngresoGasto(g) +
+      (itemsCat.length ? vistaPanel("categorias", "En qué se va el dinero · " + mes.label,
+                                    itemsCat, fmtEur(mes.gastos), "Gasto") : "") +
       tablaCategorias(g, mes, pres);
   }
 
@@ -830,7 +868,7 @@
   const ALTA_POR_PAGINA = {
     patrimonio: () => F() && F().openMovimiento(),
     caja:       () => F() && F().openMovimiento(),
-    gastos:     () => F() && F().openMovimiento(),
+    balance:    () => F() && F().openMovimiento(),
     cartera:    () => F() && F().openInversion(),
     inmuebles:  () => F() && F().openInmueble(),
     pasivos:    () => F() && F().openPasivo(),
@@ -894,7 +932,7 @@
     catch (e) { window.__GASTOS = null; }
     document.getElementById("v2-page-patrimonio").innerHTML = pagePatrimonio(m);
     document.getElementById("v2-page-caja").innerHTML = pageCaja(m);
-    document.getElementById("v2-page-gastos").innerHTML = pageGastos(m);
+    document.getElementById("v2-page-balance").innerHTML = pageBalance(m);
     document.getElementById("v2-page-cartera").innerHTML = pageCartera(m, prices);
     document.getElementById("v2-page-inmuebles").innerHTML = pageInmuebles(m);
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
@@ -962,9 +1000,13 @@
   window.v2Ajustes = () => F() && F().openAjustes();
   window.v2GastoMes = (ym) => {
     GASTO_MES = ym;
-    document.getElementById("v2-page-gastos").innerHTML = pageGastos(window.__MODEL);
+    document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
   };
   window.v2Presupuesto = (cat) => F() && F().openPresupuesto(cat);
+  window.v2CatToggle = (nombre) => {
+    ABIERTAS[nombre] = !ABIERTAS[nombre];
+    document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
+  };
   window.v2Password = () => F() && F().openPassword();
   window.v2Vista = (id, modo) => {
     VISTA[id] = modo;
@@ -976,6 +1018,9 @@
   window.v2CfgActivo = (i) => F() && F().openActivoCfg(i);
   window.v2CfgDelActivo = (i) => F() && F().borrarActivoCfg(i);
   window.v2CfgObjetivo = () => F() && F().openObjetivoCfg();
+  window.v2Categorias = () => F() && F().openCategorias();
+  window.v2CatNueva = (madre) => F() && F().openCategoriaNueva(madre);
+  window.v2CatBorrar = (cat) => F() && F().borrarCategoriaCfg(cat);
   window.v2EditPas = (id) => F() && F().editPasivo(id);
   window.v2DelPas = (id) => { if (F() && confirm("¿Borrar esta deuda?")) F().deletePasivo(id); };
   window.v2CarteraTab = (id) => {

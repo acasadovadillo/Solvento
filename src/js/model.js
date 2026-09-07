@@ -243,6 +243,35 @@
     return { items, n: items.length, total: round2(items.reduce((s, x) => s + x.importe, 0)) };
   }
 
+  // ── Categorías con jerarquía ─────────────────────────────────────────
+  // Las categorías se guardan en el movimiento como texto: "Educación" o
+  // "Educación > Formaciones". Mantener ese formato tiene una ventaja grande:
+  // no hay que migrar nada y lo que ya escribiste sigue valiendo. La jerarquía
+  // se deduce partiendo por ">".
+  const SEP = ">";
+  function partirCategoria(c) {
+    const t = String(c || "").trim();
+    if (!t) return { madre: "Sin categoría", hija: null, completa: "Sin categoría" };
+    const i = t.indexOf(SEP);
+    if (i < 0) return { madre: t, hija: null, completa: t };
+    const madre = t.slice(0, i).trim(), hija = t.slice(i + 1).trim();
+    return { madre: madre || "Sin categoría", hija: hija || null, completa: t };
+  }
+
+  // Agrupa el gasto de un mes por categoría madre, con sus hijas dentro.
+  function agruparCategorias(catGasto) {
+    const madres = {};
+    for (const c in catGasto) {
+      const { madre, hija, completa } = partirCategoria(c);
+      const m = madres[madre] || (madres[madre] = { nombre: madre, total: 0, hijas: [] });
+      m.total += catGasto[c];
+      m.hijas.push({ nombre: hija || madre, completa, total: catGasto[c], esPropia: !hija });
+    }
+    return Object.values(madres)
+      .map((m) => { m.hijas.sort((a, b) => b.total - a.total); m.total = round2(m.total); return m; })
+      .sort((a, b) => b.total - a.total);
+  }
+
   // ── Análisis de gastos (Fase 6) ──────────────────────────────────────
   // Agrega ingresos y gastos por mes y categoría a partir de lo que ya
   // registras. Qué se deja fuera, y por qué:
@@ -520,5 +549,5 @@
     return { cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, agruparCategorias, _internals: { computeSaldos, valuate, valuateInmuebles, parseFechaES, round2 } };
 })();

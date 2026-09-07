@@ -75,7 +75,8 @@
     // "Inversiones" ya no es una categoría de movimiento (las compras se
     // registran como operaciones, que mueven el efectivo solas).
     const noInv = (arr) => arr.filter((c) => String(c).trim().toLowerCase() !== "inversiones");
-    const catGasto = noInv(uniq((doc.movimientos || []).map((m) => m.tipo_gasto)));
+    // Catálogo + lo que ya exista en el histórico, por si algo no está dado de alta
+    const catGasto = noInv(uniq(categoriasCfg().concat((doc.movimientos || []).map((m) => m.tipo_gasto)))).sort();
     const catIngreso = noInv(uniq((doc.movimientos || []).map((m) => m.tipo_ingreso)));
     const body =
       field("m-fecha", "Fecha", input("m-fecha", "date", toISO(e.fecha || hoyES()))) +
@@ -266,6 +267,10 @@
        ${activosHtml}
        <div style="margin:0.6rem 0 1.4rem;">${miniBtn("＋ Añadir activo", "v2CfgActivo(-1)", "#3b82f6")}</div>
 
+       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.3rem;">Categorías de gasto</div>
+       ${filaAjuste("Categorías y subcategorías", categoriasCfg().length + " en tu catálogo", miniBtn("✎", "v2Categorias()"))}
+       <div style="margin:0.6rem 0 1.4rem;"></div>
+
        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.5rem 0 0.5rem;">Objetivo de asignación</div>
        ${filaAjuste("Renta variable / Renta fija",
                     `${(+obj["Renta variable"] || 0).toFixed(0)}% / ${(+obj["Renta fija"] || 0).toFixed(0)}%`,
@@ -388,6 +393,88 @@
     }, openAjustes);
   }
 
+  // ── Categorías de gasto (con subcategorías) ──────────────────────────
+  // Se guardan como lista de textos completos: "Educación" o
+  // "Educación > Formaciones". Mantener ese formato evita migrar nada: lo que
+  // ya escribiste sigue funcionando y el catálogo solo sirve para ofrecértelo
+  // ordenado al registrar, en vez de escribirlo a mano cada vez.
+  function categoriasCfg() {
+    const doc = DB.state.doc;
+    if (!doc.config) doc.config = {};
+    if (!doc.config.categorias) {
+      // Se siembra con lo que ya venías usando
+      doc.config.categorias = uniq((doc.movimientos || [])
+        .map((m) => m.tipo_gasto)
+        .filter((c) => c && String(c).trim().toLowerCase() !== "inversiones")).sort();
+    }
+    return doc.config.categorias;
+  }
+  const madreDe = (c) => { const i = String(c).indexOf(">"); return i < 0 ? String(c).trim() : String(c).slice(0, i).trim(); };
+  const hijaDe  = (c) => { const i = String(c).indexOf(">"); return i < 0 ? null : String(c).slice(i + 1).trim(); };
+
+  function openCategorias() {
+    const cats = categoriasCfg();
+    const madres = uniq(cats.map(madreDe)).sort();
+    const bloques = madres.map((m) => {
+      const hijas = cats.filter((c) => madreDe(c) === m && hijaDe(c));
+      const jsM = String(m).replace(/'/g, "\\'");
+      const filasHijas = hijas.map((h) => {
+        const jsH = String(h).replace(/'/g, "\\'");
+        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0 0.35rem 1.4rem;border-bottom:1px solid #1e222c;">
+          <div style="flex:1;color:#9ca3af;font-size:0.84rem;">${esc(hijaDe(h))}</div>
+          ${miniBtn("✕", `v2CatBorrar('${jsH}')`)}</div>`;
+      }).join("");
+      return `<div style="padding:0.5rem 0;border-bottom:1px solid #232733;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <div style="flex:1;color:#e5e7eb;font-weight:600;font-size:0.9rem;">${esc(m)}</div>
+          ${miniBtn("＋ sub", `v2CatNueva('${jsM}')`, "#3b82f6")}
+          ${miniBtn("✕", `v2CatBorrar('${jsM}')`)}</div>
+        ${filasHijas}</div>`;
+    }).join("");
+    const m = ensureModal();
+    m.querySelector(".modal-card").innerHTML =
+      `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+        <div style="font-size:1.1rem;font-weight:800;color:#fff;">Categorías de gasto</div>
+        <button id="ff-close" style="border:none;background:none;color:#9ca3af;font-size:1.1rem;cursor:pointer;">✕</button>
+      </div>
+      <div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.75rem;">Las que uses al registrar un gasto. Borrar una de aquí no toca los movimientos que ya la usan.</div>
+      ${bloques || '<div style="color:#6b7280;padding:1rem 0;">Aún no hay categorías.</div>'}
+      <div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría", "v2CatNueva('')", "#3b82f6")}</div>`;
+    m.style.display = "flex";
+    document.getElementById("ff-close").addEventListener("click", close);
+  }
+
+  function openCategoriaNueva(madre) {
+    const cats = categoriasCfg();
+    const body =
+      (madre ? `<div style="font-size:0.8rem;color:#9ca3af;margin:0.5rem 0 0;">Subcategoría dentro de <b style="color:#fff;">${esc(madre)}</b></div>` : "") +
+      field("k-nombre", madre ? "Nombre de la subcategoría" : "Nombre de la categoría",
+            input("k-nombre", "text", "", madre ? 'placeholder="Formaciones"' : 'placeholder="Educación"'));
+    shell(madre ? "Nueva subcategoría" : "Nueva categoría", body, () => {
+      const n = G("k-nombre");
+      if (!n) return "Escribe un nombre";
+      if (n.includes(">")) return 'El nombre no puede llevar el símbolo ">"';
+      const completa = madre ? `${madre} > ${n}` : n;
+      if (cats.some((c) => c.toLowerCase() === completa.toLowerCase())) return "Esa categoría ya existe";
+      cats.push(completa);
+      cats.sort();
+      return null;
+    }, openCategorias);
+  }
+
+  function borrarCategoriaCfg(cat) {
+    const doc = DB.state.doc;
+    const cats = categoriasCfg();
+    const usos = (doc.movimientos || []).filter((m) => m.tipo_gasto === cat || madreDe(m.tipo_gasto || "") === cat).length;
+    const aviso = usos
+      ? `"${cat}" se usa en ${usos} movimiento${usos === 1 ? "" : "s"}. Quitarla del catálogo no los cambia: seguirán con esa categoría. ¿Seguir?`
+      : `¿Quitar "${cat}" del catálogo?`;
+    if (!confirm(aviso)) return;
+    // Al borrar una madre se van con ella sus subcategorías del catálogo
+    doc.config.categorias = cats.filter((c) => c !== cat && madreDe(c) !== cat);
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(openCategorias);
+  }
+
   // ── Presupuesto por categoría ──
   // Un tope mensual para una categoría de gasto. Se guarda con el resto de tu
   // configuración, así que viaja contigo a cualquier dispositivo.
@@ -500,7 +587,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openInmueble, openNav, openCuadrar, openPasivo,
-    openAjustes, openPresupuesto, openPassword, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
+    openAjustes, openPresupuesto, openPassword, openCategorias, openCategoriaNueva, borrarCategoriaCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editInmueble: (id) => openInmueble(findById("inmuebles", id)),
