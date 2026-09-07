@@ -1020,22 +1020,6 @@
     if (id === "cartera") layoutTreemaps();
   }
   window.v2Tab = showPage;
-  // El botón flotante añade lo que corresponde a la página que estás viendo,
-  // para registrar sin tener que ir a buscar el formulario.
-  const ALTA_POR_PAGINA = {
-    patrimonio: () => F() && F().openMovimiento(),
-    caja:       () => F() && F().openMovimiento(),
-    balance:    () => F() && F().openMovimiento(),
-    cartera:    () => F() && F().openInversion(),
-    propiedades: () => F() && F().openPropiedad(),
-    pasivos:    () => F() && F().openPasivo(),
-  };
-  window.v2AddAqui = function () {
-    const activa = document.querySelector("#app .page.active");
-    const id = activa ? activa.id.replace("v2-page-", "") : "patrimonio";
-    (ALTA_POR_PAGINA[id] || ALTA_POR_PAGINA.patrimonio)();
-  };
-
   // ── Treemap: ajustar texto al tamaño real + hover (port de la v1) ──
   function layoutTreemaps() {
     document.querySelectorAll(".tm-tile").forEach((tile) => {
