@@ -537,6 +537,7 @@
   // Dos preguntas distintas, dos series. Por defecto se muestra la que de verdad
   // compara: el comportamiento del precio con todas las líneas partiendo de 0 %.
   let COMP_MODO = "comportamiento";
+  let COMP_VENTANA = null;   // zoom del eje de meses, para no perderlo al repintar
   // Iconos del selector: varias líneas (el mercado, comparado) frente a una
   // silueta (lo tuyo). La frase de debajo sigue explicando en palabras qué
   // se está viendo, que es lo que de verdad desambigua los dos modos.
@@ -1247,7 +1248,11 @@
       const ref = referenciaMercado(an.meses);
       if (ref) series = [ref].concat(series);
     }
-    window.SolventoCharts.mountMulti(el, series.map((s) => Object.assign({}, s)), { meses: an.meses });
+    window.SolventoCharts.mountMulti(el, series.map((s) => Object.assign({}, s)), {
+      meses: an.meses,
+      ventana: COMP_VENTANA,
+      onVentana: (v) => { COMP_VENTANA = v; },
+    });
   }
 
   // MSCI World como índice de referencia, desde el histórico público de precios.

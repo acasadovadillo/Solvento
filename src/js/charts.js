@@ -236,6 +236,11 @@
  * SolventoCharts.mountMulti(container, series, {meses}) donde
  * series = [{key, label, puntos: [[t, pct|null]], destacada}].
  * Una línea por activo, con leyenda clicable para mostrar/ocultar cada uno.
+ *
+ * Mismo zoom por arrastre que la gráfica de evolución: se arrastra sobre el eje
+ * de meses (o sobre la propia gráfica) y la ventana se estrecha a ese tramo. La
+ * escala vertical se recalcula con lo que queda dentro, así que un tramo plano
+ * se despliega en vez de seguir aplastado; "✕" devuelve la serie entera.
  */
 (function () {
   "use strict";
@@ -245,6 +250,8 @@
   const fmtDia = (t) => new Date(t).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
   const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const P = { x0: 10, x1: 940, y0: 16, y1: 264, W: 1000, H: 300 };
+
+  const MIN_DRAG = 8;   // en unidades del viewBox: por debajo es un clic, no una selección
 
   function mountMulti(container, series, opts) {
     opts = opts || {};
@@ -257,22 +264,43 @@
     series.forEach((s, i) => { s.color = s.destacada ? "#ffffff" : pal[i % pal.length]; });
     const n = series[0].puntos.length;
     const hidden = new Set();
+    // Ventana de meses visible. Arrastrando se estrecha; el ✕ la devuelve entera.
+    // Puede venir dada (opts.ventana) para no perder el zoom al remontar la
+    // gráfica, y se avisa de cada cambio por opts.onVentana.
+    let i0 = 0, i1 = n - 1;
+    if (opts.ventana && n > 1) {
+      const a = Math.max(0, Math.min(n - 2, opts.ventana[0] | 0));
+      const b = Math.max(a + 1, Math.min(n - 1, opts.ventana[1] | 0));
+      i0 = a; i1 = b;
+    }
+    const avisarVentana = () => {
+      if (typeof opts.onVentana === "function") opts.onVentana(i0 > 0 || i1 < n - 1 ? [i0, i1] : null);
+    };
 
     container.innerHTML =
-      `<div class="cm-plot" style="position:relative;width:100%;">
-         <svg viewBox="0 0 ${P.W} ${P.H}" width="100%" height="260" preserveAspectRatio="none" style="overflow:visible;display:block;cursor:crosshair;">
+      `<div class="cm-plot" style="position:relative;width:100%;touch-action:pan-y;cursor:ew-resize;">
+         <svg viewBox="0 0 ${P.W} ${P.H}" width="100%" height="260" preserveAspectRatio="none" style="overflow:visible;display:block;">
            <g class="cm-grid"></g>
            <g class="cm-lines"></g>
            <line class="cm-vline" x1="0" y1="${P.y0}" x2="0" y2="${P.y1}" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
            <rect class="cm-hit" x="0" y="0" width="${P.W}" height="${P.H}" fill="transparent"/>
          </svg>
+         <div class="cm-sel" style="position:absolute;top:0;bottom:0;background:rgba(139,92,246,0.18);border-left:1px solid rgba(139,92,246,0.6);border-right:1px solid rgba(139,92,246,0.6);pointer-events:none;display:none;"></div>
          <div class="cm-tip" style="position:absolute;background:#000;color:#fff;font-size:0.72rem;padding:0.45rem 0.6rem;border-radius:8px;border:1px solid #2a2d3a;pointer-events:none;white-space:nowrap;display:none;z-index:6;line-height:1.5;"></div>
        </div>
-       <div class="cm-x" style="display:flex;justify-content:space-between;margin-top:0.4rem;font-size:0.72rem;color:#4b5563;font-weight:500;"></div>
+       <div class="cm-xwrap" title="Arrastra sobre las fechas para ampliar ese periodo"
+            style="position:relative;margin-top:0.4rem;padding:0.15rem 0;cursor:ew-resize;touch-action:pan-y;">
+         <div class="cm-x" style="display:flex;justify-content:space-between;font-size:0.72rem;color:#4b5563;font-weight:500;"></div>
+         <div class="cm-x-sel" style="position:absolute;top:0;bottom:0;background:rgba(139,92,246,0.25);pointer-events:none;display:none;"></div>
+       </div>
        <div class="cm-leg" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:1rem;"></div>
-       <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.7rem;">
+       <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.7rem;">
+         <span class="cm-zoom" style="display:none;align-items:center;gap:0.4rem;background:#1e2130;border:1px solid #4b5563;border-radius:6px;padding:0.22rem 0.3rem 0.22rem 0.6rem;font-size:0.7rem;color:#e5e7eb;font-weight:600;white-space:nowrap;">
+           <span class="cm-zoom-lbl"></span>
+           <button class="cm-zoom-x" title="Quitar el zoom" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:0.78rem;padding:0 0.15rem;line-height:1;font-family:inherit;">✕</button>
+         </span>
          <button class="cm-todos" style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#9ca3af;font-size:0.7rem;font-weight:600;padding:0.22rem 0.6rem;cursor:pointer;font-family:inherit;">Ver todos</button>
-         <span style="font-size:0.68rem;color:#374151;">Clic para ocultar · doble clic para ver solo uno</span>
+         <span style="font-size:0.68rem;color:#374151;">Clic para ocultar · doble clic para ver solo uno · arrastra para ampliar</span>
        </div>`;
 
     const svg = container.querySelector("svg");
@@ -282,17 +310,31 @@
     const tip = container.querySelector(".cm-tip");
     const legEl = container.querySelector(".cm-leg");
     const xEl = container.querySelector(".cm-x");
+    const plotEl = container.querySelector(".cm-plot");
+    const xwrapEl = container.querySelector(".cm-xwrap");
+    const selPlot = container.querySelector(".cm-sel");
+    const selAxis = container.querySelector(".cm-x-sel");
+    const zoomEl = container.querySelector(".cm-zoom");
+    const zoomLbl = container.querySelector(".cm-zoom-lbl");
 
-    const xAt = (i) => P.x0 + (n <= 1 ? 0 : i / (n - 1) * (P.x1 - P.x0));
+    // El eje X ya no recorre siempre la serie entera, sino la ventana [i0, i1]
+    const xAt = (i) => P.x0 + (i1 <= i0 ? 0 : (i - i0) / (i1 - i0) * (P.x1 - P.x0));
     let vmin = -1, vmax = 1;
     const yAt = (v) => P.y1 - (vmax === vmin ? 0.5 : (v - vmin) / (vmax - vmin)) * (P.y1 - P.y0);
 
     function visibles() { return series.filter((s) => !hidden.has(s.key)); }
+    const valorEn = (s, i) => {
+      const p = s.puntos[i];
+      const v = p ? p[1] : null;
+      return v != null && isFinite(v) ? v : null;
+    };
 
     function draw() {
       const vis = visibles();
       const vals = [];
-      vis.forEach((s) => s.puntos.forEach((p) => { if (p[1] != null && isFinite(p[1])) vals.push(p[1]); }));
+      // La escala vertical se calcula solo con lo que entra en la ventana: al
+      // ampliar un tramo plano, ese tramo se despliega en vez de quedar aplastado.
+      vis.forEach((s) => { for (let i = i0; i <= i1; i++) { const v = valorEn(s, i); if (v != null) vals.push(v); } });
       if (!vals.length) { vmin = -1; vmax = 1; } else {
         vmin = Math.min(...vals); vmax = Math.max(...vals);
         const pad = (vmax - vmin) * 0.08 || 1;
@@ -314,22 +356,21 @@
       // líneas (se cortan donde no hay posición)
       linesEl.innerHTML = vis.map((s) => {
         let d = "", abierto = false;
-        s.puntos.forEach((p, i) => {
-          if (p[1] == null || !isFinite(p[1])) { abierto = false; return; }
-          d += (abierto ? " L " : " M ") + xAt(i).toFixed(2) + " " + yAt(p[1]).toFixed(2);
+        for (let i = i0; i <= i1; i++) {
+          const v = valorEn(s, i);
+          if (v == null) { abierto = false; continue; }
+          d += (abierto ? " L " : " M ") + xAt(i).toFixed(2) + " " + yAt(v).toFixed(2);
           abierto = true;
-        });
+        }
         if (!d) return "";
         return `<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="${s.destacada ? 3 : 1.8}"
           stroke-linecap="round" stroke-linejoin="round" opacity="${s.destacada ? 1 : 0.9}"/>`;
       }).join("");
       // Leyenda ordenada por resultado, con la cifra al lado: así se lee quién va
-      // mejor sin tener que rastrear las líneas por el gráfico.
+      // mejor sin tener que rastrear las líneas por el gráfico. La cifra es la del
+      // final de la ventana, para que concuerde con donde acaba la línea dibujada.
       const ultimoDe = (s) => {
-        for (let i = s.puntos.length - 1; i >= 0; i--) {
-          const v = s.puntos[i][1];
-          if (v != null && isFinite(v)) return v;
-        }
+        for (let i = i1; i >= i0; i--) { const v = valorEn(s, i); if (v != null) return v; }
         return null;
       };
       const ordenadas = series.slice().sort((a, b) => {
@@ -363,24 +404,28 @@
         });
       });
       const ms = opts.meses || [];
-      if (ms.length) xEl.innerHTML = `<span>${fmtMes(ms[0])}</span><span>${fmtMes(ms[ms.length - 1])}</span>`;
+      if (ms.length) xEl.innerHTML = `<span>${fmtMes(ms[i0])}</span><span>${fmtMes(ms[i1])}</span>`;
+      const ampliado = i0 > 0 || i1 < n - 1;
+      zoomEl.style.display = ampliado ? "inline-flex" : "none";
+      if (ampliado && ms.length) zoomLbl.textContent = `${fmtMes(ms[i0])} – ${fmtMes(ms[i1])}`;
     }
 
     function ocultarTip() { vline.style.display = "none"; tip.style.display = "none"; }
+
+    // ── Hover ──
     svg.addEventListener("mousemove", (ev) => {
+      if (drag) return;                      // durante la selección no hay hover
       const vis = visibles();
       if (!vis.length) return;
-      const rect = svg.getBoundingClientRect();
-      if (!rect.width) return;               // aún sin layout: evita dividir por 0
-      const px = (ev.clientX - rect.left) / rect.width * P.W;
-      let i = Math.round((px - P.x0) / (P.x1 - P.x0) * (n - 1));
-      i = isFinite(i) ? Math.max(0, Math.min(n - 1, i)) : 0;
+      const px = pxDesde(ev, svg);
+      if (px == null) return;
+      const i = idxDesdePx(px);
       const cx = xAt(i);
       vline.setAttribute("x1", cx); vline.setAttribute("x2", cx); vline.style.display = "";
       const ms = opts.meses || [];
       const filas = vis
-        .map((s) => ({ s, v: s.puntos[i] ? s.puntos[i][1] : null }))
-        .filter((x) => x.v != null && isFinite(x.v))
+        .map((s) => ({ s, v: valorEn(s, i) }))
+        .filter((x) => x.v != null)
         .sort((a, b) => b.v - a.v)
         .slice(0, 10)
         .map((x) => `<div style="display:flex;gap:0.5rem;justify-content:space-between;">
@@ -395,6 +440,60 @@
       tip.style.transform = `translate(${p > 55 ? "-100%" : "0"},0)`;
     });
     svg.addEventListener("mouseleave", ocultarTip);
+
+    // ── Selección de intervalo por arrastre (eje de fechas y gráfica) ──
+    function pxDesde(ev, el) {
+      const rect = el.getBoundingClientRect();
+      if (!rect.width) return null;          // aún sin layout: evita dividir por 0
+      return (ev.clientX - rect.left) / rect.width * P.W;
+    }
+    const idxDesdePx = (px) => {
+      if (px == null || !isFinite(px)) return i0;
+      const k = Math.round((px - P.x0) / (P.x1 - P.x0) * (i1 - i0)) + i0;
+      return isFinite(k) ? Math.max(i0, Math.min(i1, k)) : i0;
+    };
+    const pctOf = (u) => u / P.W * 100;
+
+    let drag = null;
+    function pintarSel() {
+      const a = Math.min(drag.a, drag.b), b = Math.max(drag.a, drag.b);
+      const l = pctOf(a) + "%", w = pctOf(b - a) + "%";
+      [selPlot, selAxis].forEach((el) => { el.style.display = "block"; el.style.left = l; el.style.width = w; });
+    }
+    function ocultarSel() { [selPlot, selAxis].forEach((el) => (el.style.display = "none")); }
+
+    function empezar(ev, el) {
+      if (ev.button != null && ev.button !== 0) return;
+      if (i1 - i0 < 2) return;               // ya no queda nada que estrechar
+      const px = pxDesde(ev, el);
+      if (px == null) return;
+      drag = { a: px, b: px, el };
+      ocultarTip(); pintarSel();
+      try { el.setPointerCapture(ev.pointerId); } catch (e) {}
+      ev.preventDefault();
+    }
+    function mover(ev) { if (!drag) return; const px = pxDesde(ev, drag.el); if (px == null) return; drag.b = px; pintarSel(); }
+    function soltar() {
+      if (!drag) return;
+      const a = Math.min(drag.a, drag.b), b = Math.max(drag.a, drag.b);
+      const suficiente = (b - a) >= MIN_DRAG;
+      drag = null; ocultarSel();
+      if (!suficiente) return;               // fue un clic, no una selección
+      const ia = idxDesdePx(a), ib = idxDesdePx(b);
+      if (ib - ia < 1) return;                // menos de dos meses: no se puede graficar
+      i0 = ia; i1 = ib;
+      avisarVentana(); ocultarTip(); draw();
+    }
+    [xwrapEl, plotEl].forEach((el) => {
+      el.addEventListener("pointerdown", (ev) => empezar(ev, el));
+      el.addEventListener("pointermove", mover);
+      el.addEventListener("pointerup", soltar);
+      el.addEventListener("pointercancel", () => { drag = null; ocultarSel(); });
+    });
+
+    container.querySelector(".cm-zoom-x").addEventListener("click", () => {
+      i0 = 0; i1 = n - 1; avisarVentana(); ocultarTip(); draw();
+    });
 
     const btnTodos = container.querySelector(".cm-todos");
     if (btnTodos) btnTodos.addEventListener("click", () => { hidden.clear(); ocultarTip(); draw(); });
