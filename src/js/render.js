@@ -97,12 +97,23 @@
     return `<div style="display:flex;height:30px;border-radius:8px;overflow:hidden;background:#1a1d27;">${segs}</div>`;
   }
 
+  // Iconos del selector de vista: una barra de distribución segmentada y un anillo
+  // partido en dos arcos. Trazados mínimos para que se lean bien a 14 px.
+  const ICONO_VISTA = {
+    barra: `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+      <rect x="1" y="5" width="6.2" height="6" rx="1.4"/><rect x="8.2" y="5" width="3.9" height="6" rx="1.4"/><rect x="13.1" y="5" width="1.9" height="6" rx="0.95"/></svg>`,
+    circular: `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d="M7.6 8.4 L13.2 8.4 A5.6 5.6 0 1 1 7.6 2.8 Z"/><path d="M8.5 7.5 L8.5 1.9 A5.6 5.6 0 0 1 14.1 7.5 Z"/></svg>`,
+  };
+
   function selectorVista(id) {
     const v = vistaDe(id);
     const btn = (modo, txt) => `<button onclick="v2Vista('${id}','${modo}')" title="Ver en ${txt.toLowerCase()}"
+      aria-label="Ver en ${txt.toLowerCase()}" aria-pressed="${v === modo}"
       style="background:${v === modo ? "#2a2d3a" : "transparent"};border:1px solid ${v === modo ? "#4b5563" : "#2a2d3a"};
-      color:${v === modo ? "#fff" : "#9ca3af"};border-radius:6px;font-size:0.72rem;font-weight:600;
-      padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;">${txt}</button>`;
+      color:${v === modo ? "#fff" : "#9ca3af"};border-radius:6px;
+      display:inline-flex;align-items:center;justify-content:center;line-height:0;
+      padding:0.32rem 0.55rem;cursor:pointer;font-family:inherit;">${ICONO_VISTA[modo]}</button>`;
     return `<div style="display:flex;gap:0.25rem;">${btn("barra", "Barra")}${btn("circular", "Circular")}</div>`;
   }
 
