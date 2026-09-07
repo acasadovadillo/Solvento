@@ -523,10 +523,26 @@
     </div></div>`;
   }
 
+  // Dos preguntas distintas, dos series. Por defecto se muestra la que de verdad
+  // compara: el comportamiento del precio con todas las líneas partiendo de 0 %.
+  let COMP_MODO = "comportamiento";
   function comparativaPanel() {
+    const btn = (modo, txt, ayuda) => `<button onclick="v2CompModo('${modo}')" title="${esc(ayuda)}"
+      style="background:${COMP_MODO === modo ? "#2a2d3a" : "transparent"};border:1px solid ${COMP_MODO === modo ? "#4b5563" : "#2a2d3a"};
+      color:${COMP_MODO === modo ? "#fff" : "#9ca3af"};border-radius:6px;font-size:0.72rem;font-weight:600;
+      padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;">${txt}</button>`;
+    const explicacion = COMP_MODO === "comportamiento"
+      ? "Cuánto se ha movido el precio de cada activo desde que lo tienes. Todas parten de 0 %, así que se pueden comparar entre sí."
+      : "Cuánto has ganado sobre lo que pagaste por cada uno. Es tu resultado real, pero no compara: un activo comprado hace años parte de un acumulado que otro reciente no puede tener.";
     return `<div class="v2-wrap"><div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.35rem;">Comparativa de rentabilidad</div>
-      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem;">Rentabilidad acumulada de cada activo a lo largo del tiempo.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Comparativa de rentabilidad</div>
+        <div style="display:flex;gap:0.25rem;">
+          ${btn("comportamiento", "Comportamiento", "Compara cómo se ha movido cada activo")}
+          ${btn("mia", "Mi rentabilidad", "Lo que has ganado sobre lo que pagaste")}
+        </div>
+      </div>
+      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem;">${esc(explicacion)}</div>
       <div id="v2-chart-comparativa"></div>
     </div></div>`;
   }
@@ -1056,6 +1072,11 @@
     document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
   };
   window.v2Password = () => F() && F().openPassword();
+  window.v2CompModo = (modo) => {
+    COMP_MODO = modo;
+    render(CURRENT_DOC, window.__PRICES);
+    showPage("cartera");
+  };
   window.v2Vista = (id, modo) => {
     VISTA[id] = modo;
     // Repintado completo: cada panel reconstruye su cuerpo con la vista elegida
@@ -1092,9 +1113,33 @@
   function montarComparativa() {
     const el = document.getElementById("v2-chart-comparativa");
     const an = window.__ANALITICA;
-    if (el && an && an.comparativa && window.SolventoCharts && window.SolventoCharts.mountMulti) {
-      window.SolventoCharts.mountMulti(el, an.comparativa, { meses: an.meses });
+    if (!el || !an || !window.SolventoCharts || !window.SolventoCharts.mountMulti) return;
+    let series = COMP_MODO === "comportamiento" ? (an.comportamiento || []) : (an.comparativa || []);
+    if (!series.length) series = an.comparativa || [];
+    // Referencia de mercado: sirve para saber si lo estás haciendo mejor o peor
+    // que comprar el índice, que es la comparación que de verdad importa.
+    if (COMP_MODO === "comportamiento") {
+      const ref = referenciaMercado(an.meses);
+      if (ref) series = [ref].concat(series);
     }
+    window.SolventoCharts.mountMulti(el, series.map((s) => Object.assign({}, s)), { meses: an.meses });
+  }
+
+  // MSCI World como índice de referencia, desde el histórico público de precios.
+  function referenciaMercado(meses) {
+    const hist = (window.__PRICES && window.__PRICES.hist && window.__PRICES.hist["IWDA.AS"]) || null;
+    if (!hist || hist.length < 2 || !meses.length) return null;
+    const antesDe = (t) => { for (let i = hist.length - 1; i >= 0; i--) if (hist[i][0] <= t) return hist[i][1]; return null; };
+    let base = null;
+    const puntos = meses.map((t) => {
+      const p = antesDe(t);
+      if (p == null || !(p > 0)) return [t, null];
+      if (base == null) base = p;
+      return [t, (p / base - 1) * 100];
+    });
+    return puntos.some((x) => x[1] != null)
+      ? { key: "__ref", label: "MSCI World (referencia)", isin: "-", destacada: true, puntos }
+      : null;
   }
   window.v2EditMov = (id) => F() && F().editMovimiento(id);
   window.v2EditInv = (id) => F() && F().editInversion(id);

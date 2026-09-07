@@ -477,6 +477,15 @@
     });
 
     // Comparativa: una línea de rentabilidad (%) por activo, más el total
+    // ── Dos comparativas, porque responden a preguntas distintas ──
+    //
+    // "Mi rentabilidad": cuánto has ganado sobre lo que pagaste. Es tu resultado
+    // real, pero NO sirve para comparar activos entre sí: uno comprado hace dos
+    // años parte de un acumulado que otro de hace dos meses no puede tener.
+    //
+    // "Comportamiento": cuánto se ha movido el precio de cada activo desde que
+    // lo tienes, con todas las líneas arrancando en 0 %. Esto sí compara, que es
+    // para lo que sirve una comparativa.
     const comparativa = filas.map((f) => ({
       key: f.jk, label: f.nombre, isin: f.isin,
       puntos: meses.map((t, i) => (f.celdas[i] ? [t, f.celdas[i].rentPct] : [t, null])),
@@ -486,7 +495,27 @@
       puntos: meses.map((t, i) => (total[i] ? [t, total[i].rentPct] : [t, null])),
     });
 
-    return { meses, filas, total, comparativa };
+    // Comportamiento del precio, rebasado a 0 % en el primer mes con dato
+    function serieComportamiento(jk, etiqueta, isin, destacada) {
+      const ptl = priceTL[jk];
+      if (!ptl || ptl.length < 2) return null;
+      // Solo desde que la tienes: antes de comprarla, su precio no te afectaba
+      const desde = unitsTL[jk] ? unitsTL[jk][0][0] : ptl[0][0];
+      let base = null;
+      const puntos = meses.map((t) => {
+        if (t < desde) return [t, null];
+        const p = antesDe(ptl, t);
+        if (p == null || !(p > 0)) return [t, null];
+        if (base == null) base = p;
+        return [t, (p / base - 1) * 100];
+      });
+      return puntos.some((x) => x[1] != null) ? { key: jk, label: etiqueta, isin, destacada, puntos } : null;
+    }
+    const comportamiento = filas
+      .map((f) => serieComportamiento(f.jk, f.nombre, f.isin, false))
+      .filter(Boolean);
+
+    return { meses, filas, total, comparativa, comportamiento };
   }
 
   // ── Series de evolución temporal (patrimonio neto y cartera) ──

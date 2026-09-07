@@ -270,7 +270,10 @@
        </div>
        <div class="cm-x" style="display:flex;justify-content:space-between;margin-top:0.4rem;font-size:0.72rem;color:#4b5563;font-weight:500;"></div>
        <div class="cm-leg" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:1rem;"></div>
-       <div style="font-size:0.68rem;color:#374151;margin-top:0.5rem;">Haz clic en la leyenda para mostrar u ocultar cada activo</div>`;
+       <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.7rem;">
+         <button class="cm-todos" style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#9ca3af;font-size:0.7rem;font-weight:600;padding:0.22rem 0.6rem;cursor:pointer;font-family:inherit;">Ver todos</button>
+         <span style="font-size:0.68rem;color:#374151;">Clic para ocultar · doble clic para ver solo uno</span>
+       </div>`;
 
     const svg = container.querySelector("svg");
     const gridEl = container.querySelector(".cm-grid");
@@ -320,18 +323,42 @@
         return `<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="${s.destacada ? 3 : 1.8}"
           stroke-linecap="round" stroke-linejoin="round" opacity="${s.destacada ? 1 : 0.9}"/>`;
       }).join("");
-      // leyenda
-      legEl.innerHTML = series.map((s) => {
+      // Leyenda ordenada por resultado, con la cifra al lado: así se lee quién va
+      // mejor sin tener que rastrear las líneas por el gráfico.
+      const ultimoDe = (s) => {
+        for (let i = s.puntos.length - 1; i >= 0; i--) {
+          const v = s.puntos[i][1];
+          if (v != null && isFinite(v)) return v;
+        }
+        return null;
+      };
+      const ordenadas = series.slice().sort((a, b) => {
+        if (a.destacada !== b.destacada) return a.destacada ? -1 : 1;
+        return (ultimoDe(b) ?? -Infinity) - (ultimoDe(a) ?? -Infinity);
+      });
+      legEl.innerHTML = ordenadas.map((s) => {
         const off = hidden.has(s.key);
-        return `<button data-k="${esc(s.key)}" style="display:inline-flex;align-items:center;gap:0.4rem;background:${off ? "transparent" : "#1e2130"};
+        const v = ultimoDe(s);
+        const corta = s.label.length > 24 ? s.label.slice(0, 23) + "…" : s.label;
+        return `<button data-k="${esc(s.key)}" title="${esc(s.label)} · clic para ocultar, doble clic para ver solo este"
+          style="display:inline-flex;align-items:center;gap:0.4rem;background:${off ? "transparent" : "#1e2130"};
           border:1px solid ${off ? "#2a2d3a" : "#3a3d4a"};border-radius:999px;padding:0.28rem 0.7rem;cursor:pointer;font-family:inherit;
           font-size:0.74rem;font-weight:600;color:${off ? "#4b5563" : "#e5e7eb"};${off ? "text-decoration:line-through;" : ""}">
-          <span style="width:9px;height:9px;border-radius:50%;background:${s.color};flex-shrink:0;opacity:${off ? 0.35 : 1};"></span>${esc(s.label)}</button>`;
+          <span style="width:9px;height:9px;border-radius:50%;background:${s.color};flex-shrink:0;opacity:${off ? 0.35 : 1};"></span>${esc(corta)}
+          ${v != null && !off ? `<b style="color:${v >= 0 ? "#10b981" : "#ef4444"};font-weight:700;">${fmtPct(v)}</b>` : ""}</button>`;
       }).join("");
       legEl.querySelectorAll("button").forEach((b) => {
+        const k = b.dataset.k;
         b.addEventListener("click", () => {
-          const k = b.dataset.k;
           if (hidden.has(k)) hidden.delete(k); else hidden.add(k);
+          ocultarTip(); draw();
+        });
+        // Doble clic: dejar solo ese activo, o restaurar todos si ya estaba solo
+        b.addEventListener("dblclick", (ev) => {
+          ev.preventDefault();
+          const soloEste = series.length - hidden.size === 1 && !hidden.has(k);
+          hidden.clear();
+          if (!soloEste) series.forEach((s) => { if (s.key !== k) hidden.add(s.key); });
           ocultarTip(); draw();
         });
       });
@@ -368,6 +395,9 @@
       tip.style.transform = `translate(${p > 55 ? "-100%" : "0"},0)`;
     });
     svg.addEventListener("mouseleave", ocultarTip);
+
+    const btnTodos = container.querySelector(".cm-todos");
+    if (btnTodos) btnTodos.addEventListener("click", () => { hidden.clear(); ocultarTip(); draw(); });
 
     draw();
   }
