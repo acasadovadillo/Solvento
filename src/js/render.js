@@ -304,10 +304,6 @@
     const total = ((CURRENT_DOC && CURRENT_DOC.movimientos) || []).length;
     const todos = movimientosFiltrados();
     const visibles = todos.slice(0, MOV.limite);
-    const suma = todos.reduce((s, r) => {
-      const v = Number(r.importe) || 0;
-      return s + (r.tipo === "Ingreso" ? v : (r.tipo === "Gasto" ? -v : 0));
-    }, 0);
     const rows = visibles.map((r) => {
       const signo = r.tipo === "Ingreso" ? "+" : (r.tipo === "Gasto" ? "−" : "");
       const color = r.tipo === "Ingreso" ? GREEN : (r.tipo === "Gasto" ? RED : "#9ca3af");
@@ -322,8 +318,7 @@
     }).join("");
     const quedan = todos.length - visibles.length;
     return `<div style="font-size:0.78rem;color:#6b7280;margin:0.35rem 0 0.5rem;">
-        ${todos.length}${todos.length !== total ? " de " + total : ""} ${todos.length === 1 ? "movimiento" : "movimientos"}
-        ${suma ? `· saldo del filtro <b style="color:${suma >= 0 ? GREEN : RED};">${suma >= 0 ? "+" : ""}${fmtEur(suma)}</b>` : ""}</div>
+        ${todos.length}${todos.length !== total ? " de " + total : ""} ${todos.length === 1 ? "movimiento" : "movimientos"}</div>
       <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Ningún movimiento coincide con el filtro</td></tr>'}</tbody></table>
       ${quedan > 0 ? `<div style="text-align:center;margin-top:0.75rem;">${addBtn("Ver " + Math.min(quedan, PAGINA) + " más (quedan " + quedan + ")", "v2MovMas()")}</div>` : ""}`;
   }
@@ -354,6 +349,19 @@
     </div></div>`;
   }
 
+  function filaOperacion(r) {
+    const MC = { Compra: GREEN, Venta: RED, Traspaso: "#3b82f6" };
+    const mov = r.tipo_movimiento || "Compra";
+    const c = MC[mov] || "#6b7280";
+    const coste = Number(r.coste);
+    return `<tr class="table-row">
+      <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
+      <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.5rem;">${logoImg(r.nombre, r.isin, 18)}<span style="color:#fff;font-weight:600;font-size:0.85rem;">${esc(r.nombre)}</span><span style="color:${c};font-size:0.7rem;font-weight:700;background:${c}22;padding:0.1rem 0.4rem;border-radius:4px;">${esc(mov)}</span></div></td>
+      <td style="text-align:right;color:${coste < 0 ? RED : "#e5e7eb"};font-weight:600;white-space:nowrap;">${fmtEur(coste)}</td>
+      <td style="text-align:right;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${r.unidades !== "" && r.unidades != null ? Number(r.unidades).toLocaleString("es-ES", { maximumFractionDigits: 6 }) : "—"}</td>
+      ${rowActions(`v2EditInv('${r.id}')`, `v2DelInv('${r.id}')`)}</tr>`;
+  }
+
   function operacionesFiltradas(banco) {
     let inv = (CURRENT_DOC && CURRENT_DOC.inversiones) || [];
     if (banco) inv = inv.filter((r) => String(r.cuenta || "").trim() === banco);
@@ -369,17 +377,7 @@
     const MC = { Compra: GREEN, Venta: RED, Traspaso: "#3b82f6" };
     const todas = operacionesFiltradas(banco);
     const visibles = todas.slice(0, OPS.limite);
-    const rows = visibles.map((r) => {
-      const mov = r.tipo_movimiento || "Compra";
-      const c = MC[mov] || "#6b7280";
-      const coste = Number(r.coste);
-      return `<tr class="table-row">
-        <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
-        <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.5rem;">${logoImg(r.nombre, r.isin, 18)}<span style="color:#fff;font-weight:600;font-size:0.85rem;">${esc(r.nombre)}</span><span style="color:${c};font-size:0.7rem;font-weight:700;background:${c}22;padding:0.1rem 0.4rem;border-radius:4px;">${esc(mov)}</span></div></td>
-        <td style="text-align:right;color:${coste < 0 ? RED : "#e5e7eb"};font-weight:600;white-space:nowrap;">${fmtEur(coste)}</td>
-        <td style="text-align:right;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${r.unidades !== "" && r.unidades != null ? Number(r.unidades).toLocaleString("es-ES", { maximumFractionDigits: 6 }) : "—"}</td>
-        ${rowActions(`v2EditInv('${r.id}')`, `v2DelInv('${r.id}')`)}</tr>`;
-    }).join("");
+    const rows = visibles.map((r) => filaOperacion(r)).join("");
     const quedan = todas.length - visibles.length;
     const invertido = todas.reduce((s, r) => s + (Number(r.coste) || 0), 0);
     return `<div style="font-size:0.78rem;color:#6b7280;margin:0.35rem 0 0.5rem;">
@@ -388,8 +386,23 @@
       ${quedan > 0 ? `<div style="text-align:center;margin-top:0.75rem;">${addBtn("Ver 40 más (quedan " + quedan + ")", "v2OpsMas()")}</div>` : ""}`;
   }
 
-  function operacionesList(banco) {
+  // `completa` distingue el listado embebido en Cartera (solo lo reciente, con
+  // un enlace a la página entera) de la página dedicada, con todos los filtros.
+  function operacionesList(banco, completa) {
     OPS_BANCO = banco || "";
+    if (!completa) {
+      const todas = operacionesFiltradas(banco);
+      const recientes = todas.slice(0, 8);
+      const filas = recientes.map((r) => filaOperacion(r)).join("");
+      return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
+          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Últimas operaciones</div>
+          <div style="display:flex;gap:0.5rem;">${addBtn("＋ NAV", "v2AddNav()")}${addBtn("＋ Operación", "v2AddInv()")}</div>
+        </div>
+        <table class="minimal-table"><tbody>${filas || '<tr><td style="color:#6b7280;padding:1rem;">Sin operaciones</td></tr>'}</tbody></table>
+        <div style="margin-top:1rem;">${addBtn("Ver todas las operaciones (" + todas.length + ") →", "v2Tab('operaciones')")}</div>
+      </div></div>`;
+    }
     const tipos = [["", "Todos los tipos"], ["Compra", "Compras"], ["Venta", "Ventas"], ["Traspaso", "Traspasos"]];
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
@@ -433,8 +446,24 @@
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio");
   }
 
+  // Una posición está cerrada cuando ya no queda nada de ella (vendida o
+  // traspasada por completo). Su "invertido" sale negativo, que despista: no es
+  // un error, es lo que recuperaste de más — la ganancia realizada.
+  const esCerrada = (a) => isFinite(a.importe) && a.importe < 1 && a.coste <= 0;
+
   function tablaCartera(inv) {
-    const rows = inv.assets.map((a) => {
+    // Las cerradas van al final: ya no forman parte de lo que tienes
+    const orden = inv.assets.slice().sort((a, b) => (esCerrada(a) ? 1 : 0) - (esCerrada(b) ? 1 : 0));
+    const rows = orden.map((a) => {
+      if (esCerrada(a)) {
+        const realizado = -a.coste;   // coste neto negativo = dinero recuperado de más
+        return `<tr class="table-row" style="opacity:0.55;">
+          <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:#9ca3af;font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(a.tipo)} · <span style="color:#6b7280;font-weight:600;">Cerrada</span></div></div></div></td>
+          <td style="text-align:right;color:#6b7280;white-space:nowrap;">—</td>
+          <td style="text-align:right;color:#6b7280;white-space:nowrap;">—</td>
+          <td style="text-align:right;white-space:nowrap;"><div style="color:${realizado >= 0 ? GREEN : RED};font-weight:600;">${realizado >= 0 ? "+" : ""}${fmtEur(realizado)}</div><div style="color:#6b7280;font-size:0.74rem;">realizado</div></td>
+          <td style="text-align:right;color:#4b5563;">—</td></tr>`;
+      }
       const rentCell = (a.coste > 0 && isFinite(a.importe))
         ? `<div style="color:${rc(a.ganancia)};font-weight:600;">${a.ganancia >= 0 ? "+" : ""}${fmtEur(a.ganancia)}</div><div style="color:${rc(a.rentPct)};font-size:0.78rem;">${fmtPct(a.rentPct)}${isFinite(a.cagr) && a.coste >= 100 ? " · CAGR " + a.cagr.toFixed(1) + "%" : ""}</div>`
         : `<span style="color:#4b5563;">—</span>`;
@@ -448,6 +477,7 @@
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cartera</div>
       <table class="minimal-table"><thead><tr><th style="text-align:left;">Activo</th><th style="text-align:right;">Valor actual</th><th style="text-align:right;">Invertido</th><th style="text-align:right;">Rentabilidad</th><th style="text-align:right;">Peso</th></tr></thead><tbody>${rows}</tbody></table>
+      <div style="margin-top:1rem;">${addBtn("Ver reporte mensual de activos →", "v2Tab('reporte')")}</div>
     </div></div>`;
   }
 
@@ -576,7 +606,6 @@
         treemapPanel(inv.assets) +
         tablaCartera(inv) +
         comparativaPanel() +
-        tablaMensual(window.__ANALITICA) +
         operacionesList();
     }
 
@@ -764,6 +793,28 @@
       tablaCategorias(g, mes, pres);
   }
 
+  // ── Páginas de detalle (sin pestaña propia) ──────────────────────────
+  // No entran en la barra de navegación: se llega a ellas desde un botón y se
+  // vuelve con el enlace de arriba. Así las tablas largas no estorban en la
+  // página principal pero siguen a un clic.
+  const volverA = (pagina, texto) =>
+    `<div class="v2-wrap" style="margin-bottom:0.5rem;">
+       <button onclick="v2Tab('${pagina}')" style="background:none;border:none;color:#3b82f6;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;padding:0;">← ${esc(texto)}</button>
+     </div>`;
+
+  function pageOperaciones(m) {
+    return volverA("cartera", "Volver a Cartera") +
+      header("Todas las operaciones", "") +
+      operacionesList("", true);
+  }
+
+  function pageReporte(m) {
+    return volverA("cartera", "Volver a Cartera") +
+      header("Reporte mensual por activo", "") +
+      (tablaMensual(window.__ANALITICA) ||
+        `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:3rem;">Todavía no hay meses que reportar.</div></div>`);
+  }
+
   // ── Navegación ──
   function showPage(id) {
     document.querySelectorAll("#app .page").forEach((p) => p.classList.remove("active"));
@@ -847,6 +898,8 @@
     document.getElementById("v2-page-cartera").innerHTML = pageCartera(m, prices);
     document.getElementById("v2-page-inmuebles").innerHTML = pageInmuebles(m);
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
+    document.getElementById("v2-page-operaciones").innerHTML = pageOperaciones(m);
+    document.getElementById("v2-page-reporte").innerHTML = pageReporte(m);
     bindTreemapHover();
     // Gráficas de evolución (patrimonio neto + cartera)
     if (window.SolventoModel.buildSeries && window.SolventoCharts) {
