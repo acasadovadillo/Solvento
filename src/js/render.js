@@ -468,7 +468,7 @@
     if (!cfg) return { valor: 0, etiqueta: "Efectivo" };
     if (cfg.cartera === "cero") return { valor: 0, etiqueta: cfg.etiquetaEfectivo || "Cuenta Broker", fijo: true };
     const s = (m.saldos || []).find((x) => x.cuenta === cuenta);
-    return { valor: s ? s.saldo : 0, etiqueta: cfg.etiquetaEfectivo || "Efectivo sin invertir" };
+    return { valor: s ? s.saldo : 0, etiqueta: cfg.etiquetaEfectivo || "Sin invertir · cuenta en Caja" };
   }
 
   function tarjetaEfectivo(m, cuenta) {
@@ -512,9 +512,10 @@
     const aviso = prices ? "" : `<div class="v2-wrap"><div style="padding:0.6rem 1rem;background:#3f2d0a;border:1px solid #a16207;border-radius:10px;font-size:0.82rem;color:#fbbf24;">⏳ Cargando precios de mercado…</div></div>`;
 
     if (CARTERA_TAB === "agregado") {
-      const tarjetas = `<div class="v2-wrap"><div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1rem;">Cuentas de bróker</div>
+      const tarjetas = `<div class="v2-wrap"><div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.3rem;">Efectivo disponible para invertir</div>
+        <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem;">Dinero que tienes en cada bróker sin invertir. Cuenta como Caja, no como Cartera: puedes sacarlo cuando quieras.</div>
         <div class="v2-hub-grid">${CFG.brokers().map((b) => tarjetaEfectivo(m, b.cuenta)).join("")}</div></div>`;
-      return aviso + heroCartera(m.carteraTotal, inv, "Valor total (posiciones + efectivo)") + tarjetas +
+      return aviso + heroCartera(m.carteraTotal, inv, "Valor invertido") + tarjetas +
         chartPanel("Evolución de la cartera", "v2-chart-cartera") +
         asignacionPanel(inv) +
         donutTipos(inv.assets, inv.total) +
@@ -538,7 +539,7 @@
     };
     const sinDatos = !assets.length
       ? `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:2.5rem;">Sin posiciones en ${esc(banco)}</div></div>` : "";
-    return aviso + heroCartera(posiciones + ef.valor, invBanco, "Valor en " + banco) +
+    return aviso + heroCartera(posiciones, invBanco, "Invertido en " + banco) +
       `<div class="v2-wrap"><div class="v2-hub-grid">${tarjetaEfectivo(m, banco)}</div></div>` +
       sinDatos + donutTipos(assets, posiciones) + treemapPanel(assets) +
       tablaCartera(invBanco) + operacionesList(banco);

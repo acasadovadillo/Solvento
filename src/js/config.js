@@ -6,13 +6,19 @@
 (function () {
   "use strict";
 
-  // broker:true → su efectivo es de la cuenta de bróker (remunerada) y se muestra
-  // en la página Cartera, no en Caja.
+  // TODO el efectivo vive en Caja, también el que está en un bróker: aunque la
+  // cuenta esté remunerada, es dinero líquido que puedes sacar y no está
+  // invertido en ningún producto. Meterlo en Cartera deformaba su valor y su
+  // rentabilidad.
+  //
+  // `cartera` indica que esa cuenta agrupa posiciones en la sub-navegación de
+  // Cartera: "efectivo" si además tiene saldo propio que enseñar como pólvora
+  // seca, "cero" si es figurativa (la Cuenta Broker de Bankinter).
   const CUENTAS_DEFECTO = [
     { cuenta: "Bankinter",      accent: "#FF6200", logo: "img/account-logo-bankinter.png", cartera: "cero", etiquetaEfectivo: "Cuenta Broker" },
     { cuenta: "Santander",      accent: "#ec0000", logo: "img/account-logo-santander.png" },
-    { cuenta: "Trade Republic", accent: "#ffffff", logo: "img/account-logo-trade-republic.png", broker: true, cartera: "efectivo" },
-    { cuenta: "MyInvestor",     accent: "#e12363", logo: "img/account-logo-myinvestor.png", broker: true, cartera: "efectivo" },
+    { cuenta: "Trade Republic", accent: "#ffffff", logo: "img/account-logo-trade-republic.png", cartera: "efectivo" },
+    { cuenta: "MyInvestor",     accent: "#e12363", logo: "img/account-logo-myinvestor.png", cartera: "efectivo" },
     { cuenta: "Efectivo",       accent: "#2d9e5f", logo: null, emoji: "💵" },
   ];
 

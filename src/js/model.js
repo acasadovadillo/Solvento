@@ -76,16 +76,18 @@
     }
     const saldos = CFG.cuentas().map((c) => ({
       cuenta: c.cuenta, accent: c.accent, logo: c.logo, emoji: c.emoji,
-      broker: !!c.broker, saldo: round2(bal[c.cuenta]),
+      cartera: c.cartera || null, saldo: round2(bal[c.cuenta]),
     }));
-    // Caja = solo cuentas NO bróker. El efectivo de los brókers (remunerado)
-    // forma parte de la Cartera, no de la Caja.
-    const saldosCaja = saldos.filter((s) => !s.broker);
-    const saldosBroker = saldos.filter((s) => s.broker);
-    const patrimonioLiquido = round2(saldosCaja.reduce((s, x) => s + x.saldo, 0));
+    // TODO el efectivo es Caja, esté donde esté. El saldo de un bróker es dinero
+    // que puedes sacar, no una inversión: contarlo como Cartera deformaba su
+    // valor y su rentabilidad. Se ignora a propósito el antiguo campo `broker`,
+    // que puede seguir guardado en la configuración de quien ya editó cuentas.
+    const saldosCaja = saldos;
+    // Solo informativo: cuánto tienes sin invertir en cada bróker (pólvora seca).
+    const saldosBroker = saldos.filter((s) => s.cartera === "efectivo");
+    const patrimonioLiquido = round2(saldos.reduce((s, x) => s + x.saldo, 0));
     const efectivoBroker = round2(saldosBroker.reduce((s, x) => s + x.saldo, 0));
     saldosCaja.forEach((s) => (s.pct = patrimonioLiquido ? s.saldo / patrimonioLiquido * 100 : 0));
-    saldosBroker.forEach((s) => (s.pct = efectivoBroker ? s.saldo / efectivoBroker * 100 : 0));
     saldos.sort((a, b) => b.saldo - a.saldo);
     saldosCaja.sort((a, b) => b.saldo - a.saldo);
     saldosBroker.sort((a, b) => b.saldo - a.saldo);
@@ -208,7 +210,8 @@
     const inv = valuate(db, prices);
     const inm = valuateInmuebles(db.inmuebles);
     // La Cartera incluye el efectivo sin invertir de los brókers.
-    const carteraTotal = round2(inv.total + efectivoBroker);
+    // La Cartera es solo lo invertido; el efectivo de bróker ya cuenta en Caja.
+    const carteraTotal = inv.total;
     const pas = valuatePasivos(db.pasivos);
     // Patrimonio NETO = lo que tienes menos lo que debes.
     const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total - pas.total);
