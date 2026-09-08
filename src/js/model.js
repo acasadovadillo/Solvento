@@ -483,15 +483,21 @@
       const ym = mesDe(m.fecha);
       const imp = num(m.importe);
       if (!ym || !isFinite(imp) || imp <= 0) continue;
-      const mes = porMes[ym] || (porMes[ym] = { ym, ingresos: 0, gastos: 0, catGasto: {}, catIngreso: {} });
+      const mes = porMes[ym] || (porMes[ym] = { ym, ingresos: 0, gastos: 0, catGasto: {}, catIngreso: {},
+                                                cenGasto: {}, cenIngreso: {} });
+      // El centro de coste es el segundo eje y se acumula en paralelo: la misma
+      // cifra contada por lo que se compró y por para qué se compró.
+      const centro = String(m.centro || "").trim() || "Sin imputar";
       if (m.tipo === "Gasto") {
         mes.gastos += imp;
         const c = String(m.tipo_gasto || "").trim() || "Sin categoría";
         mes.catGasto[c] = (mes.catGasto[c] || 0) + imp;
+        mes.cenGasto[centro] = (mes.cenGasto[centro] || 0) + imp;
       } else {
         mes.ingresos += imp;
         const c = String(m.tipo_ingreso || "").trim() || "Sin categoría";
         mes.catIngreso[c] = (mes.catIngreso[c] || 0) + imp;
+        mes.cenIngreso[centro] = (mes.cenIngreso[centro] || 0) + imp;
       }
     }
     const etiqueta = (ym) => {
@@ -505,6 +511,7 @@
         ingresos: round2(m.ingresos), gastos: round2(m.gastos), ahorro,
         tasa: m.ingresos > 0 ? ahorro / m.ingresos * 100 : NaN,
         catGasto: m.catGasto, catIngreso: m.catIngreso,
+        cenGasto: m.cenGasto, cenIngreso: m.cenIngreso,
       };
     });
     // Media de los últimos 12 meses con actividad, para comparar un mes con "lo normal"

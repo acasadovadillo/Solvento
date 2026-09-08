@@ -931,6 +931,10 @@
   // Categorías desplegadas por madre: "Educación > Formaciones" se agrupa bajo
   // "Educación", que suma sus hijas. Los presupuestos valen en los dos niveles.
   const ABIERTAS = {};
+  // Los centros de coste se miran en otro plazo que los gastos: cuánto cuesta un
+  // piso no se responde con un mes suelto, sino con el año. Por eso este panel
+  // lleva su propio rango en vez de heredar el mes de arriba.
+  const CENTROS = { rango: "12m", abiertas: {} };
   function tablaCategorias(g, mes, presupuesto) {
     // El árbol entero, no dos niveles: «Vivienda > Suministros > Luz» se
     // despliega hasta donde llegue. Cada nodo lleva su total (con las hijas
@@ -1023,6 +1027,86 @@
     </div></div>`;
   }
 
+  // ── Segundo eje: para qué o para quién ───────────────────────────────────
+  // La categoría dice QUÉ se compró; el centro, a qué proyecto, inmueble o
+  // persona se imputa. Aquí importa el neto, no solo el gasto: un piso que cuesta
+  // 8.219 € y renta 11.472 € no es un gasto de 8.219 €, es una renta de 3.253 €.
+  function tablaCentros(g) {
+    const rangos = [["mes", "Este mes"], ["12m", "Últimos 12 meses"], ["todo", "Todo"]];
+    const meses = CENTROS.rango === "mes" ? [mesElegido(g)]
+                : CENTROS.rango === "12m" ? g.meses.slice(-12) : g.meses;
+    const gasto = {}, ingreso = {};
+    meses.forEach((m) => {
+      for (const c in (m.cenGasto || {})) gasto[c] = (gasto[c] || 0) + m.cenGasto[c];
+      for (const c in (m.cenIngreso || {})) ingreso[c] = (ingreso[c] || 0) + m.cenIngreso[c];
+    });
+    // Un centro que solo cobra —una finca alquilada sin gastos ese año— también
+    // tiene que salir en la lista, así que entra con gasto cero.
+    const totales = Object.assign({}, gasto);
+    for (const c in ingreso) if (!(c in totales)) totales[c] = 0;
+    const arbolG = window.SolventoModel.arbolCategorias(totales);
+    const idxI = (function indexar(ns, mapa) {
+      ns.forEach((n) => { mapa[n.completa] = n.total; indexar(n.hijas, mapa); });
+      return mapa;
+    })(window.SolventoModel.arbolCategorias(ingreso), {});
+    if (!arbolG.length) return "";
+
+    const totalGasto = Object.keys(gasto).reduce((t, c) => t + gasto[c], 0);
+    const totalIngreso = Object.keys(ingreso).reduce((t, c) => t + ingreso[c], 0);
+    const TONO = ["#e5e7eb", "#c3c8d2", "#9ca3af", "#8b93a1"];
+    const FONDO = ["", "#14171f", "#12151c", "#111318"];
+    const tono = (p) => TONO[Math.min(p, TONO.length - 1)];
+
+    function fila(n, padre, prof) {
+      const jsC = String(n.completa).replace(/'/g, "\\'");
+      const hijas = n.hijas || [];
+      const abierta = CENTROS.abiertas[n.completa];
+      const ing = idxI[n.completa] || 0;
+      const neto = ing - n.total;
+      const base = padre ? padre.total : totalGasto;
+      const flecha = hijas.length
+        ? `<button onclick="v2CentroToggle('${jsC}')" aria-expanded="${abierta ? "true" : "false"}"
+             style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>`
+        : '<span style="width:1rem;display:inline-block;"></span>';
+      let html = `<tr class="table-row"${FONDO[Math.min(prof, 3)] ? ` style="background:${FONDO[Math.min(prof, 3)]};"` : ""}>
+        <td style="text-align:left;padding-left:${(0.75 + prof * 1.35).toFixed(2)}rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">${flecha}
+            <span style="color:${tono(prof)};font-weight:${prof ? 500 : 600};font-size:${prof ? "0.85rem" : "0.92rem"};">${esc(n.nombre)}</span></div></td>
+        <td style="text-align:right;color:${tono(prof)};white-space:nowrap;">${n.total ? fmtEur(n.total) : "—"}</td>
+        <td style="text-align:right;color:${ing ? GREEN : "#4b5563"};white-space:nowrap;">${ing ? fmtEur(ing) : "—"}</td>
+        <td style="text-align:right;color:${ing ? rc(neto) : tono(prof)};font-weight:600;white-space:nowrap;">${ing ? (neto >= 0 ? "+" : "−") + fmtEur(Math.abs(neto)) : "−" + fmtEur(n.total)}</td>
+        <td style="text-align:right;color:#6b7280;white-space:nowrap;">${(base ? n.total / base * 100 : 0).toFixed(1)}%</td></tr>`;
+      if (!hijas.length || !abierta) return html;
+      if (n.propio > 0.005) {
+        html += `<tr class="table-row" style="background:${FONDO[Math.min(prof + 1, 3)]};">
+          <td style="text-align:left;padding-left:${(0.75 + (prof + 1) * 1.35 + 1.5).toFixed(2)}rem;color:#6b7280;font-size:0.82rem;font-style:italic;">directamente en ${esc(n.nombre)}</td>
+          <td style="text-align:right;color:${tono(prof + 1)};white-space:nowrap;">${fmtEur(n.propio)}</td>
+          <td colspan="3"></td></tr>`;
+      }
+      return html + hijas.map((h) => fila(h, n, prof + 1)).join("");
+    }
+
+    const filas = arbolG.map((n) => fila(n, null, 0)).join("");
+    const netoTotal = totalIngreso - totalGasto;
+    return `<div class="v2-wrap"><div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Por centro de coste</div>
+        <div style="display:flex;gap:0.3rem;">
+          ${rangos.map(([v, t]) => `<button onclick="v2CentroRango('${v}')"
+             style="background:${CENTROS.rango === v ? "#232733" : "none"};border:1px solid #2a2d3a;border-radius:8px;
+             color:${CENTROS.rango === v ? "#fff" : "#9ca3af"};font-size:0.72rem;font-family:inherit;padding:0.2rem 0.55rem;cursor:pointer;">${t}</button>`).join("")}
+        </div>
+      </div>
+      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.5rem;">
+        Para qué o para quién, no en qué. ${totalIngreso ? `Neto del periodo: <span style="color:${rc(netoTotal)};font-weight:600;">${netoTotal >= 0 ? "+" : "−"}${fmtEur(Math.abs(netoTotal))}</span>.` : ""}</div>
+      <table class="minimal-table">
+        <thead><tr>
+          <th style="text-align:left;">Centro</th><th style="text-align:right;">Gasto</th>
+          <th style="text-align:right;">Ingreso</th><th style="text-align:right;">Neto</th><th style="text-align:right;">Peso</th>
+        </tr></thead><tbody>${filas}</tbody></table>
+    </div></div>`;
+  }
+
   function pageBalance(m) {
     const g = window.__GASTOS || { meses: [], media: { ingresos: 0, gastos: 0, meses: 0 }, categorias: [] };
     if (!g.meses.length) {
@@ -1052,7 +1136,8 @@
       barrasIngresoGasto(g) +
       (itemsCat.length ? vistaPanel("categorias", "En qué se va el dinero · " + mes.label,
                                     itemsCat, fmtEur(mes.gastos), "Gasto") : "") +
-      tablaCategorias(g, mes, pres);
+      tablaCategorias(g, mes, pres) +
+      tablaCentros(g);
   }
 
   // ── Páginas de detalle (sin pestaña propia) ──────────────────────────
@@ -1346,6 +1431,11 @@
     }
     render(CURRENT_DOC, window.__PRICES);
   };
+  window.v2CentroToggle = (nombre) => {
+    CENTROS.abiertas[nombre] = !CENTROS.abiertas[nombre];
+    render(CURRENT_DOC, window.__PRICES);
+  };
+  window.v2CentroRango = (r) => { CENTROS.rango = r; render(CURRENT_DOC, window.__PRICES); };
   window.v2CatToggle = (nombre) => {
     ABIERTAS[nombre] = !ABIERTAS[nombre];
     document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
