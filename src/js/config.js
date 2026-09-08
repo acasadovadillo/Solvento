@@ -24,9 +24,14 @@
   ];
 
 
-  // Activos conocidos (con ticker de Yahoo, o yf_ticker null si se valoran por NAV).
-  // Los fondos Bankinter Premium/Horizonte NO están aquí: se derivan de los datos
-  // y se valoran con su NAV (db.nav). yf_ticker null + sin NAV ⇒ "N/D".
+  // Activos conocidos con su ticker de Yahoo. El ticker no es un dato personal
+  // —dice qué se cotiza, no cuánto tienes— y por eso vive aquí, en el código.
+  //
+  // Los fondos que no cotizan en bolsa también tienen símbolo en Yahoo: los «0P…»
+  // son las fichas de fondo, y un fondo europeo suele estar además listado en
+  // Stuttgart con su propio ISIN. Vale la pena buscarlo antes de dejar un activo
+  // en NAV manual: el valor liquidativo escrito a mano deja de actualizarse en
+  // cuanto uno se olvida, y entonces la cartera vale lo que valía aquel día.
   const ACTIVOS_DEFECTO = [
     { nombre: "US Aggregate Bond USD (Acc)",     isin: "IE00BYXYYM63", categoria: "Renta fija",     tipo: "ETF",                banco: "Trade Republic", yf: "IUAA.L" },
     { nombre: "Core MSCI World USD (Acc)",       isin: "IE00B4L5Y983", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "IWDA.AS" },
@@ -36,7 +41,11 @@
     { nombre: "Bitcoin",                         isin: "-",            categoria: "Renta variable", tipo: "Criptoactivo",       banco: "Trade Republic", yf: "BTC-EUR" },
     { nombre: "Apple",                           isin: "US0378331005", categoria: "Renta variable", tipo: "Acciones",           banco: "Trade Republic", yf: "AAPL" },
     { nombre: "Renta 4 Multigestión Numantia Patrimonio Global FI", isin: "ES0173311103", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "MyInvestor", yf: "0P000168OI.F" },
-    { nombre: "Fidelity S&P 500 Index Fund P-ACC-EUR",              isin: "IE00BYX5MX67", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "MyInvestor", yf: null },
+    // Cotiza en Stuttgart: da precio del día, pero no serie histórica. La
+    // valoración de hoy sale de ahí y la gráfica sigue apoyándose en el NAV.
+    { nombre: "Fidelity S&P 500 Index Fund P-ACC-EUR",              isin: "IE00BYX5MX67", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "MyInvestor", yf: "IE00BYX5MX67.SG" },
+    { nombre: "Bankinter Horizonte 2028 Cl R",                      isin: "ES0159038001", categoria: "Renta fija",     tipo: "Fondo de inversión", banco: "Bankinter",  yf: "0P0001M4BN.F" },
+    { nombre: "Bankinter Premium Moderado R",                       isin: "ES0164586036", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "Bankinter",  yf: "0P0001MV1P.F" },
     { nombre: "MSCI ACWI USD (Acc)",             isin: "IE00B6R52259", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "SSAC.AS" },
   ];
 
@@ -115,7 +124,21 @@
       return d && d.logo ? Object.assign({}, c, { logo: d.logo }) : c;
     });
   };
-  const activos  = () => cfgDoc().activos  || ACTIVOS_DEFECTO;
+  // El ticker se completa igual que el logo de una cuenta: si tu activo no trae
+  // ninguno y el catálogo del código conoce uno para ese ISIN, se usa. Así un
+  // fondo que se dio de alta cuando no le encontramos símbolo deja de depender
+  // del NAV escrito a mano sin que tengas que tocar nada.
+  const tickerConocido = (isin) => {
+    const s = String(isin || "").trim();
+    if (!s || s === "-") return null;
+    const a = ACTIVOS_DEFECTO.find((x) => x.isin === s);
+    return (a && a.yf) || null;
+  };
+  const activos = () => {
+    const propios = cfgDoc().activos;
+    if (!propios) return ACTIVOS_DEFECTO;
+    return propios.map((a) => (a.yf ? a : Object.assign({}, a, { yf: tickerConocido(a.isin) })));
+  };
   const objetivo = () => cfgDoc().objetivo || OBJETIVO_DEFECTO;
   // Los brókers de la sub-navegación de Cartera se deducen de las cuentas:
   // aparece ahí toda cuenta con `cartera` ("efectivo" si tiene saldo propio,
@@ -123,7 +146,7 @@
   const brokers  = () => cuentas().filter((c) => c.cartera);
 
   window.SolventoConfig = {
-    usarDoc, cuentas, activos, objetivo, brokers,
+    usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     assetLogo, SYNC,

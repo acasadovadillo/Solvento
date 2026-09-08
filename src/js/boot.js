@@ -135,7 +135,17 @@
     if (!DB.state.token || !DB.state.doc) return;
     const activos = (DB.state.doc.config && DB.state.doc.config.activos) || [];
     if (!activos.length) return;                       // sin config propia, manda la del código
-    const lista = activos.map((a) => a.yf).filter(Boolean).sort();
+    // La lista sale de los activos YA completados con los tickers que conoce el
+    // código, más los que solo existen en tus operaciones: si un fondo no entra
+    // aquí, el proceso que descarga precios no sabe que existe y ese fondo se
+    // queda con el último valor que alguien escribió a mano.
+    const CFG = window.SolventoConfig;
+    const symbols = CFG.activos().map((a) => a.yf).filter(Boolean);
+    (DB.state.doc.inversiones || []).forEach((r) => {
+      const t = CFG.tickerConocido && CFG.tickerConocido(r.isin);
+      if (t) symbols.push(t);
+    });
+    const lista = Array.from(new Set(symbols)).sort();
     const firma = lista.join(",");
     if (!firma || localStorage.getItem(TICKERS_KEY) === firma) return;
     try {

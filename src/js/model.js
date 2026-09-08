@@ -116,7 +116,10 @@
         byJk[jk] = {
           nombre: r.nombre, isin: (r.isin || "-").trim(),
           categoria: r.renta || "Renta variable", tipo: r.activo || "Fondo de inversión",
-          banco: r.cuenta || "", yf: null, derived: true,
+          // Un activo que no está en el catálogo del usuario puede seguir
+          // teniendo ticker conocido: los fondos heredados entraron por los
+          // datos, no dándolos de alta a mano, y sin esto se quedaban sin precio.
+          banco: r.cuenta || "", yf: CFG.tickerConocido ? CFG.tickerConocido(r.isin) : null, derived: true,
         };
       }
     }

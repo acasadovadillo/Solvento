@@ -73,10 +73,27 @@ def fetch_precio_eur(ticker, fx):
     try:
         d = _get(f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=5d")
         result = d["chart"]["result"][0]
-        closes = [v for v in result["indicators"]["quote"][0]["close"] if v is not None]
-        if not closes:
-            return None
-        return round(_to_eur(closes[-1], result["meta"].get("currency", "EUR"), fx), 6)
+        meta = result["meta"]
+        cur = meta.get("currency", "EUR")
+        # Un listado sin velas no trae ni la clave «close», así que se pregunta
+        # con .get: pedirla directamente lanzaba, y el error se comía el precio
+        # que sí venía en la cabecera.
+        quote = (result.get("indicators", {}).get("quote") or [{}])[0]
+        closes = [v for v in (quote.get("close") or []) if v is not None]
+        if closes:
+            return round(_to_eur(closes[-1], cur, fx), 6)
+        # Los fondos apenas se negocian, así que su listado no tiene velas
+        # diarias: Yahoo publica la cotización pero no cierra ningún día. Se
+        # acepta ese precio siempre que sea de esta semana; si el listado está
+        # muerto de verdad, no devolvemos nada y el fondo se sigue valorando con
+        # su valor liquidativo, que es preferible a un precio congelado que
+        # nadie va a notar.
+        precio, cuando = meta.get("regularMarketPrice"), meta.get("regularMarketTime")
+        if precio and cuando:
+            dias = (datetime.now(timezone.utc).timestamp() - float(cuando)) / 86400
+            if dias <= 7:
+                return round(_to_eur(float(precio), cur, fx), 6)
+        return None
     except Exception:
         return None
 
@@ -90,8 +107,8 @@ def fetch_hist_eur(ticker, fx):
         d = _get(f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
                  f"?interval=1d&period1={_HIST_PERIOD1}&period2={int(datetime.now(timezone.utc).timestamp())}")
         result = d["chart"]["result"][0]
-        ts = result["timestamp"]
-        cl = result["indicators"]["quote"][0]["close"]
+        ts = result.get("timestamp") or []
+        cl = (result.get("indicators", {}).get("quote") or [{}])[0].get("close") or []
         cur = result["meta"].get("currency", "EUR")
         out = []
         for t, v in zip(ts, cl):
