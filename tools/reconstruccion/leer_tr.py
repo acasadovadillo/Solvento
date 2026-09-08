@@ -93,17 +93,31 @@ def leer(pdf):
                                 " ".join(textos)[:110]))
                 anterior = balance
                 continue
-            # La fecha vive repartida: el día y el mes en el renglón de arriba y el
-            # año en el de abajo, así que se buscan alrededor de este.
+            # La fecha vive repartida: el día y el mes en el renglón de ARRIBA y el
+            # año en el de ABAJO. Hay que buscar cada mitad en su lado y quedarse
+            # con la más cercana. Barriendo los cinco renglones de corrido y
+            # dejando que la última coincidencia mandara, cada transacción se
+            # llevaba el día de la SIGUIENTE: la cadena de balances cuadraba igual
+            # —los importes son los mismos— pero todas las fechas iban corridas un
+            # apunte, y con ellas los emparejamientos de traspasos.
             dia = mes = anio = None
-            for g in filas[max(0, i - 2): i + 3]:
-                for k, w in enumerate(g):
-                    if w["x"] > 120:
-                        continue
-                    if RE_DIA.match(w["t"]) and k + 1 < len(g) and g[k + 1]["t"].rstrip(".") in MES:
+            for off in (0, -1, -2):
+                g = filas[i + off] if 0 <= i + off else None
+                for k, w in enumerate(g or []):
+                    if w["x"] <= 120 and RE_DIA.match(w["t"]) and k + 1 < len(g) \
+                            and g[k + 1]["t"].rstrip(".") in MES:
                         dia, mes = int(w["t"]), MES[g[k + 1]["t"].rstrip(".")]
-                    elif RE_ANIO.match(w["t"]):
+                        break
+                if dia:
+                    break
+            for off in (0, 1, 2):
+                g = filas[i + off] if i + off < len(filas) else None
+                for w in g or []:
+                    if w["x"] <= 120 and RE_ANIO.match(w["t"]):
                         anio = int(w["t"])
+                        break
+                if anio:
+                    break
             # La descripción se recompone de los renglones que abarca la transacción
             desc = []
             for g in filas[max(0, i - 1): i + 2]:
