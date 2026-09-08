@@ -1,4 +1,3 @@
-set -e
 P=/usr/local/Caskroom/miniconda/base/bin/python3
 T=tools/reconstruccion
 D=/Users/albertocasadovadillo/Downloads/Solvento_EXPORT
@@ -21,3 +20,6 @@ $P $T/categorizar.py "$D/_10.json" "$D/solvento-RECONSTRUIDO.json" "$D/reglas.ts
 grep -hE "CUADRE|✓ cuadra|parejas resueltas|ambiguas" /tmp/p1.log /tmp/p2.log /tmp/p3.log /tmp/p5.log /tmp/p7.log /tmp/p6.log /tmp/p8.log /tmp/p9.log
 
 grep -hE "gastos con (categor|centro)" /tmp/p10.log
+
+echo "─── puerta final ───"
+$P $T/comprobar_pendientes.py "$D/solvento-RECONSTRUIDO.json" || true
