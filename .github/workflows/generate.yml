@@ -19,6 +19,13 @@ on:
 permissions:
   contents: write
 
+# Cada push dispara este workflow, así que dos empujones seguidos lanzaban dos
+# ejecuciones que competían por escribir prices.json: la segunda se encontraba la
+# rama movida y su push moría. Con esto van en fila de a una.
+concurrency:
+  group: precios-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   precios:
     runs-on: ubuntu-latest
@@ -72,7 +79,22 @@ jobs:
           git add prices.json fundamentals.json 2>/dev/null || git add prices.json
           if git diff --cached --quiet; then
             echo "Sin cambios que publicar"
-          else
-            git commit -m "Actualizar precios $(date +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git commit -m "Actualizar precios $(date +%Y-%m-%d)"
+          # El push puede fallar por dos motivos que no son culpa de nadie: que
+          # la rama se haya movido mientras corría el trabajo, o que GitHub
+          # conteste con un 500. Los dos se arreglan volviéndolo a intentar
+          # después de traerse lo nuevo, así que se reintenta antes de dar el
+          # trabajo por fallido y mandar un correo de alarma.
+          for intento in 1 2 3; do
+            if git push; then
+              echo "Publicado a la $intento"
+              exit 0
+            fi
+            echo "Push rechazado (intento $intento); reintento tras traer la rama"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+            sleep $((intento * 5))
+          done
+          echo "::error::No se pudo publicar prices.json tras tres intentos"
+          exit 1
