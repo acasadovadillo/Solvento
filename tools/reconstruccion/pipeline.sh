@@ -18,9 +18,10 @@ $P $T/reclasificar.py "$D/_8.json" "$D/_8a.json" "$D/reclasificaciones.tsv" > /t
 $P $T/apuntes_manuales.py "$D/_8a.json" "$D/_8b.json" "$D/apuntes.tsv" > /tmp/p13.log
 $P $T/ajustar_efectivo.py "$D/_8b.json" "$D/_9.json" 08/09/2026 > /tmp/p9.log
 # Las reglas se quedan fuera del repositorio: son datos personales
-$P $T/migrar_categorias.py "$D/_9.json" "$D/_10.json" "$D/migracion.tsv" "$D/clasificacion.tsv" > /tmp/p11.log
+$P $T/ajustar_posiciones.py "$D/_9.json" "$D/_9b.json" "$D/posiciones.tsv" > /tmp/p15.log
+$P $T/migrar_categorias.py "$D/_9b.json" "$D/_10.json" "$D/migracion.tsv" "$D/clasificacion.tsv" > /tmp/p11.log
 $P $T/categorizar.py "$D/_10.json" "$D/solvento-RECONSTRUIDO.json" "$D/reglas.tsv" --aplicar > /tmp/p10.log
-grep -hE "CUADRE|✓ cuadra|parejas resueltas|ambiguas" /tmp/p1.log /tmp/p2.log /tmp/p3.log /tmp/p5.log /tmp/p7.log /tmp/p12.log /tmp/p6.log /tmp/p14.log /tmp/p13.log /tmp/p8.log /tmp/p9.log
+grep -hE "CUADRE|✓ cuadra|parejas resueltas|ambiguas" /tmp/p1.log /tmp/p2.log /tmp/p3.log /tmp/p5.log /tmp/p7.log /tmp/p12.log /tmp/p6.log /tmp/p14.log /tmp/p13.log /tmp/p15.log /tmp/p8.log /tmp/p9.log
 
 grep -hE "gastos con (categor|centro)" /tmp/p10.log
 
