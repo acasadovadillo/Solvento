@@ -932,18 +932,22 @@
   // "Educación", que suma sus hijas. Los presupuestos valen en los dos niveles.
   const ABIERTAS = {};
   function tablaCategorias(g, mes, presupuesto) {
-    const grupos = window.SolventoModel.agruparCategorias(mes.catGasto);
-    if (!grupos.length) return `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:2.5rem;">Sin gastos registrados en ${esc(mes.label)}</div></div>`;
+    // El árbol entero, no dos niveles: «Vivienda > Suministros > Luz» se
+    // despliega hasta donde llegue. Cada nodo lleva su total (con las hijas
+    // dentro) y lo suyo propio, que es lo imputado a ese nivel exacto.
+    const arbol = window.SolventoModel.arbolCategorias(mes.catGasto);
+    if (!arbol.length) return `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:2.5rem;">Sin gastos registrados en ${esc(mes.label)}</div></div>`;
+    const cls = (CURRENT_DOC && CURRENT_DOC.config && CURRENT_DOC.config.clasificacion) || {};
     const previos = g.meses.filter((m) => m.ym < mes.ym).slice(-6);
+    // La media de una rama suma todo lo que cuelga de ella, a cualquier
+    // profundidad: comparar «Vivienda» contra su media sin contar los
+    // suministros de dentro daría un porcentaje que no significa nada.
     const mediaDe = (clave) => {
       if (!previos.length) return NaN;
+      const prefijo = clave + " > ";
       return previos.reduce((s, m) => {
-        // La media de una madre suma también lo de sus hijas
         let t = 0;
-        for (const c in m.catGasto) {
-          const p = window.SolventoModel.partirCategoria(c);
-          if (c === clave || p.madre === clave) t += m.catGasto[c];
-        }
+        for (const c in m.catGasto) if (c === clave || c.indexOf(prefijo) === 0) t += m.catGasto[c];
         return s + t;
       }, 0) / previos.length;
     };
@@ -952,7 +956,7 @@
       if (!(isFinite(pres) && pres > 0)) return "";
       const pct = Math.min(100, v / pres * 100);
       const col = v > pres ? RED : (v > pres * 0.85 ? "#f59e0b" : GREEN);
-      return `<div style="margin-top:0.35rem;height:5px;background:#232733;border-radius:3px;overflow:hidden;">
+      return `<div style="margin-top:0.35rem;height:5px;background:#232733;border-radius:3px;overflow:hidden;max-width:16rem;">
           <div style="width:${pct.toFixed(1)}%;height:100%;background:${col};"></div></div>
         <div style="font-size:0.7rem;color:${v > pres ? RED : "#6b7280"};margin-top:0.2rem;">
           ${v > pres ? `Te has pasado ${fmtEur(v - pres)} del presupuesto` : `Te quedan ${fmtEur(pres - v)} de ${fmtEur(pres)}`}</div>`;
@@ -961,37 +965,60 @@
       ? `<span style="color:${v > media * 1.15 ? RED : (v < media * 0.85 ? GREEN : "#6b7280")};font-size:0.72rem;">
            ${v > media ? "+" : ""}${((v / media - 1) * 100).toFixed(0)}% vs media</span>` : "");
 
-    const filas = grupos.map((gr) => {
-      const jsN = String(gr.nombre).replace(/'/g, "\\'");
-      // Solo hay algo que desplegar si tiene subcategorías de verdad
-      const tieneHijas = gr.hijas.some((h) => !h.esPropia);
-      const abierta = ABIERTAS[gr.nombre];
-      const cabecera = `<tr class="table-row">
-        <td style="text-align:left;">
-          <div style="display:flex;align-items:center;gap:0.5rem;">
-            ${tieneHijas ? `<button onclick="v2CatToggle('${jsN}')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>` : '<span style="width:1rem;display:inline-block;"></span>'}
-            <div style="flex:1;"><div style="color:#e5e7eb;font-weight:600;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">${esc(gr.nombre)} ${chipClase(gr.nombre, null)}</div>
-              ${barraPresupuesto(gr.total, Number(presupuesto[gr.nombre]))}</div>
+    // Cada nivel se hunde un poco y baja de tono: la jerarquía se ve sin leer.
+    const TONO = ["#e5e7eb", "#c3c8d2", "#9ca3af", "#8b93a1"];
+    const FONDO = ["", "#14171f", "#12151c", "#111318"];
+    const tono = (p) => TONO[Math.min(p, TONO.length - 1)];
+    const fondo = (p) => FONDO[Math.min(p, FONDO.length - 1)];
+
+    function fila(n, padre, prof) {
+      const jsC = String(n.completa).replace(/'/g, "\\'");
+      const hijas = n.hijas || [];
+      const abierta = ABIERTAS[n.completa];
+      const base = padre ? padre.total : mes.gastos;
+      const pct = base ? n.total / base * 100 : 0;
+      const heredada = padre ? window.SolventoModel.clasificarCategoria(padre.completa, cls) : null;
+      const flecha = hijas.length
+        ? `<button onclick="v2CatToggle('${jsC}')" aria-expanded="${abierta ? "true" : "false"}"
+             style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>`
+        : '<span style="width:1rem;display:inline-block;"></span>';
+      let html = `<tr class="table-row"${fondo(prof) ? ` style="background:${fondo(prof)};"` : ""}>
+        <td style="text-align:left;padding-left:${(0.75 + prof * 1.35).toFixed(2)}rem;">
+          <div style="display:flex;align-items:flex-start;gap:0.5rem;">${flecha}
+            <div style="flex:1;">
+              <div style="color:${tono(prof)};font-weight:${prof ? 500 : 600};font-size:${prof ? "0.85rem" : "0.92rem"};display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+                ${esc(n.nombre)} ${chipClase(n.completa, heredada)}</div>
+              ${barraPresupuesto(n.total, Number(presupuesto[n.completa]))}</div>
           </div></td>
-        <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(gr.total)}<div>${comparativa(gr.total, mediaDe(gr.nombre))}</div></td>
-        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${(mes.gastos ? gr.total / mes.gastos * 100 : 0).toFixed(1)}%</td>
-        <td style="text-align:right;width:1%;"><button onclick="v2Presupuesto('${jsN}')" title="Poner presupuesto" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">🎯</button></td></tr>`;
-      if (!tieneHijas || !abierta) return cabecera;
-      const hijas = gr.hijas.map((h) => {
-        const jsC = String(h.completa).replace(/'/g, "\\'");
-        return `<tr class="table-row" style="background:#14171f;">
-          <td style="text-align:left;padding-left:2.4rem;"><div style="color:#9ca3af;font-size:0.85rem;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">${esc(h.esPropia ? "(sin subcategoría)" : h.nombre)} ${chipClase(h.completa, window.SolventoModel.clasificarCategoria(gr.nombre, (CURRENT_DOC.config || {}).clasificacion))}</div>
-            ${barraPresupuesto(h.total, Number(presupuesto[h.completa]))}</td>
-          <td style="text-align:right;color:#e5e7eb;white-space:nowrap;">${fmtEur(h.total)}</td>
-          <td style="text-align:right;color:#6b7280;white-space:nowrap;">${(gr.total ? h.total / gr.total * 100 : 0).toFixed(1)}%</td>
-          <td style="text-align:right;width:1%;"><button onclick="v2Presupuesto('${jsC}')" title="Poner presupuesto" style="background:none;border:none;color:#4b5563;cursor:pointer;font-size:0.8rem;padding:0.2rem 0.4rem;">🎯</button></td></tr>`;
-      }).join("");
-      return cabecera + hijas;
-    }).join("");
+        <td style="text-align:right;color:${prof ? tono(prof) : "#fff"};font-weight:600;white-space:nowrap;">${fmtEur(n.total)}
+          ${prof === 0 ? `<div>${comparativa(n.total, mediaDe(n.completa))}</div>` : ""}</td>
+        <td style="text-align:right;color:#6b7280;white-space:nowrap;">${pct.toFixed(1)}%</td>
+        <td style="text-align:right;width:1%;"><button onclick="v2Presupuesto('${jsC}')" title="Poner presupuesto"
+          style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">🎯</button></td></tr>`;
+      if (!hijas.length || !abierta) return html;
+      // Lo imputado a la rama misma, sin bajar más: sin esta línea, la suma de
+      // las hijas no cuadraría con el total de arriba y parecería un error.
+      if (n.propio > 0.005) {
+        html += `<tr class="table-row" style="background:${fondo(prof + 1)};">
+          <td style="text-align:left;padding-left:${(0.75 + (prof + 1) * 1.35 + 1.5).toFixed(2)}rem;color:#6b7280;font-size:0.82rem;font-style:italic;">directamente en ${esc(n.nombre)}</td>
+          <td style="text-align:right;color:${tono(prof + 1)};white-space:nowrap;">${fmtEur(n.propio)}</td>
+          <td style="text-align:right;color:#6b7280;white-space:nowrap;">${(n.total ? n.propio / n.total * 100 : 0).toFixed(1)}%</td>
+          <td></td></tr>`;
+      }
+      return html + hijas.map((h) => fila(h, n, prof + 1)).join("");
+    }
+
+    const filas = arbol.map((n) => fila(n, null, 0)).join("");
+    const hondura = (function medir(ns, p) {
+      return ns.reduce((mx, n) => Math.max(mx, n.hijas && n.hijas.length ? medir(n.hijas, p + 1) : p), p);
+    })(arbol, 1);
 
     return `<div class="v2-wrap"><div class="table-container">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.35rem;">Gasto por categoría · ${esc(mes.label)}</div>
-      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.5rem;">▸ despliega las subcategorías · 🎯 pon un presupuesto y te aviso cuando te pases.</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Gasto por categoría · ${esc(mes.label)}</div>
+        ${hondura > 1 ? `<button onclick="v2CatTodas()" style="background:none;border:1px solid #2a2d3a;border-radius:8px;color:#9ca3af;font-size:0.75rem;font-family:inherit;padding:0.25rem 0.6rem;cursor:pointer;">Desplegar todo</button>` : ""}
+      </div>
+      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.5rem;">▸ despliega los ${hondura} niveles · 🎯 pon un presupuesto y te aviso cuando te pases.</div>
       <table class="minimal-table"><tbody>${filas}</tbody></table>
     </div></div>`;
   }
@@ -1306,6 +1333,19 @@
     if (window.SolventoBoot) window.SolventoBoot.saveDoc();
   };
   window.v2Regla = () => F() && F().openRegla();
+  // Abrir rama a rama un árbol de tres niveles es tedioso cuando lo que quieres
+  // es buscar algo: este botón lo abre entero y lo vuelve a cerrar.
+  window.v2CatTodas = () => {
+    const g = window.__GASTOS; if (!g) return;
+    const abiertas = Object.keys(ABIERTAS).filter((k) => ABIERTAS[k]).length;
+    Object.keys(ABIERTAS).forEach((k) => delete ABIERTAS[k]);
+    if (!abiertas) {
+      const mes = mesElegido(g);
+      const marcar = (ns) => ns.forEach((n) => { if (n.hijas && n.hijas.length) { ABIERTAS[n.completa] = true; marcar(n.hijas); } });
+      marcar(window.SolventoModel.arbolCategorias(mes.catGasto));
+    }
+    render(CURRENT_DOC, window.__PRICES);
+  };
   window.v2CatToggle = (nombre) => {
     ABIERTAS[nombre] = !ABIERTAS[nombre];
     document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
