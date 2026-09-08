@@ -1020,7 +1020,7 @@
     document.querySelectorAll("#app .page").forEach((p) => p.classList.remove("active"));
     const pg = document.getElementById("v2-page-" + id);
     if (pg) pg.classList.add("active");
-    document.querySelectorAll('.nav-tab, .bottom-nav-item, .sn-item').forEach((b) => b.classList.toggle("active", b.dataset.page === id));
+    document.querySelectorAll('.bottom-nav-item, .sn-item').forEach((b) => b.classList.toggle("active", b.dataset.page === id));
     if (window.v2Sidebar) window.v2Sidebar(false);   // navegar cierra el panel lateral
     window.scrollTo({ top: 0, behavior: "auto" });
     if (id === "cartera") layoutTreemaps();
