@@ -44,6 +44,119 @@
   const selectKV = (id, pairs, val) => `<select id="${id}" style="${styleInput}">${pairs.map((p) => `<option value="${esc(p[0])}" ${p[0] === val ? "selected" : ""}>${esc(p[1])}</option>`).join("")}</select>`;
   const datalist = (id, opts, val) => `<input id="${id}" list="${id}-dl" value="${esc(val || "")}" style="${styleInput}"><datalist id="${id}-dl">${uniq(opts).map((o) => `<option value="${esc(o)}">`).join("")}</datalist>`;
 
+  // ── Selector jerárquico ───────────────────────────────────────────────────
+  // Una categoría es una ruta: «Vivienda > Suministros > Luz». Escribirla a mano
+  // obliga a acordarse de la jerarquía entera y a teclear los «>» en su sitio, y
+  // basta una tilde o un espacio de más para crear una categoría gemela que
+  // luego aparece dos veces en el árbol. Aquí se elige nivel a nivel: cada
+  // desplegable ofrece solo los hijos del que tiene encima, y solo se escribe
+  // cuando de verdad se está creando algo nuevo.
+  const SEP_RUTA = " > ";
+  const partesRuta = (v) => String(v || "").split(">").map((x) => x.trim()).filter(Boolean);
+
+  function arbolDeRutas(rutas) {
+    const raiz = {};
+    uniq(rutas).forEach((r) => {
+      let n = raiz;
+      partesRuta(r).forEach((seg) => { n = (n[seg] = n[seg] || {}); });
+    });
+    return raiz;
+  }
+
+  function selectorArbol(id, valor) {
+    return `<div id="${id}-wrap" style="display:flex;flex-direction:column;gap:0.4rem;"></div>` +
+           `<input type="hidden" id="${id}" value="${esc(valor || "")}">`;
+  }
+
+  function wireArbol(id, rutas, placeholder, nombra) {
+    // Cómo se llama lo que se crea en cada nivel: una categoría tiene
+    // subcategorías y un centro de coste tiene centros dentro, y el desplegable
+    // debe decirlo con las palabras de cada uno.
+    const comoSeLlama = nombra || ((k) => (k === 0 ? "+ Nueva categoría…" : "+ Nueva subcategoría…"));
+    const arbol = arbolDeRutas(rutas);
+    const hidden = document.getElementById(id), wrap = document.getElementById(id + "-wrap");
+    if (!hidden || !wrap) return;
+    // Lo que ya tenía el movimiento marca el camino de partida, aunque sea una
+    // categoría que no esté en el catálogo: se edita lo que hay, no lo que
+    // debería haber.
+    let camino = partesRuta(hidden.value).map((v) => ({ valor: v, nueva: false }));
+
+    const nodoDe = (prof) => {
+      let n = arbol;
+      for (let i = 0; i < prof; i++) {
+        if (!n || camino[i] == null || camino[i].nueva) return null;
+        n = n[camino[i].valor];
+      }
+      return n || null;
+    };
+    const sincronizar = () => {
+      hidden.value = camino.map((c) => c.valor).filter(Boolean).join(SEP_RUTA);
+      hidden.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
+    function pintar() {
+      wrap.innerHTML = "";
+      for (let k = 0; k <= camino.length; k++) {
+        const padre = nodoDe(k);
+        const hijos = padre ? Object.keys(padre).sort((a, b) => a.localeCompare(b, "es")) : [];
+        // Siempre se ofrece un nivel más, aunque esté vacío: es la puerta para
+        // colgar algo nuevo debajo. Sin ella, una categoría recién creada no
+        // podría tener hijas nunca, y el árbol solo crecería a lo ancho.
+        const fila = document.createElement("div");
+        fila.style.cssText = "display:flex;gap:0.4rem;align-items:center;";
+        const sel = document.createElement("select");
+        sel.style.cssText = styleInput;
+        const actual = camino[k];
+        const vacio = k === 0 ? (placeholder || "— Elige —") : "— (nada más) —";
+        const items = [["", vacio]].concat(hijos.map((h) => [h, h]));
+        items.push(["__nueva__", comoSeLlama(k)]);
+        items.forEach(([v, t]) => {
+          const o = document.createElement("option");
+          o.value = v; o.textContent = t;
+          if (actual && (actual.nueva ? v === "__nueva__" : v === actual.valor)) o.selected = true;
+          sel.appendChild(o);
+        });
+        sel.addEventListener("change", () => {
+          const v = sel.value;
+          camino = camino.slice(0, k);
+          if (v === "__nueva__") camino.push({ valor: "", nueva: true });
+          else if (v) camino.push({ valor: v, nueva: false });
+          sincronizar(); pintar();
+        });
+        fila.appendChild(sel);
+        if (actual && actual.nueva) {
+          const txt = document.createElement("input");
+          txt.type = "text"; txt.value = actual.valor; txt.placeholder = "nombre";
+          txt.style.cssText = styleInput;
+          // Se escribe sin repintar para no perder el cursor; al salir del campo
+          // ya se puede colgar otro nivel debajo.
+          txt.addEventListener("input", () => { camino[k].valor = txt.value.trim(); sincronizar(); });
+          txt.addEventListener("change", () => { sincronizar(); pintar(); });
+          fila.appendChild(txt);
+        }
+        wrap.appendChild(fila);
+        if (actual && actual.nueva && !actual.valor) break;
+      }
+      const eco = document.createElement("div");
+      eco.style.cssText = "font-size:0.75rem;color:#6b7280;margin-top:0.15rem;";
+      eco.textContent = hidden.value || "sin asignar";
+      wrap.appendChild(eco);
+    }
+    pintar();
+  }
+
+  // Da de alta la ruta y todas sus ramas intermedias: quien crea
+  // «Mascotas > Veterinario» crea también «Mascotas», y sin ella la hija sería
+  // huérfana y el árbol no sabría dónde colgarla.
+  function registrarRuta(lista, ruta) {
+    if (!Array.isArray(lista)) return;
+    const partes = partesRuta(ruta);
+    for (let i = 1; i <= partes.length; i++) {
+      const acumulada = partes.slice(0, i).join(SEP_RUTA);
+      if (!lista.includes(acumulada)) lista.push(acumulada);
+    }
+  }
+
   function shell(titulo, bodyHtml, onSubmit, despues) {
     const m = ensureModal();
     m.querySelector(".modal-card").innerHTML =
@@ -78,26 +191,37 @@
     // Catálogo + lo que ya exista en el histórico, por si algo no está dado de alta
     const catGasto = noInv(uniq(categoriasCfg().concat((doc.movimientos || []).map((m) => m.tipo_gasto)))).sort();
     const catIngreso = noInv(uniq((doc.movimientos || []).map((m) => m.tipo_ingreso)));
+    const centros = uniq(((doc.config || {}).centros || []).concat((doc.movimientos || []).map((m) => m.centro)));
     const body =
       field("m-fecha", "Fecha", input("m-fecha", "date", toISO(e.fecha || hoyES()))) +
       field("m-tipo", "Tipo", select("m-tipo", ["Gasto", "Ingreso", "Traspaso", "Préstamo"], e.tipo || "Gasto")) +
       field("m-importe", "Importe (€)", input("m-importe", "number", e.importe, 'step="0.01" min="0"')) +
       field("m-origen", "Cuenta origen", select("m-origen", CUENTAS(), e.cuenta_origen || CUENTAS()[0])) +
       field("m-destino", "Cuenta destino", select("m-destino", CUENTAS(), e.cuenta_destino || CUENTAS()[0])) +
-      field("m-catg", "Categoría de gasto", datalist("m-catg", catGasto, e.tipo_gasto)) +
-      field("m-cati", "Categoría de ingreso", datalist("m-cati", catIngreso, e.tipo_ingreso)) +
+      field("m-catg", "Categoría de gasto", selectorArbol("m-catg", e.tipo_gasto)) +
+      field("m-cati", "Categoría de ingreso", selectorArbol("m-cati", e.tipo_ingreso)) +
+      // El centro de coste es el segundo eje: la categoría dice QUÉ se compró y
+      // el centro, PARA QUÉ o para quién. Sin él, «cuánto me cuesta Poza de la
+      // Sal» solo se puede responder metiendo el destino dentro de la categoría,
+      // que es justo lo que rompe la otra pregunta.
+      field("m-centro", "Centro de coste", selectorArbol("m-centro", e.centro)) +
       field("m-tpres", "Tipo de préstamo", select("m-tpres", ["Dinero prestado", "Devolución"], e.tipo_prestamo || "Dinero prestado")) +
       field("m-persona", "Persona", input("m-persona", "text", e.persona_prestamo)) +
       field("m-detalle", "Detalle", input("m-detalle", "text", e.detalle));
     shell(existing ? "Editar movimiento" : "Nuevo movimiento", body, () => {
       const tipo = G("m-tipo"), importe = parseFloat(G("m-importe"));
       if (!isFinite(importe) || importe <= 0) return "Introduce un importe válido";
-      const rec = {
+      // Se parte del movimiento que había, no de cero: un apunte reconstruido
+      // lleva el concepto literal del banco y su referencia en el extracto, y
+      // editarle el importe no puede hacer que se pierda de dónde salió.
+      const rec = Object.assign({}, e, {
         id: e.id || newId("m"), marca_temporal: e.marca_temporal || new Date().toLocaleString("es-ES"),
         fecha: fromISO(G("m-fecha")) || hoyES(), tipo, importe: String(importe),
         cuenta_origen: "", cuenta_destino: "", tipo_ingreso: "", tipo_gasto: "",
         tipo_prestamo: "", persona_prestamo: "", detalle: G("m-detalle"),
-      };
+      });
+      const centro = G("m-centro");
+      if (centro) rec.centro = centro; else delete rec.centro;
       if (tipo === "Gasto") { rec.cuenta_origen = G("m-origen"); rec.tipo_gasto = G("m-catg"); }
       else if (tipo === "Ingreso") { rec.cuenta_destino = G("m-destino"); rec.tipo_ingreso = G("m-cati"); }
       else if (tipo === "Traspaso") {
@@ -107,9 +231,22 @@
         rec.tipo_prestamo = G("m-tpres"); rec.persona_prestamo = G("m-persona");
         if (rec.tipo_prestamo === "Dinero prestado") rec.cuenta_origen = G("m-origen"); else rec.cuenta_destino = G("m-destino");
       }
+      // Lo que se crea desde aquí queda dado de alta: si no, la categoría nueva
+      // solo existiría mientras exista el movimiento que la estrenó, y al
+      // borrarlo desaparecería del desplegable con él.
+      if (rec.tipo_gasto) registrarRuta(categoriasCfg(), rec.tipo_gasto);
+      if (rec.centro) {
+        doc.config = doc.config || {};
+        doc.config.centros = doc.config.centros || [];
+        registrarRuta(doc.config.centros, rec.centro);
+      }
       upsert(doc.movimientos, rec);
       return null;
     });
+    wireArbol("m-catg", catGasto, "— Elige categoría —");
+    wireArbol("m-cati", catIngreso, "— Elige categoría —");
+    wireArbol("m-centro", centros, "— Sin imputar —",
+              (k) => (k === 0 ? "+ Nuevo centro…" : "+ Nuevo centro dentro…"));
     wireMovVisibility();
   }
   function wireMovVisibility() {
@@ -120,6 +257,9 @@
       show("m-origen", t === "Gasto" || t === "Traspaso" || (t === "Préstamo" && tp === "Dinero prestado"));
       show("m-destino", t === "Ingreso" || t === "Traspaso" || (t === "Préstamo" && tp === "Devolución"));
       show("m-catg", t === "Gasto"); show("m-cati", t === "Ingreso");
+      // El centro solo tiene sentido donde hay gasto o ingreso: un traspaso
+      // entre cuentas propias no es de nadie, es dinero cambiándose de sitio.
+      show("m-centro", t === "Gasto" || t === "Ingreso");
       show("m-tpres", t === "Préstamo"); show("m-persona", t === "Préstamo");
     }
     tipoEl.addEventListener("change", upd); tpresEl.addEventListener("change", upd); upd();
