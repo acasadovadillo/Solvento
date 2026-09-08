@@ -133,7 +133,7 @@
     (doc.inversiones || []).forEach((r) => { if (r.nombre && !conocidos[r.nombre]) conocidos[r.nombre] = { nombre: r.nombre, isin: r.isin, categoria: r.renta, tipo: r.activo, banco: r.cuenta }; });
     const body =
       field("i-fecha", "Fecha", input("i-fecha", "date", toISO(e.fecha || hoyES()))) +
-      field("i-tipo", "Operación", select("i-tipo", ["Compra", "Venta"], e.tipo_movimiento || "Compra")) +
+      field("i-tipo", "Operación", select("i-tipo", ["Compra", "Venta", "Traspaso", "Herencia"], e.tipo_movimiento || "Compra")) +
       field("i-nombre", "Activo", datalist("i-nombre", Object.keys(conocidos), e.nombre)) +
       field("i-isin", "ISIN", input("i-isin", "text", e.isin && e.isin !== "-" ? e.isin : "")) +
       field("i-renta", "Categoría", select("i-renta", RENTAS, e.renta || "Renta variable")) +

@@ -48,6 +48,18 @@
   // Fase 6: una Compra resta del efectivo de su cuenta, una Venta suma, y un
   // Traspaso entre fondos es neutro. Así comprar un fondo descuenta el dinero
   // automáticamente, sin doble apunte.
+  /*
+   * Operaciones que NO mueven efectivo de ninguna cuenta:
+   *   Traspaso  el dinero va de un fondo a otro sin pasar por la caja
+   *   Herencia  la posición ya era tuya cuando empezaste a registrar. No la
+   *             compraste con dinero de ninguna cuenta de Solvento, así que
+   *             restar su coste de una cuenta la dejaría en negativo por algo
+   *             que nunca salió de ella.
+   * En los dos casos la posición y su coste SÍ cuentan en la cartera: lo que no
+   * cuenta es la salida de caja.
+   */
+  const SIN_EFECTIVO = new Set(["Traspaso", "Herencia"]);
+
   function computeSaldos(movimientos, inversiones) {
     const bal = {};
     CFG.cuentas().forEach((c) => (bal[c.cuenta] = 0));
@@ -69,7 +81,7 @@
     }
     // Efecto en efectivo de las operaciones de inversión (Compra/Venta).
     for (const r of inversiones || []) {
-      if ((r.tipo_movimiento || "Compra") === "Traspaso") continue; // fondo→fondo, neutro
+      if (SIN_EFECTIVO.has(r.tipo_movimiento || "Compra")) continue;
       const coste = num(r.coste);
       const cuenta = String(r.cuenta || "").trim();
       if (isFinite(coste) && isC(cuenta)) bal[cuenta] -= coste; // Compra(+coste)→resta, Venta(−coste)→suma
@@ -658,10 +670,10 @@
       }
       deltaByDate[t] = (deltaByDate[t] || 0) + delta;
     }
-    // Efecto en efectivo de las operaciones (Compra resta, Venta suma, Traspaso neutro):
-    // mantiene la continuidad del patrimonio (el dinero pasa de caja a posiciones).
+    // Efecto en efectivo de las operaciones (Compra resta, Venta suma; traspaso y
+    // herencia, neutros): mantiene la continuidad del patrimonio.
     for (const r of db.inversiones || []) {
-      if ((r.tipo_movimiento || "Compra") === "Traspaso") continue;
+      if (SIN_EFECTIVO.has(r.tipo_movimiento || "Compra")) continue;
       const f = parseFechaES(r.fecha); if (!f) continue;
       const coste = num(r.coste);
       if (isFinite(coste) && isC(String(r.cuenta || "").trim())) {
