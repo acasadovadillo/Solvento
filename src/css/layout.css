@@ -5,8 +5,16 @@
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 1.5rem; z-index: 1000;
 }
-.navbar-brand h1 { font-size: 1.1rem; font-weight: 700; color: #fff; }
-.navbar-brand .navbar-date { color: #6b7280; font-size: 0.72rem; }
+/* La marca es el botón que abre el panel lateral, pero no debe parecer un botón */
+.navbar-brand {
+  display: flex; align-items: center; gap: 0.5rem; text-align: left;
+  background: none; border: none; padding: 0.25rem 0.4rem; margin-left: -0.4rem;
+  border-radius: 10px; cursor: pointer; font-family: inherit;
+  transition: background 0.15s;
+}
+.navbar-brand:hover { background: #232733; }
+.navbar-brand .nb-title { display: block; font-size: 1.1rem; font-weight: 700; color: #fff; }
+.navbar-brand .navbar-date { display: block; color: #6b7280; font-size: 0.72rem; }
 .nav-tabs { display: flex; gap: 0.25rem; }
 .nav-tab {
   background: transparent; color: #9ca3af; border: none; border-radius: 8px;
@@ -67,7 +75,7 @@ footer { text-align: center; margin-top: 5rem; font-size: 0.75rem; color: #3a3d4
   .nav-tabs { display: none; }
   /* La marca no debe partirse en varias líneas ni empujar los botones fuera */
   .navbar { padding: 0 0.85rem; gap: 0.5rem; }
-  .navbar-brand h1 { font-size: 1rem; white-space: nowrap; }
+  .navbar-brand .nb-title { font-size: 1rem; white-space: nowrap; }
   .navbar-date { display: none; }
   #sync-estado { font-size: 0.7rem !important; }
   /* Solo el icono: con el texto, "Bloquear" se salía de la pantalla */
@@ -103,4 +111,48 @@ footer { text-align: center; margin-top: 5rem; font-size: 0.75rem; color: #3a3d4
   .section-subtitle { font-size: 1.6rem; }
   .hero-breakdown { flex-direction: column; }
   .hero-item { width: 100%; }
+}
+
+/* ── Panel lateral de secciones ──
+   Se abre desde el logo. En escritorio convive con las pestañas de arriba; en el
+   móvil, donde esas pestañas no existen, es la forma de saltar de sección sin
+   depender de la barra inferior. */
+#sidebar-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1400;
+  opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
+}
+#sidebar-backdrop.open { opacity: 1; visibility: visible; }
+#sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 1401;
+  width: 258px; max-width: 82vw;
+  background: #171a24; border-right: 1px solid #2a2d3a;
+  display: flex; flex-direction: column; overflow-y: auto;
+  padding: 1rem 0.75rem calc(1rem + env(safe-area-inset-bottom));
+  transform: translateX(-100%); visibility: hidden;
+  transition: transform 0.22s ease, visibility 0.22s;
+}
+#sidebar.open { transform: none; visibility: visible; }
+.sn-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0.5rem 1.2rem; }
+.sn-head img { width: 26px; height: 26px; object-fit: contain; }
+.sn-name { font-size: 1.05rem; font-weight: 700; color: #fff; }
+.sn-close {
+  margin-left: auto; width: 26px; height: 26px; border-radius: 50%;
+  background: none; border: 1px solid #2a2d3a; color: #9ca3af;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-family: inherit;
+}
+.sn-close:hover { color: #fff; border-color: #4b5563; }
+.sn-list { display: flex; flex-direction: column; gap: 0.15rem; }
+.sn-item {
+  display: flex; align-items: center; gap: 0.75rem; width: 100%;
+  background: none; border: none; border-radius: 10px; cursor: pointer;
+  color: #9ca3af; font-family: inherit; font-size: 0.9rem; font-weight: 500;
+  padding: 0.62rem 0.7rem; text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+.sn-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.sn-item:hover { background: #1e2130; color: #e5e7eb; }
+.sn-item.active { background: #2a2d3a; color: #fff; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  #sidebar, #sidebar-backdrop { transition: none; }
 }

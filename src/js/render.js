@@ -1020,11 +1020,29 @@
     document.querySelectorAll("#app .page").forEach((p) => p.classList.remove("active"));
     const pg = document.getElementById("v2-page-" + id);
     if (pg) pg.classList.add("active");
-    document.querySelectorAll('.nav-tab, .bottom-nav-item').forEach((b) => b.classList.toggle("active", b.dataset.page === id));
+    document.querySelectorAll('.nav-tab, .bottom-nav-item, .sn-item').forEach((b) => b.classList.toggle("active", b.dataset.page === id));
+    if (window.v2Sidebar) window.v2Sidebar(false);   // navegar cierra el panel lateral
     window.scrollTo({ top: 0, behavior: "auto" });
     if (id === "cartera") layoutTreemaps();
   }
   window.v2Tab = showPage;
+
+  // Panel lateral de secciones, que se abre desde el logo. Sin argumento
+  // alterna; con true/false fuerza el estado.
+  window.v2Sidebar = function (abrir) {
+    const sb = document.getElementById("sidebar");
+    const bd = document.getElementById("sidebar-backdrop");
+    if (!sb || !bd) return;
+    const ver = abrir == null ? !sb.classList.contains("open") : !!abrir;
+    sb.classList.toggle("open", ver);
+    bd.classList.toggle("open", ver);
+    const btn = document.getElementById("brand-btn");
+    if (btn) btn.setAttribute("aria-expanded", ver ? "true" : "false");
+    if (ver) { const p = sb.querySelector(".sn-item.active") || sb.querySelector(".sn-item"); if (p) p.focus(); }
+  };
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") window.v2Sidebar(false);
+  });
   // ── Treemap: ajustar texto al tamaño real + hover (port de la v1) ──
   function layoutTreemaps() {
     document.querySelectorAll(".tm-tile").forEach((tile) => {
