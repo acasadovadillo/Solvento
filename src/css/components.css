@@ -152,3 +152,28 @@
   .leg-fila { gap: 0.15rem 0; }
   .leg-fila > .leg-it { width: 100%; max-width: 280px; justify-content: space-between; }
 }
+
+/* ── Barra de distribución ──
+   Sin texto dentro: la leyenda pone los nombres y las cifras salen en un globo
+   al pasar por encima, con el tramo correspondiente resaltado y el resto
+   atenuado. El resalte funciona igual desde la barra que desde la leyenda. */
+.bd { position: relative; }
+.bd-bar {
+  display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: #1a1d27;
+}
+.bd-seg { cursor: default; transition: opacity 0.15s, filter 0.15s; }
+.bd.act .bd-seg { opacity: 0.3; }
+.bd.act .bd-seg.on { opacity: 1; filter: brightness(1.12); }
+.bd-tip {
+  position: absolute; bottom: calc(100% + 0.55rem); transform: translateX(-50%);
+  background: #000; color: #fff; border: 1px solid #2a2d3a; border-radius: 8px;
+  padding: 0.45rem 0.65rem; font-size: 0.72rem; line-height: 1.45;
+  white-space: nowrap; pointer-events: none; z-index: 6;
+}
+.bd-tip[hidden] { display: none; }
+.leg-fila .leg-it { cursor: default; transition: opacity 0.15s; }
+.leg-fila.act .leg-it { opacity: 0.4; }
+.leg-fila.act .leg-it.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .bd-seg, .leg-fila .leg-it { transition: none; }
+}

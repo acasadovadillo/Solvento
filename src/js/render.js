@@ -53,11 +53,11 @@
   }
   // fila = true: los ítems se ciñen a su contenido para poder ir uno al lado de
   // otro; en columna conservan el ancho fijo que alinea las cifras a la derecha.
-  function legend(items, total, targets, fila) {
+  function legend(items, total, targets, fila, idPanel) {
     const estiloItem = fila
       ? "display:flex;align-items:center;gap:0.55rem;font-size:0.85rem;"
       : "display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.85rem;width:100%;max-width:280px;margin:0.3rem 0;";
-    return items.map((it) => {
+    return items.map((it, i) => {
       const p = total > 0 ? it.value / total * 100 : 0;
       let badge = "";
       if (targets && targets[it.label] != null) {
@@ -65,8 +65,16 @@
         const dc = dev >= 0 ? GREEN : RED;
         badge = `<span style="font-size:0.68rem;color:${dc};background:${dc}22;padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;margin-left:0.3rem;" title="Objetivo: ${targets[it.label].toFixed(0)}%">${dev >= 0 ? "+" : ""}${dev.toFixed(1)}pp</span>`;
       }
-      return `<div class="${fila ? "leg-it" : ""}" style="${estiloItem}">
-        <div style="display:flex;align-items:center;gap:0.5rem;"><span style="width:9px;height:9px;background:${it.accent};border-radius:50%;flex-shrink:0;"></span><span style="color:#9ca3af;font-weight:500;">${esc(it.label)}</span>${badge}</div>
+      const punto = `<span style="width:9px;height:9px;background:${it.accent};border-radius:50%;flex-shrink:0;"></span>`;
+      const nombre = `<span style="color:#9ca3af;font-weight:500;">${esc(it.label)}</span>`;
+      // En fila solo el punto y el nombre: las cifras salen en el globo al pasar
+      // por encima, aquí o sobre el tramo de la barra, que es lo mismo.
+      if (fila) {
+        return `<div class="leg-it" style="${estiloItem}"
+          onmouseenter="v2Barra('${idPanel}',${i})" onmouseleave="v2Barra('${idPanel}',null)">${punto}${nombre}${badge}</div>`;
+      }
+      return `<div style="${estiloItem}">
+        <div style="display:flex;align-items:center;gap:0.5rem;">${punto}${nombre}${badge}</div>
         <span style="text-align:right;"><span style="color:#fff;font-weight:600;display:block;line-height:1.2;">${fmtPct(p)}</span><span style="color:#6b7280;font-size:0.72rem;display:block;line-height:1.2;">${fmtEur(it.value)}</span></span>
       </div>`;
     }).join("");
@@ -89,17 +97,19 @@
     return { positivos, negativos, total: positivos.reduce((a, i) => a + i.value, 0) };
   }
 
-  function barraDistribucion(items, total) {
-    const segs = items.map((it) => {
+  // La barra no lleva texto dentro: los nombres los pone la leyenda y las cifras
+  // salen al pasar por encima, en un globo, junto con el tramo resaltado.
+  function barraDistribucion(items, total, id) {
+    const segs = items.map((it, i) => {
       const p = total > 0 ? it.value / total * 100 : 0;
-      // La etiqueta solo cabe si el tramo es ancho; si no, queda en el tooltip
-      const etiqueta = p >= 11
-        ? `<span style="font-size:0.68rem;font-weight:700;color:#0b0d12;white-space:nowrap;padding:0 0.35rem;overflow:hidden;text-overflow:ellipsis;">${esc(it.label)} ${p.toFixed(0)}%</span>`
-        : "";
-      return `<div title="${esc(it.label)}: ${fmtEur(it.value)} (${p.toFixed(1)}%)"
-        style="width:${p.toFixed(2)}%;background:${it.accent};display:flex;align-items:center;justify-content:center;overflow:hidden;">${etiqueta}</div>`;
+      return `<div class="bd-seg" data-label="${esc(it.label)}" data-pct="${fmtPct(p)}" data-eur="${fmtEur(it.value)}"
+        onmouseenter="v2Barra('${id}',${i})" onmouseleave="v2Barra('${id}',null)"
+        style="width:${p.toFixed(2)}%;background:${it.accent};"></div>`;
     }).join("");
-    return `<div style="display:flex;height:30px;border-radius:8px;overflow:hidden;background:#1a1d27;">${segs}</div>`;
+    return `<div class="bd" id="bd-${id}" onmouseleave="v2Barra('${id}',null)">
+      <div class="bd-bar">${segs}</div>
+      <div class="bd-tip" hidden></div>
+    </div>`;
   }
 
   // Iconos del selector de vista: una barra de distribución segmentada y un anillo
@@ -136,8 +146,8 @@
            ${donut(positivos, centroValor, centroEtiqueta)}
            <div style="display:flex;flex-direction:column;align-items:stretch;">${legend(positivos, total, targets)}</div>
          </div>`
-      : `${barraDistribucion(positivos, total)}
-         <div class="leg-fila">${legend(positivos, total, targets, true)}</div>`;
+      : `${barraDistribucion(positivos, total, id)}
+         <div class="leg-fila" id="leg-${id}">${legend(positivos, total, targets, true, id)}</div>`;
     return cuerpo + aviso;
   }
 
@@ -1025,6 +1035,37 @@
     window.scrollTo({ top: 0, behavior: "auto" });
     if (id === "cartera") layoutTreemaps();
   }
+  // Resalta un tramo de la barra de distribución y saca sus cifras en un globo.
+  // Se dispara igual desde el tramo que desde su entrada de la leyenda.
+  window.v2Barra = function (id, i) {
+    const wrap = document.getElementById("bd-" + id);
+    if (!wrap) return;
+    const tip = wrap.querySelector(".bd-tip");
+    const segs = wrap.querySelectorAll(".bd-seg");
+    const leg = document.getElementById("leg-" + id);
+    const items = leg ? leg.querySelectorAll(".leg-it") : [];
+    if (i == null) {
+      wrap.classList.remove("act");
+      segs.forEach((s) => s.classList.remove("on"));
+      if (leg) { leg.classList.remove("act"); items.forEach((s) => s.classList.remove("on")); }
+      tip.hidden = true;
+      return;
+    }
+    const seg = segs[i];
+    if (!seg) return;
+    wrap.classList.add("act");
+    segs.forEach((s, k) => s.classList.toggle("on", k === i));
+    if (leg) { leg.classList.add("act"); items.forEach((s, k) => s.classList.toggle("on", k === i)); }
+    tip.innerHTML = `<div style="color:#9ca3af;">${esc(seg.dataset.label)}</div>
+      <div style="margin-top:0.1rem;"><b>${esc(seg.dataset.pct)}</b> <span style="color:#6b7280;">·</span> <span style="color:#9ca3af;">${esc(seg.dataset.eur)}</span></div>`;
+    tip.hidden = false;
+    // Centrado sobre el tramo, pero sin salirse por los lados del panel
+    const ancho = wrap.getBoundingClientRect().width;
+    const centro = seg.offsetLeft + seg.offsetWidth / 2;
+    const medio = tip.getBoundingClientRect().width / 2;
+    tip.style.left = Math.max(medio, Math.min(ancho - medio, centro)) + "px";
+  };
+
   window.v2Tab = showPage;
 
   // Panel lateral de secciones, que se abre desde el logo. Sin argumento
