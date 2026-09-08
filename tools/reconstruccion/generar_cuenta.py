@@ -9,9 +9,14 @@ Reglas aplicadas (las acordadas con el usuario):
 
 Decisiones que merecen explicación:
 
-  · Un movimiento que ya existía y es TRASPASO no se sustituye aunque el extracto
-    lo traiga: el traspaso es un único apunte que mueve DOS cuentas, y cambiarlo
-    por un gasto suelto dejaría a la otra cuenta sin su mitad.
+  · Un traspaso es un único apunte que mueve DOS cuentas, así que sustituirlo por
+    un gasto suelto deja a la otra cuenta sin su mitad. Se conserva SOLO si la
+    otra cuenta no tiene extracto —Efectivo, que no lo tiene y nunca lo tendrá—.
+    Si la otra cuenta también se va a reconstruir, se deja como apunte de una
+    sola pata: la otra saldrá de su propio extracto y el paso de emparejado las
+    volverá a unir al final, cuando estén las dos. Conservarlo aquí y
+    reconstruir después la otra cuenta era justamente lo que descuadraba
+    Bankinter en 332,70 €.
 
   · El concepto del banco («Transaccion Contactless En...») es peor que el que
     escribió el usuario («Cena con Laura por ayudarme con la mudanza»). Manda el
@@ -73,6 +78,9 @@ def base(fecha_es, importe, detalle, ref):
 
 def main():
     ext, docj, cuenta, efectivo, salida = sys.argv[1:6]
+    # Cuentas que también se reconstruyen desde su propio extracto: con ellas no
+    # hay que conservar nada, porque su mitad vendrá de su archivo.
+    con_extracto = set((sys.argv[6] if len(sys.argv) > 6 else "").split(",")) - {""}
     filas = leer_extracto(ext)
     doc = json.load(open(docj))
 
@@ -120,8 +128,12 @@ def main():
     nuevos, informe = [], collections.Counter()
 
     # los traspasos y préstamos que casaron se conservan: mueven otra cuenta
+    def otra_pata(m):
+        o, d = str(m.get("cuenta_origen") or ""), str(m.get("cuenta_destino") or "")
+        return d if o == cuenta else o
+
     for linea, c in pareja.items():
-        if c["m"]["tipo"] in ("Traspaso", "Préstamo"):
+        if c["m"]["tipo"] in ("Traspaso", "Préstamo") and otra_pata(c["m"]) not in con_extracto:
             fl = next(x for x in filas if x["linea"] == linea)
             mov = dict(c["m"])
             mov["fecha"] = f"{fl['fecha']:%d/%m/%Y}"          # §1: la fecha, del banco
@@ -133,7 +145,7 @@ def main():
 
     for fl in sorted(filas, key=lambda x: x["fecha"]):
         c = pareja.get(fl["linea"])
-        if c and c["m"]["tipo"] in ("Traspaso", "Préstamo"):
+        if c and c["m"]["tipo"] in ("Traspaso", "Préstamo") and otra_pata(c["m"]) not in con_extracto:
             continue                                          # ya añadido arriba
         detalle = fl["concepto"]
         cat_g = cat_i = ""
