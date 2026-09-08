@@ -741,6 +741,8 @@
 
   function pagePropiedades(m) {
     const inm = m.inm;
+    // Los costes reales se calculan una vez para toda la página, no por fila.
+    const CENTROS_REAL = window.SolventoModel.resumenCentros((CURRENT_DOC || {}).movimientos);
     const items = {};
     inm.items.forEach((r) => { if (isFinite(r.importe)) items[r.tipo] = (items[r.tipo] || 0) + r.importe; });
     const donutItems = Object.keys(items).map((t) => ({ label: t, value: items[t], accent: CFG.TIPO_COLORES_INMUEBLE[t] || CFG.INMUEBLE_ACCENT_DEFAULT }));
@@ -752,6 +754,21 @@
       const alquiler = r.alquilada
         ? `<div style="font-size:0.74rem;color:${GREEN};margin-top:0.15rem;">Alquilada · ${fmtEur(r.renta)}/mes${isFinite(r.yieldNeto) ? " · " + r.yieldNeto.toFixed(1).replace(".", ",") + "% neto anual" : ""}</div>`
         : "";
+      // Lo que de verdad ha costado y rentado, contado de los movimientos que
+      // llevan su centro. La renta mensual de la ficha es una previsión; esto es
+      // lo que pasó: comunidad, suministros, derramas y los meses que no cobró.
+      const real = r.centro ? CENTROS_REAL[r.centro] : null;
+      const realLinea = real && (real.gasto || real.ingreso)
+        ? `<div style="font-size:0.74rem;color:#6b7280;margin-top:0.25rem;">
+             Real acumulado ${real.gasto ? `· <span style="color:${RED};">−${esc(fmtEur(real.gasto))}</span>` : ""}
+             ${real.ingreso ? ` · <span style="color:${GREEN};">+${esc(fmtEur(real.ingreso))}</span>` : ""}
+             ${real.ingreso && real.gasto ? ` · <b style="color:${rc(real.neto)};">${real.neto >= 0 ? "+" : "−"}${esc(fmtEur(Math.abs(real.neto)))}</b>` : ""}
+             ${isFinite(r.importe) && r.importe > 0 && real.ingreso
+               ? ` · ${(real.neto < 0 ? "−" : "")}${Math.abs(real.neto / r.importe * 100).toFixed(1).replace(".", ",")}% sobre su valor` : ""}
+           </div>`
+        : (r.centro ? "" : `<div style="font-size:0.72rem;color:#4b5563;margin-top:0.25rem;">
+             Sin centro de coste: sus gastos no se le imputan.
+             <button onclick="v2EditProp('${String(r.id).replace(/'/g, "\\'")}')" style="background:none;border:none;padding:0;color:#3b82f6;font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Asignarlo</button></div>`);
       const revalorizacion = (r.coste > 0 && isFinite(r.ganancia))
         ? `<div style="color:${rc(r.ganancia)};font-weight:600;">${r.ganancia >= 0 ? "+" : ""}${fmtEur(r.ganancia)}</div><div style="color:${rc(r.rentPct)};font-size:0.76rem;">${fmtPct(r.rentPct)}</div>`
         : `<span style="color:#4b5563;">—</span>`;
@@ -762,7 +779,7 @@
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
           <span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span>
           <div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div>
-            <div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}</div></div></td>
+            <div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}${realLinea}</div></div></td>
         <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>
         <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${revalorizacion}</td>

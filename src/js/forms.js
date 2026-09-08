@@ -678,6 +678,10 @@
       field("p-fecha", "Fecha de adquisición", input("p-fecha", "date", toISO(e.fecha_adquisicion))) +
       `<label style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:#9ca3af;margin-top:0.9rem;cursor:pointer;">
          <input type="checkbox" id="p-alq" ${e.alquilada ? "checked" : ""}> Está alquilada</label>` +
+      // El centro de coste es lo que une la ficha con la contabilidad: sin él,
+      // los recibos de la comunidad y el alquiler cobrado están en los datos
+      // pero no hay forma de saber que son de ESTE piso.
+      field("p-centro", "Centro de coste", selectorArbol("p-centro", e.centro)) +
       `<div id="p-alquiler" style="display:none;">
         ${field("p-renta", "Renta mensual (€)", input("p-renta", "number", e.renta_mensual, 'step="0.01" min="0"'))}
         ${field("p-gastos", "Gastos mensuales (€)", input("p-gastos", "number", e.gastos_mensuales, 'step="0.01" min="0" placeholder="comunidad, IBI, seguro…"'))}
@@ -688,12 +692,21 @@
       if (!nombre) return "Indica el nombre o la dirección";
       const tipo = G("p-tipo");
       const porPeso = CFG.TIPOS_POR_PESO.includes(tipo);
-      const rec = {
+      // Se parte de lo que había, como en los movimientos: editar el valor de
+      // una propiedad no puede borrarle campos que este formulario no enseña.
+      const rec = Object.assign({}, e, {
         id: e.id || newId("p"), nombre, tipo,
         valor_compra: G("p-compra"), fecha_adquisicion: fromISO(G("p-fecha")),
         alquilada: document.getElementById("p-alq").checked,
         renta_mensual: G("p-renta"), gastos_mensuales: G("p-gastos"),
-      };
+      });
+      const centro = G("p-centro");
+      if (centro) rec.centro = centro; else delete rec.centro;
+      if (rec.centro) {
+        doc.config = doc.config || {};
+        doc.config.centros = doc.config.centros || [];
+        registrarRuta(doc.config.centros, rec.centro);
+      }
       if (porPeso) {
         const peso = parseFloat(G("p-peso"));
         if (!isFinite(peso) || peso <= 0) return "Introduce el peso en gramos";
@@ -714,6 +727,13 @@
       document.getElementById("p-portasacion").style.display = porPeso ? "none" : "block";
       document.getElementById("p-alquiler").style.display = document.getElementById("p-alq").checked ? "block" : "none";
     };
+    // Se ofrecen los centros que ya existen, con los de inmuebles delante por ser
+    // los únicos que tienen sentido aquí, pero sin impedir crear uno nuevo.
+    const centros = uniq(((doc.config || {}).centros || [])
+      .concat((doc.movimientos || []).map((m) => m.centro))
+      .concat((doc.propiedades || []).map((r) => r.centro)));
+    wireArbol("p-centro", centros, "— Sin imputar —",
+              (k) => (k === 0 ? "+ Nuevo centro…" : "+ Nuevo centro dentro…"));
     document.getElementById("p-tipo").addEventListener("change", refrescar);
     document.getElementById("p-alq").addEventListener("change", refrescar);
     refrescar();

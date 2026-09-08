@@ -250,6 +250,7 @@
         porPeso, peso, metal, precioGramo,
         alquilada, renta, gastos, rentaAnual, netoAnual, yieldBruto, yieldNeto,
         baseYield: base,
+        centro: String(r.centro || "").trim(),
       };
     });
     arr.sort((a, b) => (isFinite(b.importe) ? b.importe : 0) - (isFinite(a.importe) ? a.importe : 0));
@@ -470,6 +471,34 @@
   //     contarlos dispararía el gasto de un mes por un motivo ficticio.
   const esAjuste = (m) =>
     /ajuste/i.test(String(m.tipo_gasto || "")) || /ajuste/i.test(String(m.tipo_ingreso || ""));
+
+  // ── Cuánto cuesta y cuánto renta cada centro ─────────────────────────────
+  // Devuelve un índice ruta → {gasto, ingreso, neto} con lo que cuelga debajo ya
+  // sumado: preguntar por «Inmuebles > Almazara» tiene que responder por su
+  // vivienda y su garaje a la vez, que es como se piensa en un inmueble.
+  function resumenCentros(movimientos, desde, hasta) {
+    const gastos = {}, ingresos = {};
+    for (const m of movimientos || []) {
+      if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") continue;
+      if (esAjuste(m) || esMovInversion(m)) continue;
+      const f = parseFechaES(m.fecha);
+      if (!f || (desde && f < desde) || (hasta && f > hasta)) continue;
+      const imp = Math.abs(num(m.importe) || 0);
+      if (!isFinite(imp) || imp <= 0) continue;
+      const c = String(m.centro || "").trim() || "Sin imputar";
+      const donde = m.tipo === "Gasto" ? gastos : ingresos;
+      donde[c] = (donde[c] || 0) + imp;
+    }
+    const idx = {};
+    const volcar = (nodos, campo) => nodos.forEach((n) => {
+      (idx[n.completa] = idx[n.completa] || { gasto: 0, ingreso: 0 })[campo] = n.total;
+      volcar(n.hijas, campo);
+    });
+    volcar(arbolCategorias(gastos), "gasto");
+    volcar(arbolCategorias(ingresos), "ingreso");
+    for (const k in idx) idx[k].neto = round2(idx[k].ingreso - idx[k].gasto);
+    return idx;
+  }
 
   function buildGastos(db) {
     const porMes = {};
@@ -777,5 +806,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();
