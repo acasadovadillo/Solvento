@@ -129,7 +129,7 @@
     return `<div style="display:flex;gap:0.25rem;">${btn("barra", "Barra")}${btn("circular", "Circular")}</div>`;
   }
 
-  function cuerpoVista(id, items, centroValor, centroEtiqueta, targets) {
+  function cuerpoVista(id, items, centroValor, centroEtiqueta, targets, sinLeyenda) {
     const { positivos, negativos, total } = repartoValido(items);
     if (!positivos.length) {
       return `<div style="color:#6b7280;text-align:center;padding:2rem;font-size:0.85rem;">Nada que repartir todavía</div>`;
@@ -138,23 +138,26 @@
       ? `<div style="font-size:0.75rem;color:#fbbf24;margin-top:0.9rem;">
            ${negativos.map((n) => esc(n.label) + " está en negativo (" + fmtEur(n.value) + ")").join(" · ")}, así que no entra en el reparto.</div>`
       : "";
+    // Donde el color ya está explicado fuera (las tarjetas del patrimonio, el
+    // punto de las tablas de Caja y Propiedades) la leyenda solo repetiría; los
+    // nombres siguen saliendo en el globo al apuntar.
+    const leyendaCol = sinLeyenda ? "" : `<div class="leg-col" id="leg-${id}">${legend(positivos, total, targets, false, id)}</div>`;
+    const leyendaFila = sinLeyenda ? "" : `<div class="leg-fila" id="leg-${id}">${legend(positivos, total, targets, true, id)}</div>`;
     const cuerpo = vistaDe(id) === "circular"
       ? `<div style="display:flex;align-items:center;justify-content:center;gap:2.5rem;flex-wrap:wrap;">
-           ${donut(positivos, centroValor, centroEtiqueta, id)}
-           <div class="leg-col" id="leg-${id}">${legend(positivos, total, targets, false, id)}</div>
+           ${donut(positivos, centroValor, centroEtiqueta, id)}${leyendaCol}
          </div>`
-      : `${barraDistribucion(positivos, total, id)}
-         <div class="leg-fila" id="leg-${id}">${legend(positivos, total, targets, true, id)}</div>`;
+      : `${barraDistribucion(positivos, total, id)}${leyendaFila}`;
     return cuerpo + aviso;
   }
 
-  function vistaPanel(id, titulo, items, centroValor, centroEtiqueta, targets) {
+  function vistaPanel(id, titulo, items, centroValor, centroEtiqueta, targets, sinLeyenda) {
     return `<div class="v2-wrap"><div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.1rem;">
         <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
         ${selectorVista(id)}
       </div>
-      <div id="vista-${id}">${cuerpoVista(id, items, centroValor, centroEtiqueta, targets)}</div>
+      <div id="vista-${id}">${cuerpoVista(id, items, centroValor, centroEtiqueta, targets, sinLeyenda)}</div>
     </div></div>`;
   }
 
@@ -465,7 +468,7 @@
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
          { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
          { label: "Propiedades", value: m.inm.total, accent: "#a16207" }],
-        fmtEur(m.patrimonioNeto), "Neto") +
+        fmtEur(m.patrimonioNeto), "Neto", null, true) +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio");
   }
 
@@ -694,7 +697,7 @@
       return `<tr class="table-row"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button></div></td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
-      vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total") +
+      vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", null, true) +
       `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
       </div></div>` +
@@ -738,7 +741,7 @@
       : "";
 
     return header("Propiedades", fmtEur(inm.total)) +
-      (donutItems.length ? vistaPanel("propiedades", "Distribución por tipo", donutItems, fmtEur(inm.total), "Total") : "") +
+      (donutItems.length ? vistaPanel("propiedades", "Distribución por tipo", donutItems, fmtEur(inm.total), "Total", null, true) : "") +
       rentaPanel +
       `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
