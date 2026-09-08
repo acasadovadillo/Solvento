@@ -1258,13 +1258,10 @@
     poner("aj-activos", fr.activos);
     poner("aj-objetivo", fr.objetivo);
     poner("aj-categorias", fr.categorias);
-    if (window.SolventoImport) window.SolventoImport.pintar();
   };
   window.v2AjSec = (sec) => {
     document.querySelectorAll(".aj-sec").forEach((e) => e.classList.toggle("active", e.id === "aj-sec-" + sec));
     document.querySelectorAll(".aj-tab").forEach((b) => b.classList.toggle("active", b.dataset.sec === sec));
-    // El importador se repinta al abrirlo: así refleja las cuentas del momento
-    if (sec === "importar" && window.SolventoImport) window.SolventoImport.pintar();
   };
   window.v2GastoMes = (ym) => {
     GASTO_MES = ym;
