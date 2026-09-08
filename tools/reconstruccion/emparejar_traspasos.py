@@ -27,11 +27,15 @@ RE_TRANSF = re.compile(r"trans\b|transf|transferencia|incoming transfer|traspaso
 # suyas, aunque el concepto no diga ni su nombre ni las cuentas: el de 100 € a
 # MyInvestor tiene su pareja exacta el mismo día.
 RE_PROPIO_EXTRA = re.compile(r"^inversion(es)?$|entrada de dinero en|pasar dinero", re.I)
-# Revolut nombra la operación pero nunca al pagador: una «recarga con open
-# banking» solo puede venir de una cuenta bancaria del propio titular, porque es
+# Revolut nombra la operación pero nunca al pagador: una recarga —con la tarjeta
+# o por open banking— solo puede venir de una cuenta del propio titular, porque es
 # él quien se autentica en su banco para ordenarla. Sin esto, la entrada no se
-# reconocía como propia y su cargo en Bankinter se quedaba huérfano.
-RE_RECARGA = re.compile(r"recarga con open banking|recarga desde|top-?up", re.I)
+# reconocía como propia y su cargo en el otro banco se quedaba huérfano.
+RE_RECARGA = re.compile(r"\brecarga\b|top-?up", re.I)
+# Un cargo de tarjeta se apunta días después de gastarse: la recarga entró en
+# Revolut el 19 y el Santander la cobró el 24. Frente a una tarjeta, la entrada
+# puede ir por delante de la salida sin que eso signifique que no son pareja.
+RE_TARJETA = re.compile(r"compra .*tarj|transacci[óo]n contactless|tarjeta\s*·|tarj\.", re.I)
 
 
 def fecha(s):
@@ -95,7 +99,16 @@ def main():
             # existir la orden. Se deja un día de margen por las fechas valor.
             sale, entra = (x, y) if x["imp"] < 0 else (y, x)
             d = (entra["f"] - sale["f"]).days
-            if -1 <= d <= dias and (propio(y) or RE_TRANSF.search(y["txt"])):
+            # Vale también que la otra pata NOMBRE la cuenta de esta: una recarga
+            # de Revolut tiene enfrente un cargo que se llama «Compra Revolut», y
+            # ni dice el titular ni dice «transferencia», pero no puede ser otra
+            # cosa que el dinero entrando en la cuenta que nombra.
+            # Un cargo de tarjeta se apunta días después de gastarse —la recarga
+            # entró en Revolut el 19 y el Santander la cobró el 24—, así que ahí
+            # la entrada sí puede ir por delante de la salida.
+            minimo = -7 if RE_TARJETA.search(sale["txt"]) else -1
+            if minimo <= d <= dias and (propio(y) or RE_TRANSF.search(y["txt"])
+                                    or re.search(re.escape(x["cta"]), y["txt"], re.I)):
                 opciones[id(x)].append((d, y))
 
     # Se resuelve por CERCANÍA, no por orden de calendario. Recorriendo por fecha,
@@ -104,13 +117,16 @@ def main():
     # un solo día— y el error se propagaba en cadena. Los pares evidentes se
     # cierran antes y los dudosos se reparten lo que queda.
     todas = sorted(((d, x, y) for x in candidatos for d, y in opciones[id(x)]),
-                   key=lambda o: (o[0], o[1]["f"]))
+                   key=lambda o: (abs(o[0]), o[1]["f"]))
     for d, x, y in todas:
         if id(x["m"]) in usados or id(y["m"]) in usados:
             continue
-        # Si a esa misma distancia hay otra entrada libre, no se decide sola
+        # Si a esa misma distancia hay otra entrada libre y DISTINTA, no se decide
+        # sola. Dos cargos idénticos de la misma cuenta y el mismo día no son una
+        # duda: son intercambiables, y elegir uno u otro da el mismo resultado.
         empates = [z for dd, z in opciones[id(x)]
-                   if dd == d and z is not y and id(z["m"]) not in usados]
+                   if abs(dd) == abs(d) and z is not y and id(z["m"]) not in usados
+                   and (z["cta"], z["f"]) != (y["cta"], y["f"])]
         if empates:
             ambiguos.append((x, [y] + empates))
             usados.add(id(x["m"]))

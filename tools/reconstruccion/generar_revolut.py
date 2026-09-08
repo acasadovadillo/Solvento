@@ -44,11 +44,27 @@ def main():
                 a, m, d = (int(x) for x in f.split("-"))
                 imp = float(r.get("Importe") or r.get("Amount") or 0)
                 com = float(r.get("Comisión") or r.get("Fee") or 0)
+                # El tipo va delante del concepto, como en Trade Republic: la
+                # descripción de una transferencia es solo el destinatario, y sin
+                # la palabra «Transferir» delante no hay forma de saber que lo es.
+                tipo = (r.get("Tipo") or r.get("Type") or "").strip()
+                desc = (r.get("Descripción") or r.get("Description") or "").strip()
                 filas.append({"fecha": datetime.date(a, m, d),
-                              "concepto": (r.get("Descripción") or r.get("Description") or "").strip(),
+                              "concepto": f"{tipo} · {desc}" if tipo else desc,
                               "importe": round(imp - com, 2),
                               "saldo": float(r.get("Saldo") or r.get("Balance") or 0)})
-    filas.sort(key=lambda x: (x["fecha"], x["saldo"]))
+    # Los extractos descargados se solapan: uno cubre desde el origen y otro solo
+    # el último tramo, y las líneas repetidas duplicaban las recargas. La misma
+    # operación tiene fecha, concepto, importe y saldo idénticos.
+    vistas, unicas = set(), []
+    for f in filas:
+        k = (f["fecha"], f["concepto"], f["importe"], f["saldo"])
+        if k not in vistas:
+            vistas.add(k); unicas.append(f)
+    # NO se reordena: el extracto viene en orden de liquidación y su columna de
+    # saldo solo encadena en ese orden. Ordenar por fecha —dos operaciones del
+    # mismo día se liquidan una detrás de otra— rompía 19 de los 26 enlaces.
+    filas = unicas
     if not filas:
         print("no hay movimientos completados en el extracto"); return
 
