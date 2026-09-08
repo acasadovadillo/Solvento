@@ -52,9 +52,13 @@ def main():
         elif o == CUENTA and m.get("tipo") in ("Gasto", "Traspaso", "Préstamo"):
             sal[ym] += num(m["importe"])
 
-    if not ent:
-        print("no hay entradas de efectivo: nada que repartir"); return
-    inicio, fin = min(ent), max(max(ent), (hoy.year, hoy.month))
+    if not ent and not sal:
+        print("no hay movimientos de efectivo: nada que repartir"); return
+    # El arranque es el primer mes con CUALQUIER movimiento de efectivo, no solo
+    # con retiradas: si se ingresó efectivo en ventanilla antes de la primera
+    # retirada registrada, ese mes tiene que entrar en el reparto.
+    todos_meses = set(ent) | set(sal)
+    inicio, fin = min(todos_meses), max(max(todos_meses), (hoy.year, hoy.month))
     # todos los meses del hueco, incluidos los que no tuvieron retiradas
     todos = []
     a, m = inicio
@@ -62,6 +66,31 @@ def main():
         todos.append((a, m))
         m += 1
         if m == 13: a, m = a + 1, 1
+
+    # Si el efectivo llega a estar en negativo antes de la primera retirada, es
+    # que ya había dinero en el bolsillo cuando empiezan los datos: se ingresó en
+    # ventanilla efectivo que no se había sacado de ninguna cuenta registrada.
+    # Eso es un saldo inicial DEDUCIDO del propio movimiento, no un invento.
+    corriendo, minimo = 0.0, 0.0
+    a, m = inicio
+    while (a, m) <= fin:
+        corriendo += ent[(a, m)] - sal[(a, m)]
+        minimo = min(minimo, corriendo)
+        m += 1
+        if m == 13: a, m = a + 1, 1
+    apertura = None
+    if minimo < -0.005:
+        primer = datetime.date(inicio[0], inicio[1], 1) - datetime.timedelta(days=1)
+        apertura = {
+            "id": nid(), "marca_temporal": datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "fecha": f"{primer:%d/%m/%Y}", "tipo": "Ingreso", "importe": f"{-minimo:.2f}",
+            "cuenta_origen": "", "cuenta_destino": CUENTA,
+            "tipo_ingreso": "Ajustes > Saldo inicial", "tipo_gasto": "",
+            "tipo_prestamo": "", "persona_prestamo": "",
+            "detalle": ("Saldo inicial en efectivo, deducido: se ingresó en ventanilla "
+                        "efectivo que no se había retirado de ninguna cuenta registrada."),
+            "imp_ref": "ajuste-efectivo|apertura"}
+        ent[inicio] = ent[(inicio)] + (-minimo)
 
     nuevos, arrastre, total = [], 0.0, 0.0
     for (a, m) in todos:
@@ -93,6 +122,8 @@ def main():
 
     doc["movimientos"] = [m for m in doc["movimientos"]
                           if not str(m.get("imp_ref") or "").startswith("ajuste-efectivo|")]
+    if apertura:
+        doc["movimientos"].append(apertura)
     doc["movimientos"] += nuevos
     json.dump(doc, open(salida, "w"), ensure_ascii=False, indent=2)
 
@@ -105,6 +136,9 @@ def main():
 
     print(f"hueco: {MESES[inicio[1]-1]} de {inicio[0]} → {MESES[fin[1]-1]} de {fin[0]}  "
           f"({len(todos)} meses, {len(nuevos)} con ajuste)")
+    if apertura:
+        print(f"saldo inicial en efectivo deducido: {num(apertura['importe']):,.2f} € "
+              f"al {apertura['fecha']}".replace(",", " "))
     print(f"repartido: {total:,.2f} €\n".replace(",", " "))
     for x in nuevos:
         print(f"   {x['fecha']}   {num(x['importe']):>9,.2f} €".replace(",", " "))

@@ -821,19 +821,27 @@
   let GASTO_MES = null;   // null = el último mes con actividad
 
   function barrasIngresoGasto(g) {
-    const ult = g.meses.slice(-12);
+    // Todos los meses, no los últimos doce: con el histórico reconstruido hay
+    // años enteros que quedaban fuera y no había forma de llegar a ellos. Si no
+    // caben, la tira se desplaza en horizontal en lugar de recortar datos.
+    const ult = g.meses;
     if (!ult.length) return "";
+    // Con meses de varios años, "oct" a secas no distingue octubre de 2025 del
+    // de 2026: se añade el año cuando el histórico cruza más de uno.
+    const varios = new Set(ult.map((m) => m.ym.slice(0, 4))).size > 1;
     const tope = Math.max(...ult.map((m) => Math.max(m.ingresos, m.gastos))) || 1;
     const cols = ult.map((m) => {
       const hi = (m.ingresos / tope * 100).toFixed(1), hg = (m.gastos / tope * 100).toFixed(1);
       const activo = m.ym === mesElegido(g).ym;
+      const enero = m.ym.slice(5) === "01";
       return `<button onclick="v2GastoMes('${m.ym}')" title="${esc(m.label)} · ingresos ${fmtEur(m.ingresos)} · gastos ${fmtEur(m.gastos)}"
-        style="flex:1;min-width:0;background:none;border:none;cursor:pointer;font-family:inherit;padding:0;display:flex;flex-direction:column;align-items:center;gap:0.35rem;">
+        style="flex:1 0 auto;min-width:34px;background:none;border:none;cursor:pointer;font-family:inherit;padding:0;display:flex;flex-direction:column;align-items:center;gap:0.35rem;
+        ${enero && varios ? "border-left:1px solid #2a2d3a;" : ""}">
         <div style="display:flex;align-items:flex-end;gap:2px;height:110px;width:100%;justify-content:center;">
           <div style="width:42%;max-width:16px;height:${hi}%;background:${GREEN};border-radius:2px 2px 0 0;opacity:${activo ? 1 : 0.55};"></div>
           <div style="width:42%;max-width:16px;height:${hg}%;background:${RED};border-radius:2px 2px 0 0;opacity:${activo ? 1 : 0.55};"></div>
         </div>
-        <div style="font-size:0.62rem;color:${activo ? "#fff" : "#4b5563"};font-weight:${activo ? 700 : 500};white-space:nowrap;">${esc(m.label.split(" ")[0])}</div>
+        <div style="font-size:0.62rem;color:${activo ? "#fff" : "#4b5563"};font-weight:${activo ? 700 : 500};white-space:nowrap;">${esc(m.label.split(" ")[0])}${varios ? `<span style="display:block;font-size:0.56rem;color:${activo ? "#9ca3af" : "#374151"};">${m.ym.slice(2, 4)}</span>` : ""}</div>
       </button>`;
     }).join("");
     return `<div class="v2-wrap"><div class="dashboard-panel">
@@ -844,8 +852,8 @@
           <span style="color:#9ca3af;"><span style="display:inline-block;width:9px;height:9px;background:${RED};border-radius:2px;margin-right:0.3rem;"></span>Gastos</span>
         </div>
       </div>
-      <div style="display:flex;gap:0.3rem;align-items:flex-end;">${cols}</div>
-      <div style="font-size:0.72rem;color:#4b5563;margin-top:0.75rem;">Pulsa un mes para verlo en detalle.</div>
+      <div style="display:flex;gap:0.3rem;align-items:flex-end;overflow-x:auto;padding-bottom:0.25rem;">${cols}</div>
+      <div style="font-size:0.72rem;color:#4b5563;margin-top:0.75rem;">Pulsa un mes para verlo en detalle${ult.length > 14 ? " · desplaza para ver los más antiguos" : ""}. ${ult.length} meses con actividad.</div>
     </div></div>`;
   }
 

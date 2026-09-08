@@ -17,7 +17,15 @@ público. Formato, separado por tabuladores:
 Lo que no esté en la tabla se queda como está y se avisa, para que no
 desaparezca nada en silencio.
 
-    python3 migrar_categorias.py <entrada.json> <salida.json> <tabla.tsv>
+    python3 migrar_categorias.py <entrada.json> <salida.json> <tabla.tsv> [clasificacion.tsv]
+
+La tabla opcional de clasificación dice qué madres son necesarias, cuáles son
+deseo y cuáles ahorro, para que la regla 50/30/20 funcione:
+
+    madre<TAB>necesario|deseo|ahorro
+
+Basta clasificar las madres: clasificarCategoria hereda hacia las hijas, así que
+una categoría nueva colgada de "Vivienda" ya nace clasificada como necesaria.
 """
 import sys, json, collections
 
@@ -63,6 +71,18 @@ def main():
             nuevas.append(n)
     cfg["categorias"] = sorted(nuevas)
 
+    # Clasificación para el 50/30/20, si se ha pasado su tabla
+    clasif = {}
+    if len(sys.argv) > 4:
+        for linea in open(sys.argv[4], encoding="utf-8"):
+            linea = linea.rstrip("\n")
+            if not linea.strip() or linea.lstrip().startswith("#"):
+                continue
+            partes = linea.split("\t")
+            if len(partes) >= 2 and partes[0].strip():
+                clasif[partes[0].strip()] = partes[1].strip()
+        cfg["clasificacion"] = clasif
+
     json.dump(doc, open(salida, "w"), ensure_ascii=False, indent=2)
     print(f"{len(mapa)} equivalencias · {sum(hechos.values())} movimientos remapeados\n")
     for k, n in hechos.most_common():
@@ -72,6 +92,16 @@ def main():
         for c, imp in sin_mapa.most_common():
             print(f"   {c:52} {imp:>10,.2f} €".replace(",", " "))
     print(f"\ncatálogo: {len(viejas)} → {len(cfg['categorias'])} categorías")
+    if clasif:
+        print(f"clasificación 50/30/20: {len(clasif)} madres")
+        # Aviso si alguna madre en uso se queda sin clasificar: su gasto saldría
+        # como "sin clasificar" en el reparto y lo desvirtuaría entero.
+        madres = {str(m.get(c) or "").split(">")[0].strip()
+                  for m in doc["movimientos"] for c in ("tipo_gasto",)
+                  if str(m.get(c) or "").strip()}
+        faltan = sorted(madres - set(clasif))
+        if faltan:
+            print(f"   ⚠ madres en uso sin clasificar: {', '.join(faltan)}")
     print(f"escrito: {salida}")
 
 

@@ -23,6 +23,10 @@ import sys, re, json, datetime, collections
 # Nombre del titular tal y como lo escribe cada banco en sus conceptos
 RE_PROPIO = re.compile(r"alberto\s+casado|casado\s+vadillo", re.I)
 RE_TRANSF = re.compile(r"trans\b|transf|transferencia|incoming transfer|traspaso", re.I)
+# Sus propios apuntes de "llevar dinero a invertir" son traspasos entre cuentas
+# suyas, aunque el concepto no diga ni su nombre ni las cuentas: el de 100 € a
+# MyInvestor tiene su pareja exacta el mismo día.
+RE_PROPIO_EXTRA = re.compile(r"^inversion(es)?$|entrada de dinero en|pasar dinero", re.I)
 
 
 def fecha(s):
@@ -54,9 +58,17 @@ def main():
                         "imp": signo * abs(float(str(m.get("importe") or 0).replace(",", "."))),
                         "txt": str(m.get("detalle") or "")})
 
-    # Solo se consideran los que alguien ha marcado como transferencia propia
+    # Solo se consideran los que alguien ha marcado como transferencia propia.
+    # Además del nombre del titular vale que el concepto NOMBRE DOS CUENTAS
+    # suyas: "Pasar dinero de Bankinter a Santander" es tan inequívoco como su
+    # nombre, y sin esto esos pares se quedaban sueltos.
+    def dos_cuentas(t):
+        return sum(1 for c in cuentas if re.search(re.escape(c), t, re.I)) >= 2
+
     def propio(x):
-        return bool(RE_PROPIO.search(x["txt"]) and RE_TRANSF.search(x["txt"]))
+        t = x["txt"].strip()
+        return bool((RE_PROPIO.search(t) and RE_TRANSF.search(t))
+                    or dos_cuentas(t) or RE_PROPIO_EXTRA.search(t))
 
     candidatos = [x for x in sueltos if propio(x)]
     usados, parejas, ambiguos = set(), [], []
@@ -83,6 +95,22 @@ def main():
         usados.add(id(x["m"])); usados.add(id(y["m"]))
         parejas.append((x, y))
 
+    # ── El efectivo ingresado en ventanilla vuelve de Efectivo ──
+    # Es el reintegro de cajero al revés: dinero que sale del bolsillo y entra en
+    # la cuenta. Su contrapartida es Efectivo, que no tiene extracto, así que no
+    # hay pareja que buscar: se convierte aquí. Sin esto, ese dinero se contaba
+    # como si nunca hubiera salido del bolsillo e inflaba el ajuste de efectivo.
+    RE_DEPOSITO = re.compile(r"dep[óo]sito de efectivo|ingreso de efectivo", re.I)
+    depositos = 0
+    for m in doc["movimientos"]:
+        if m.get("tipo") != "Ingreso" or not RE_DEPOSITO.search(str(m.get("detalle") or "")):
+            continue
+        destino = str(m.get("cuenta_destino") or "").strip()
+        if destino not in cuentas or destino == "Efectivo":
+            continue
+        m["tipo"] = "Traspaso"; m["cuenta_origen"] = "Efectivo"; m["tipo_ingreso"] = ""
+        depositos += 1
+
     # ── aplicar: un único traspaso sustituye a las dos mitades ──
     fuera = set()
     for x, y in parejas:
@@ -97,6 +125,7 @@ def main():
     doc["movimientos"] = [m for m in doc["movimientos"] if id(m) not in fuera]
     json.dump(doc, open(salida, "w"), ensure_ascii=False, indent=2)
 
+    print(f"ingresos de efectivo en ventanilla   {depositos:>4}  (pasan a traspaso desde Efectivo)")
     print(f"transferencias propias detectadas   {len(candidatos):>4}")
     print(f"parejas resueltas                   {len(parejas):>4}")
     print(f"ambiguas, para decidir a mano       {len(ambiguos):>4}")
