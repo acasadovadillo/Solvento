@@ -131,8 +131,37 @@ def leer_mes(pdf):
                          "importe": importe, "saldo": saldo})
             anterior = saldo
 
+    # ── compras con la Mastercard: tabla propia, sin columna de saldo ──
+    # No tocan la cuenta corriente hasta la liquidación mensual, así que van
+    # aparte: mezclarlas con la caja descuadraría el extracto.
+    # La tarjeta no tiene columna de saldo, así que aquí el signo SÍ hay que
+    # sacarlo de la columna: se toma la posición de «Cargos» y «Abonos» en su
+    # cabecera y se mira dónde cae el número. El control es que la suma del mes
+    # tiene que dar el saldo final de la tarjeta.
+    tarj_movs, dentro_t, x_abonos = [], False, None
+    for cruda in plano.split("\n"):
+        if "Movimientos de su Tarjeta" in cruda:
+            dentro_t = True; x_abonos = None; continue
+        if dentro_t and "Cargos" in cruda and x_abonos is None:
+            i = cruda.find("Abo")
+            x_abonos = i if i > 0 else None
+            continue
+        if dentro_t and re.search(r"Movimientos de su Cuenta|FONDOS DE INVERSIÓN", cruda):
+            dentro_t = False; continue
+        if not dentro_t:
+            continue
+        mt = re.match(r"^\s*(\d{2}-\d{2}-\d{2})\s+(.*?)\s{2,}([\d.]+,\d{2})\s*$", cruda.rstrip())
+        if not mt:
+            continue
+        d, mo, a = mt.group(1).split("-")
+        valor = float(mt.group(3).replace(".", "").replace(",", "."))
+        # a la derecha de donde empieza «Abonos» es un abono; a la izquierda, cargo
+        signo = 1 if (x_abonos and mt.start(3) >= x_abonos - 4) else -1
+        tarj_movs.append({"fecha": datetime.date(2000 + int(a), int(mo), int(d)),
+                          "concepto": mt.group(2).strip(), "importe": signo * valor})
+
     return {"pdf": pdf.name, "mes": mes, "cc": cc, "tarjeta": tarjeta,
-            "fondos": fondos, "movs": movs, "dudosas": dudosas}
+            "fondos": fondos, "movs": movs, "dudosas": dudosas, "tarj_movs": tarj_movs}
 
 
 def main(carpeta):

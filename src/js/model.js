@@ -254,7 +254,7 @@
     // La Cartera incluye el efectivo sin invertir de los brókers.
     // La Cartera es solo lo invertido; el efectivo de bróker ya cuenta en Caja.
     const carteraTotal = inv.total;
-    const pas = valuatePasivos(db.pasivos);
+    const pas = valuatePasivos(db.pasivos, db.movimientos);
     // Patrimonio NETO = lo que tienes menos lo que debes.
     const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total - pas.total);
     const ratioInv = patrimonioNeto ? carteraTotal / patrimonioNeto * 100 : 0;
@@ -271,15 +271,43 @@
   // Aún no hay formulario para darlos de alta, pero el cálculo ya es real: en
   // cuanto el documento tenga db.pasivos, la tarjeta y la página los reflejan y
   // el patrimonio neto los descuenta.
-  function valuatePasivos(pasivos) {
+  // Una deuda puede llevar su saldo escrito a mano (una hipoteca, que se
+  // actualiza de tarde en tarde) o CALCULARSE de sus movimientos, que es lo que
+  // conviene a una tarjeta de crédito: cada compra la aumenta y la liquidación
+  // de fin de mes la salda, sin que haya que mantener la cifra a mano.
+  //
+  // Una tarjeta no es una cuenta: comprar con ella no baja la caja, sube la
+  // deuda. Por eso sus movimientos NO entran en computeSaldos —el nombre de la
+  // deuda no está entre las cuentas— y solo el cargo de la liquidación, que sí
+  // sale de una cuenta real, mueve el efectivo.
+  function saldoDeMovimientos(nombre, movimientos) {
+    let debe = 0;
+    for (const m of movimientos || []) {
+      const imp = Math.abs(num(m.importe)) || 0;
+      const o = String(m.cuenta_origen || "").trim();
+      const d = String(m.cuenta_destino || "").trim();
+      if (m.tipo === "Gasto" && o === nombre) debe += imp;          // compra: más deuda
+      else if (m.tipo === "Ingreso" && d === nombre) debe -= imp;   // abono o devolución
+      else if (m.tipo === "Traspaso" && d === nombre) debe -= imp;  // liquidación: la salda
+      else if (m.tipo === "Traspaso" && o === nombre) debe += imp;
+    }
+    return round2(debe);
+  }
+
+  function valuatePasivos(pasivos, movimientos) {
     const items = (pasivos || [])
-      .map((r) => ({
-        id: r.id,
-        nombre: r.nombre || r.concepto || "Deuda",
-        tipo: r.tipo || "Préstamo",
-        entidad: r.entidad || "",
-        importe: num(r.importe ?? r.pendiente ?? r.saldo),
-      }))
+      .map((r) => {
+        const nombre = r.nombre || r.concepto || "Deuda";
+        const calculado = r.calcular === false ? null : saldoDeMovimientos(nombre, movimientos);
+        return {
+          id: r.id,
+          nombre,
+          tipo: r.tipo || "Préstamo",
+          entidad: r.entidad || "",
+          cuenta: r.cuenta || "",            // cuenta a la que está vinculada, si lo está
+          importe: calculado != null && r.importe == null ? calculado : num(r.importe ?? r.pendiente ?? r.saldo),
+        };
+      })
       .filter((x) => isFinite(x.importe) && x.importe > 0)
       .sort((a, b) => b.importe - a.importe);
     return { items, n: items.length, total: round2(items.reduce((s, x) => s + x.importe, 0)) };

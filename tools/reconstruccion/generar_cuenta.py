@@ -27,11 +27,37 @@ Decisiones que merecen explicación:
     extracto del otro banco, que todavía no tenemos.
 """
 import sys, re, json, datetime, collections
+from pathlib import Path
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from cotejar import leer_xls_santander, fecha, efecto, es_inversion
 
+
+def leer_extracto(ruta):
+    """Un .xls es el extracto de Santander; una carpeta, los PDF de Bankinter."""
+    p = Path(ruta)
+    if p.is_file():
+        return leer_xls_santander(str(p))
+    from leer_bankinter import leer_mes
+    meses = sorted([d for d in (leer_mes(x) for x in p.glob("*.pdf")) if d["mes"]],
+                   key=lambda d: d["mes"])
+    filas, n = [], 0
+    for d in meses:
+        for m in d["movs"]:
+            n += 1
+            filas.append({"linea": n, "fecha": m["fecha"], "concepto": m["concepto"],
+                          "importe": m["importe"], "saldo": m["saldo"]})
+    # El saldo de partida real de la cuenta, que en Bankinter es 0: la cuenta se
+    # abre dentro del periodo, así que no hay que inventar ningún saldo inicial.
+    filas[0]["saldo_apertura"] = meses[0]["cc"][0] or 0.0
+    return filas
+
 RE_CAJERO = re.compile(r"retirada de efectivo|cajero autom|disposicion de efectivo", re.I)
 RE_PROPIA = re.compile(r"transferencia .*alberto casado", re.I)
+
+
+def _descendente(filas):
+    """¿El extracto va del presente al pasado? Santander sí, Bankinter no."""
+    return filas[0]["fecha"] > filas[-1]["fecha"]
 
 
 def nuevo_id(p="m"):
@@ -48,7 +74,7 @@ def base(fecha_es, importe, detalle, ref):
 
 def main():
     ext, docj, cuenta, efectivo, salida = sys.argv[1:6]
-    filas = leer_xls_santander(ext)
+    filas = leer_extracto(ext)
     doc = json.load(open(docj))
 
     # ── emparejamiento en dos pasadas: ±3 días y, para lo que quede, ±10 ──
@@ -133,11 +159,14 @@ def main():
         nuevos.append(mov)
 
     # ── los sobrantes: a Efectivo si tienen concepto propio, fuera si son tapahuecos ──
-    RE_TAPA = re.compile(r"ajuste|actualizar el html|saldo en cuenta inicial|cuadr", re.I)
+    detalle_sobrantes = []
+    RE_TAPA = re.compile(r"ajuste|actualizar el html|saldo\s.*inicial|cuadr|"
+                         r"gasto estimado|no registrado|aproximado", re.I)
     for c in sobrantes:
         m, txt = dict(c["m"]), str(c["m"].get("detalle") or "").strip()
         if RE_TAPA.search(txt) or txt in ("", "-"):
             informe["tapahuecos eliminado"] += 1
+            detalle_sobrantes.append((c, "ELIMINADO"))
             continue
         # gasto o préstamo real que el banco no tiene: se pagó en efectivo
         if m["tipo"] in ("Gasto", "Préstamo"):
@@ -146,6 +175,7 @@ def main():
             m["cuenta_destino"] = efectivo
         nuevos.append(m)
         informe["movido a Efectivo"] += 1
+        detalle_sobrantes.append((c, "→ Efectivo"))
 
     doc["movimientos"] = resto + nuevos
 
@@ -153,7 +183,12 @@ def main():
     # El más antiguo es el de MAYOR número de línea, no el de menor fecha: el
     # extracto va del presente al pasado y el primer día trae varias líneas
     # empatadas, entre las que la fecha no sabe cuál fue primero.
-    antiguo = max(filas, key=lambda f: f["linea"])
+    # El más antiguo es el primero de la cadena. Santander numera del presente al
+    # pasado y Bankinter al revés, así que se decide por la fecha y, en empate,
+    # por el extremo de la numeración que corresponda.
+    antiguo = min(filas, key=lambda f: (f["fecha"], -f["linea"] if _descendente(filas) else f["linea"]))
+    if "saldo_apertura" in filas[0]:
+        antiguo = dict(antiguo, saldo=filas[0]["saldo_apertura"], importe=0.0)
     saldo_ini = round(antiguo["saldo"] - antiguo["importe"], 2)
     if abs(saldo_ini) > 0.005:
         ap = base(f"{antiguo['fecha'] - datetime.timedelta(days=1):%d/%m/%Y}", saldo_ini,
@@ -164,8 +199,16 @@ def main():
 
     calc = round(sum(e for e in (efecto(m, cuenta) for m in doc["movimientos"]
                                  if not es_inversion(m)) if e is not None), 2)
-    banco = min(filas, key=lambda f: f["linea"])["saldo"]
+    # El saldo de cierre es el del movimiento más reciente: al principio de la
+    # numeración en Santander, que va del presente al pasado, y al final en
+    # Bankinter, que va al revés.
+    banco = (min if _descendente(filas) else max)(filas, key=lambda f: f["linea"])["saldo"]
 
+    if detalle_sobrantes:
+        print("\nLO QUE SOLO ESTÁ EN SOLVENTO (el extracto no lo trae)")
+        for c, destino in detalle_sobrantes:
+            print(f"   {c['f']:%d/%m/%Y} {c['m']['tipo']:9} {c['e']:>10,.2f}  {destino:12} "
+                  f"{(c['m'].get('detalle') or c['m'].get('tipo_gasto') or '(sin concepto)')[:44]}".replace(",", " "))
     print("\nRESUMEN")
     for k, v in informe.most_common():
         print(f"   {k:34} {v:>5}")
