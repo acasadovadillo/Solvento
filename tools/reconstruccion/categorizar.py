@@ -10,12 +10,18 @@ queda en el equipo.
 Formato del archivo de reglas, separado por tabuladores y en orden de prioridad
 (gana la primera que encaje):
 
-    patrón<TAB>categoría<TAB>centro<TAB>dirección
+    patrón<TAB>categoría<TAB>centro<TAB>dirección<TAB>condiciones
 
 La dirección puede ser «in» (solo ingresos), «out» (solo gastos) o quedar vacía
 (cualquiera). Hace falta más de lo que parece: un Bizum recibido de un inquilino
 es alquiler y uno enviado a esa misma persona es un reparto de gastos, y sin
 distinguirlos la misma regla clasificaría mal la mitad.
+
+Las CONDICIONES son opcionales y afinan por importe o por fecha:
+«=50», «>=40», «<40», «desde:01/08/2026», «hasta:31/12/2026», separadas por
+espacios. Existen porque a veces el concepto no distingue: los Bizums de la
+pareja se llaman todos igual, y solo el importe y la fecha dicen cuáles son su
+mitad de la recarga de la cuenta común y cuáles son otra cosa.
 
 El patrón es una expresión regular sobre el concepto, sin distinguir mayúsculas.
 La categoría y el centro pueden llevar la profundidad que haga falta con «>», y
@@ -27,7 +33,7 @@ las buenas.
 
     python3 categorizar.py <entrada.json> <salida.json> <reglas.tsv> [--aplicar]
 """
-import sys, re, json, collections
+import sys, re, json, datetime, collections
 
 
 def cargar(ruta):
@@ -43,9 +49,45 @@ def cargar(ruta):
         pat, cat = partes[0].strip(), partes[1].strip()
         centro = partes[2].strip() if len(partes) > 2 else ""
         direccion = partes[3].strip().lower() if len(partes) > 3 else ""
+        cond = partes[4].strip() if len(partes) > 4 else ""
         reglas.append({"n": n, "re": re.compile(pat, re.I), "pat": pat, "cat": cat,
-                       "centro": centro, "dir": direccion, "casan": 0, "importe": 0.0})
+                       "centro": centro, "dir": direccion, "cond": condiciones(cond, n),
+                       "casan": 0, "importe": 0.0})
     return reglas
+
+
+def condiciones(txt, n):
+    """Convierte «>=40 desde:01/08/2026» en una lista de comprobaciones."""
+    pruebas = []
+    for t in txt.split():
+        m = re.fullmatch(r"(>=|<=|>|<|=)(\d+(?:[.,]\d+)?)", t)
+        if m:
+            op, v = m.group(1), float(m.group(2).replace(",", "."))
+            pruebas.append(("imp", op, v)); continue
+        m = re.fullmatch(r"(desde|hasta):(\d{2}/\d{2}/\d{4})", t)
+        if m:
+            d, mth, a = (int(x) for x in m.group(2).split("/"))
+            pruebas.append((m.group(1), None, datetime.date(a, mth, d))); continue
+        print(f"   ⚠ condición no entendida en la regla {n}, se ignora: {t}")
+    return pruebas
+
+
+def cumple(pruebas, imp, f):
+    for clave, op, v in pruebas:
+        if clave == "imp":
+            if op == "=" and abs(imp - v) > 0.005: return False
+            if op == ">=" and not imp >= v - 0.005: return False
+            if op == "<=" and not imp <= v + 0.005: return False
+            if op == ">" and not imp > v: return False
+            if op == "<" and not imp < v: return False
+        elif f is None or (clave == "desde" and f < v) or (clave == "hasta" and f > v):
+            return False
+    return True
+
+
+def fecha(s):
+    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})", str(s or ""))
+    return datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1))) if m else None
 
 
 def main():
@@ -68,8 +110,10 @@ def main():
         campo = "tipo_gasto" if m.get("tipo") == "Gasto" else "tipo_ingreso"
         tenia = bool(str(m.get(campo) or "").strip())
         sentido = "in" if m.get("tipo") == "Ingreso" else "out"
+        imp, f = num(m.get("importe")), fecha(m.get("fecha"))
         encajan = [r for r in reglas
-                   if (not r["dir"] or r["dir"] == sentido) and r["re"].search(texto)]
+                   if (not r["dir"] or r["dir"] == sentido) and r["re"].search(texto)
+                   and cumple(r["cond"], imp, f)]
         if not encajan:
             if not tenia:
                 sin_regla += 1

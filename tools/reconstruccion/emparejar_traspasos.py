@@ -27,6 +27,11 @@ RE_TRANSF = re.compile(r"trans\b|transf|transferencia|incoming transfer|traspaso
 # suyas, aunque el concepto no diga ni su nombre ni las cuentas: el de 100 € a
 # MyInvestor tiene su pareja exacta el mismo día.
 RE_PROPIO_EXTRA = re.compile(r"^inversion(es)?$|entrada de dinero en|pasar dinero", re.I)
+# Revolut nombra la operación pero nunca al pagador: una «recarga con open
+# banking» solo puede venir de una cuenta bancaria del propio titular, porque es
+# él quien se autentica en su banco para ordenarla. Sin esto, la entrada no se
+# reconocía como propia y su cargo en Bankinter se quedaba huérfano.
+RE_RECARGA = re.compile(r"recarga con open banking|recarga desde|top-?up", re.I)
 
 
 def fecha(s):
@@ -70,7 +75,8 @@ def main():
     def propio(x):
         t = x["txt"].strip()
         return bool((RE_PROPIO.search(t) and RE_TRANSF.search(t))
-                    or dos_cuentas(t) or RE_PROPIO_EXTRA.search(t))
+                    or dos_cuentas(t) or RE_PROPIO_EXTRA.search(t)
+                    or RE_RECARGA.search(t))
 
     candidatos = [x for x in sueltos if propio(x)]
     usados, parejas, ambiguos = set(), [], []
@@ -78,26 +84,37 @@ def main():
     # marca de "es mío" puede estar en la entrada —"Incoming transfer from
     # ALBERTO CASADO"— mientras la salida se llama "Traspaso por bono transporte
     # julio"; exigiéndola en la salida, esos pares no se consideraban nunca.
-    for x in sorted(candidatos, key=lambda x: (x["f"], -abs(x["imp"]))):
-        if id(x["m"]) in usados:
-            continue
-        opciones = []
+    opciones = collections.defaultdict(list)
+    for x in candidatos:
         for y in sueltos:
-            if id(y["m"]) in usados or y is x:
+            if y is x or y["cta"] == x["cta"] or abs(y["imp"] + x["imp"]) > 0.005:
                 continue
-            if y["cta"] == x["cta"] or abs(y["imp"] + x["imp"]) > 0.005:
-                continue
-            d = abs((y["f"] - x["f"]).days)
-            if d <= dias and (propio(y) or RE_TRANSF.search(y["txt"])):
-                opciones.append((d, y))
-        if not opciones:
+            # El dinero sale antes de entrar. Medir la distancia en valor
+            # absoluto daba pares imposibles: la recarga de Revolut ordenada el
+            # 08/08 se emparejaba con un cargo del 03/08, cinco días ANTES de
+            # existir la orden. Se deja un día de margen por las fechas valor.
+            sale, entra = (x, y) if x["imp"] < 0 else (y, x)
+            d = (entra["f"] - sale["f"]).days
+            if -1 <= d <= dias and (propio(y) or RE_TRANSF.search(y["txt"])):
+                opciones[id(x)].append((d, y))
+
+    # Se resuelve por CERCANÍA, no por orden de calendario. Recorriendo por fecha,
+    # el primer cargo del mes se quedaba con una entrada que pertenecía a otro
+    # posterior —el de Revolut se lo llevaba el cargo del 03/08 estando el suyo a
+    # un solo día— y el error se propagaba en cadena. Los pares evidentes se
+    # cierran antes y los dudosos se reparten lo que queda.
+    todas = sorted(((d, x, y) for x in candidatos for d, y in opciones[id(x)]),
+                   key=lambda o: (o[0], o[1]["f"]))
+    for d, x, y in todas:
+        if id(x["m"]) in usados or id(y["m"]) in usados:
             continue
-        opciones.sort(key=lambda o: o[0])
-        # Si hay varias a la misma distancia, no se decide sola
-        if len(opciones) > 1 and opciones[0][0] == opciones[1][0]:
-            ambiguos.append((x, [o[1] for o in opciones if o[0] == opciones[0][0]]))
+        # Si a esa misma distancia hay otra entrada libre, no se decide sola
+        empates = [z for dd, z in opciones[id(x)]
+                   if dd == d and z is not y and id(z["m"]) not in usados]
+        if empates:
+            ambiguos.append((x, [y] + empates))
+            usados.add(id(x["m"]))
             continue
-        y = opciones[0][1]
         usados.add(id(x["m"])); usados.add(id(y["m"]))
         # La salida es siempre el origen del traspaso, venga de x o de y
         parejas.append((x, y) if x["imp"] < 0 else (y, x))
