@@ -391,6 +391,63 @@
     ev.target.value = "";
   }
 
+  /*
+   * Reconstrucción contable: sacar el documento EN CLARO y volver a meterlo.
+   *
+   * La copia normal va cifrada, que es como debe viajar. Pero para rehacer las
+   * cuentas desde los extractos del banco hace falta poder leer lo que hay y
+   * devolver el resultado, y eso el cifrado no lo permite: la clave es la
+   * contraseña, que solo tienes tú. Estos dos botones abren esa puerta y por eso
+   * avisan de lo que son: un archivo en claro es tu vida financiera en texto
+   * plano, y quien lo tenga no necesita ninguna contraseña.
+   */
+  function doExportClaro() {
+    const doc = DB.state.doc;
+    if (!doc) { setError("sync-status", "No hay datos que exportar"); return; }
+    const n = (doc.movimientos || []).length, i = (doc.inversiones || []).length;
+    if (!window.confirm(
+      `Vas a descargar ${n} movimientos y ${i} operaciones SIN CIFRAR, en texto legible.\n\n` +
+      `Cualquiera que abra ese archivo ve tus finanzas enteras sin necesidad de tu contraseña. ` +
+      `Bórralo en cuanto termines de usarlo.\n\n¿Sigo?`)) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" }));
+    a.download = "solvento-datos-EN-CLARO.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+    setError("sync-status", "Descargado en claro · bórralo cuando acabes", "#fbbf24");
+  }
+
+  // Reemplaza el documento entero. No es la importación de la primera vez
+  // (aquella solo entra cuando no hay nada); esta pisa lo que haya.
+  async function doReemplazarClaro(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    if (!file) return;
+    try {
+      const nuevo = JSON.parse(await file.text());
+      // Se comprueba la forma antes de tocar nada: un JSON cualquiera no vale
+      const faltan = ["movimientos", "inversiones"].filter((k) => !Array.isArray(nuevo[k]));
+      if (faltan.length) throw new Error("no parece un documento de Solvento (falta " + faltan.join(" y ") + ")");
+      const viejo = DB.state.doc || {};
+      const cuenta = (d, k) => (Array.isArray(d[k]) ? d[k].length : 0);
+      if (!window.confirm(
+        `Se va a REEMPLAZAR todo lo que hay en Solvento:\n\n` +
+        `  movimientos  ${cuenta(viejo, "movimientos")} → ${cuenta(nuevo, "movimientos")}\n` +
+        `  operaciones  ${cuenta(viejo, "inversiones")} → ${cuenta(nuevo, "inversiones")}\n` +
+        `  propiedades  ${cuenta(viejo, "inmuebles")} → ${cuenta(nuevo, "inmuebles")}\n\n` +
+        `Lo que hay ahora se pierde. ¿Tienes hecha la copia cifrada?`)) return;
+      // Se conserva la configuración actual salvo que el archivo traiga la suya:
+      // cuentas, activos y objetivo no vienen de los extractos del banco.
+      if (!nuevo.config && viejo.config) nuevo.config = viejo.config;
+      DB.state.doc = nuevo;
+      setError("sync-status", "Reemplazado · guardando…", "#9ca3af");
+      await saveDoc();
+      setError("sync-status", "Datos reemplazados ✓", "#10b981");
+    } catch (e) {
+      setError("sync-status", "No se pudo reemplazar: " + (e.message || e));
+    }
+  }
+
   function init() {
     $("login-form").addEventListener("submit", handleLogin);
     $("import-form").addEventListener("submit", handleImport);
@@ -402,6 +459,8 @@
     $("sync-pull").addEventListener("click", doPull);
     $("sync-export").addEventListener("click", doExport);
     $("sync-import").addEventListener("change", doImport);
+    $("sync-export-claro").addEventListener("click", doExportClaro);
+    $("sync-reemplazar").addEventListener("change", doReemplazarClaro);
     // Reintentar lo pendiente al recuperar conexión o al volver a la pestaña
     window.addEventListener("online", reintentarPendiente);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) reintentarPendiente(); });
