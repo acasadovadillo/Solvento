@@ -285,7 +285,13 @@
   }
   // Tarjeta del panel de Patrimonio. Si se le pasa `pagina`, es clicable y
   // navega a esa sección (con realce al pasar el cursor y una flecha de pista).
-  function hubCard(titulo, valor, pct, color, sub, subColor, pagina) {
+  function hubCard(titulo, valor, pct, color, sub, subColor, pagina, reparto) {
+    // Al señalar la tarjeta se resalta su tramo en la gráfica de reparto, que es
+    // lo que ata los colores de una con los de la otra. Sin globo: la tarjeta ya
+    // enseña el importe y el porcentaje.
+    const enlace = reparto
+      ? ` onmouseenter="v2Reparto('${reparto}','${String(titulo).replace(/'/g, "\\'")}',true)" onmouseleave="v2Reparto('${reparto}',null)"`
+      : "";
     const clicable = pagina
       ? ` role="link" tabindex="0" onclick="v2Tab('${pagina}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();v2Tab('${pagina}');}"`
         + ` onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''"`
@@ -294,7 +300,7 @@
     const flecha = pagina
       ? `<span style="color:${color};font-weight:700;margin-left:0.35rem;">&nbsp;→</span>`
       : "";
-    return `<div class="dashboard-panel" style="border-left:3px solid ${color};${pagina ? "cursor:pointer;transition:background 0.2s;" : ""}"${clicable}>
+    return `<div class="dashboard-panel" style="border-left:3px solid ${color};${pagina ? "cursor:pointer;transition:background 0.2s;" : ""}"${clicable}${enlace}>
       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:${color};margin-bottom:0.6rem;">${esc(titulo)}</div>
       <div style="font-size:1.7rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">${valor}</div>
       <div style="font-size:0.82rem;color:${subColor || "#9ca3af"};font-weight:600;margin-top:0.3rem;">${sub}</div>
@@ -477,11 +483,11 @@
          { label: "Propiedades", value: m.inm.total, accent: "#a16207" }],
         fmtEur(m.patrimonioNeto), "Neto", null, { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-hub-grid" style="margin-top:1.5rem;">
-        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja")}
-        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera")}
-        ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades")}
+        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja", "patrimonio")}
+        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera", "patrimonio")}
+        ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades", "patrimonio")}
         ${hubCard("Pasivos", fmtEur(m.pas.total), m.ratioPas, "#6b7280",
-                  m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas", null, "pasivos")}
+                  m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas", null, "pasivos", "patrimonio")}
       </div>` +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio");
   }
@@ -1052,15 +1058,24 @@
   // Resalta un tramo de la barra de distribución y saca sus cifras en un globo.
   // Se dispara igual desde el tramo que desde su entrada de la leyenda.
   // Resalta un tramo del reparto (segmento de la barra o sector del dónut) y saca
-  // sus cifras en un globo. Se dispara igual desde la gráfica que desde su
-  // entrada de la leyenda, porque las dos pasan el mismo índice.
-  window.v2Reparto = function (id, i) {
+  // sus cifras en un globo. Se dispara igual desde la gráfica, desde su entrada de
+  // la leyenda o desde la tarjeta correspondiente.
+  //   ref      índice, o el nombre del tramo (las tarjetas no saben en qué
+  //            posición ha quedado el suyo: el reparto deja fuera los negativos)
+  //   sinGlobo resaltar sin sacar las cifras, para cuando quien pregunta ya las
+  //            enseña —la tarjeta— y el globo saldría lejos del cursor
+  window.v2Reparto = function (id, ref, sinGlobo) {
     const wrap = document.getElementById("rep-" + id);
     if (!wrap) return;
     const tip = wrap.querySelector(".rep-tip");
     const segs = wrap.querySelectorAll(".rep-seg");
     const leg = document.getElementById("leg-" + id);
     const items = leg ? leg.querySelectorAll(".leg-it") : [];
+    let i = ref;
+    if (typeof ref === "string") {
+      i = [...segs].findIndex((s) => s.dataset.label === ref);
+      if (i < 0) i = null;             // lo que no está repartido no resalta nada
+    }
     if (i == null) {
       wrap.classList.remove("act");
       segs.forEach((s) => s.classList.remove("on"));
@@ -1075,6 +1090,7 @@
     if (leg) { leg.classList.add("act"); items.forEach((s, k) => s.classList.toggle("on", k === i)); }
     tip.innerHTML = `<div style="color:#9ca3af;">${esc(seg.dataset.label)}</div>
       <div style="margin-top:0.1rem;"><b>${esc(seg.dataset.pct)}</b> <span style="color:#6b7280;">·</span> <span style="color:#9ca3af;">${esc(seg.dataset.eur)}</span></div>`;
+    if (sinGlobo) { tip.hidden = true; return; }
     tip.hidden = false;
     if (wrap.dataset.tipo === "circular") {
       // El dónut es pequeño y redondo: el globo va centrado encima, y quien
