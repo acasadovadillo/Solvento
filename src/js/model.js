@@ -331,6 +331,70 @@
   // no hay que migrar nada y lo que ya escribiste sigue valiendo. La jerarquía
   // se deduce partiendo por ">".
   const SEP = ">";
+
+  /*
+   * Una categoría es una RUTA de la profundidad que haga falta:
+   * "Vivienda > Suministros > Luz". partirCategoria sigue devolviendo madre e
+   * hija —la madre es el primer nivel y la hija todo lo que cuelga— porque es
+   * lo que espera la tabla de Balance y así un catálogo de tres niveles ya
+   * funciona sin tocar la interfaz. rutaCategoria da los niveles sueltos, y
+   * arbolCategorias construye el árbol completo para cuando la vista lo pinte.
+   */
+  function rutaCategoria(c) {
+    const t = String(c || "").trim();
+    if (!t) return ["Sin categoría"];
+    const partes = t.split(SEP).map((x) => x.trim()).filter(Boolean);
+    return partes.length ? partes : ["Sin categoría"];
+  }
+
+  function arbolCategorias(totales) {
+    const raiz = { nombre: "", completa: "", total: 0, propio: 0, hijas: [], _idx: {} };
+    for (const c in totales) {
+      const ruta = rutaCategoria(c);
+      let nodo = raiz;
+      raiz.total += totales[c];
+      ruta.forEach((paso, i) => {
+        let hijo = nodo._idx[paso];
+        if (!hijo) {
+          hijo = nodo._idx[paso] = { nombre: paso, completa: ruta.slice(0, i + 1).join(" " + SEP + " "),
+                                     nivel: i, total: 0, propio: 0, hijas: [], _idx: {} };
+          nodo.hijas.push(hijo);
+        }
+        hijo.total += totales[c];
+        // "propio" es lo imputado a ESTE nivel, sin contar lo de sus hijas
+        if (i === ruta.length - 1) hijo.propio += totales[c];
+        nodo = hijo;
+      });
+    }
+    const limpiar = (n) => {
+      delete n._idx;
+      n.total = round2(n.total); n.propio = round2(n.propio);
+      n.hijas.sort((a, b) => b.total - a.total);
+      n.hijas.forEach(limpiar);
+      return n;
+    };
+    return limpiar(raiz).hijas;
+  }
+
+  /*
+   * Eje analítico: a qué centro de coste se imputa cada gasto. Es un eje
+   * INDEPENDIENTE de la categoría, no un nivel más de ella. Si el destino
+   * viviera dentro de la categoría —"Vivienda > Poza de la Sal > Luz"— no se
+   * podría preguntar ni cuánto se gasta en luz en total ni cuánto cuesta Poza
+   * de la Sal, que son justo las dos preguntas de la contabilidad analítica.
+   */
+  function arbolCentros(movimientos, desde, hasta) {
+    const totales = {};
+    for (const m of movimientos || []) {
+      if (m.tipo !== "Gasto" || esMovInversion(m)) continue;
+      const f = parseFechaES(m.fecha);
+      if (!f || (desde && f < desde) || (hasta && f > hasta)) continue;
+      const c = String(m.centro || "").trim() || "Sin imputar";
+      totales[c] = (totales[c] || 0) + Math.abs(num(m.importe) || 0);
+    }
+    return arbolCategorias(totales);
+  }
+
   function partirCategoria(c) {
     const t = String(c || "").trim();
     if (!t) return { madre: "Sin categoría", hija: null, completa: "Sin categoría" };
@@ -698,5 +762,5 @@
     return { cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, agruparCategorias, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();
