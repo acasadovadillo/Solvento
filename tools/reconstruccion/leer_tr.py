@@ -121,7 +121,10 @@ def leer(pdf):
             # La descripción se recompone de los renglones que abarca la transacción
             desc = []
             for g in filas[max(0, i - 1): i + 2]:
-                desc += [w["t"] for w in g
+                # El propio PDF de Trade Republic pega un «null» al final de la
+                # descripción de muchas compras con tarjeta. Es basura de su
+                # generador de extractos, no parte del comercio.
+                desc += [re.sub(r"null$", "", w["t"]) for w in g
                          if 150 < w["x"] < euros[-2]["x"] - 10
                          and w["t"] not in TIPOS and w["t"] not in ("Transacción", "con", "tarjeta")]
             movs.append({"fecha": datetime.date(anio, mes, dia) if (dia and mes and anio) else None,

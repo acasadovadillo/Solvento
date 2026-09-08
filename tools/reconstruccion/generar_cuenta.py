@@ -59,7 +59,11 @@ def leer_extracto(ruta):
     filas[0]["saldo_apertura"] = meses[0]["cc"][0] or 0.0
     return filas
 
-RE_CAJERO = re.compile(r"retirada de efectivo|cajero autom|disposicion de efectivo", re.I)
+# El Santander llama «reintegro contra cuenta en ATM» a sacar dinero en un cajero
+# ajeno. Sin esto, esos 20 € figuraban como un gasto sin comercio en vez de como
+# dinero que se pasó al bolsillo.
+RE_CAJERO = re.compile(r"retirada de efectivo|cajero autom|disposicion de efectivo"
+                       r"|reintegro.*\batm\b|reintegro (de|en) caj", re.I)
 RE_PROPIA = re.compile(r"transferencia .*alberto casado", re.I)
 
 
