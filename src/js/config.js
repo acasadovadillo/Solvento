@@ -19,7 +19,7 @@
     { cuenta: "Santander",      accent: "#ec0000", logo: "img/account-logo-santander.png" },
     { cuenta: "Trade Republic", accent: "#ffffff", logo: "img/account-logo-trade-republic.png", cartera: "efectivo" },
     { cuenta: "MyInvestor",     accent: "#e12363", logo: "img/account-logo-myinvestor.png", cartera: "efectivo" },
-    { cuenta: "Revolut",        accent: "#191c1f", logo: "img/account-logo-revolut.svg" },
+    { cuenta: "Revolut",        accent: "#191c1f", logo: "img/account-logo-revolut.png" },
     { cuenta: "Efectivo",       accent: "#2d9e5f", logo: null, emoji: "💵" },
   ];
 

@@ -516,10 +516,7 @@
       const rentCell = (a.coste > 0 && isFinite(a.importe))
         ? `<div style="color:${rc(a.ganancia)};font-weight:600;">${a.ganancia >= 0 ? "+" : ""}${fmtEur(a.ganancia)}</div><div style="color:${rc(a.rentPct)};font-size:0.78rem;">${fmtPct(a.rentPct)}${isFinite(a.cagr) && a.coste >= 100 ? " · CAGR " + a.cagr.toFixed(1) + "%" : ""}</div>`
         : `<span style="color:#4b5563;">—</span>`;
-      // La palabra «Gasto» o «Ingreso» delante del concepto repetía lo que ya
-      // dice el color del importe. Se queda como title de la fila, para quien
-      // navegue con lector de pantalla o pase el ratón por encima.
-      return `<tr class="table-row" title="${esc(r.tipo)}">
+      return `<tr class="table-row">
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:#fff;font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(a.tipo)}${a.isin && a.isin !== "-" ? ' · <span style="font-family:ui-monospace,monospace;">' + esc(a.isin) + "</span>" : ""}</div></div></div></td>
         <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(a.importe)}</td>
         <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${a.coste ? fmtEur(a.coste) : "—"}</td>
@@ -555,10 +552,7 @@
 
     const filas = an.filas.map((f) => {
       const cs = f.celdas.slice(desde);
-      // La palabra «Gasto» o «Ingreso» delante del concepto repetía lo que ya
-      // dice el color del importe. Se queda como title de la fila, para quien
-      // navegue con lector de pantalla o pase el ratón por encima.
-      return `<tr class="table-row" title="${esc(r.tipo)}"><td style="text-align:left;position:sticky;left:0;background:#12141d;z-index:1;">
+      return `<tr class="table-row"><td style="text-align:left;position:sticky;left:0;background:#12141d;z-index:1;">
         <div style="display:flex;align-items:center;gap:0.5rem;min-width:200px;">${logoImg(f.nombre, f.isin, 20)}
           <span style="color:#e5e7eb;font-weight:600;font-size:0.82rem;">${esc(f.nombre.length > 32 ? f.nombre.slice(0, 31) + "…" : f.nombre)}</span></div></td>
         ${cs.map(celda).join("")}</tr>`;
