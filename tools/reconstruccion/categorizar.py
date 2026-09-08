@@ -66,25 +66,31 @@ def main():
         campo = "tipo_gasto" if m.get("tipo") == "Gasto" else "tipo_ingreso"
         tenia = bool(str(m.get(campo) or "").strip())
         sentido = "in" if m.get("tipo") == "Ingreso" else "out"
-        regla = next((r for r in reglas
-                      if (not r["dir"] or r["dir"] == sentido) and r["re"].search(texto)), None)
-        if not regla:
+        encajan = [r for r in reglas
+                   if (not r["dir"] or r["dir"] == sentido) and r["re"].search(texto)]
+        if not encajan:
             if not tenia:
                 sin_regla += 1
                 importe_sin += num(m.get("importe"))
                 ejemplos_sin[texto[:52]] += 1
             continue
-        regla["casan"] += 1
-        regla["importe"] += num(m.get("importe"))
-        if tenia and not regla["cat"]:
-            ya_tenian += 1
+        # LOS DOS EJES SE RESUELVEN POR SEPARADO. Si una sola regla fijara los
+        # dos, «Carrefour comida con Hafsa» se llevaría la categoría de la regla
+        # del supermercado y también su centro, y el centro de Hafsa no llegaría
+        # nunca. Siendo ejes independientes, gana la primera regla que aporte
+        # categoría y la primera que aporte centro, que pueden no ser la misma.
+        r_cat = next((r for r in encajan if r["cat"]), None)
+        r_cen = next((r for r in encajan if r["centro"]), None)
+        for r in {id(x): x for x in (r_cat, r_cen) if x}.values():
+            r["casan"] += 1
+            r["importe"] += num(m.get("importe"))
         if aplicar:
-            # La categoría propia manda sobre la regla: lo que clasificaste a
-            # mano es mejor información que un patrón.
-            if regla["cat"] and not tenia:
-                m[campo] = regla["cat"]
-            if regla["centro"]:
-                m["centro"] = regla["centro"]
+            # Lo que clasificaste a mano manda sobre cualquier regla: es mejor
+            # información que un patrón.
+            if r_cat and r_cat["cat"] and not tenia:
+                m[campo] = r_cat["cat"]
+            if r_cen and r_cen["centro"]:
+                m["centro"] = r_cen["centro"]
             tocados += 1
 
     if aplicar:
