@@ -21,7 +21,7 @@ no se inventa: se localiza y se convierte de Gasto en Traspaso.
 import sys, re, json, datetime
 from pathlib import Path
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from leer_bankinter import leer_mes
+from leer_bankinter import leer_todo
 from cotejar import fecha, efecto, es_inversion
 
 TARJETA = "Mastercard Oro"
@@ -38,8 +38,7 @@ def nuevo_id():
 
 def main():
     carpeta, entrada, salida = sys.argv[1:4]
-    meses = sorted([d for d in (leer_mes(p) for p in Path(carpeta).glob("*.pdf")) if d["mes"]],
-                   key=lambda d: d["mes"])
+    meses = leer_todo(carpeta)
     compras = [m for d in meses for m in d["tarj_movs"]]
     doc = json.load(open(entrada))
 
@@ -116,7 +115,10 @@ def main():
             elif m.get("tipo") == "Traspaso" and m.get("cuenta_destino") == TARJETA: t -= imp
         return round(t, 2)
 
-    objetivo = meses[-1]["tarjeta"][1] or 0.0
+    # El último mes puede ser un CSV transcrito sin datos de tarjeta: el saldo
+    # objetivo es el del último extracto que sí la traiga.
+    ult = next((d for d in reversed(meses) if d["tarjeta"][1] is not None), meses[-1])
+    objetivo = ult["tarjeta"][1] or 0.0
     resto = round(objetivo - calcular(), 2)
     if abs(resto) > 0.005:
         cierre = max(m["fecha"] for d in meses for m in d["tarj_movs"])
@@ -141,9 +143,9 @@ def main():
     print(f"   de ellas, con tu concepto y categoría {heredadas:>5}")
     print(f"liquidaciones convertidas en traspaso    {liquidaciones:>5}")
     print(f"\nDEUDA PENDIENTE calculada  {deuda:>10,.2f} €".replace(",", " "))
-    print(f"según el extracto de agosto {meses[-1]['tarjeta'][1]:>9,.2f} €".replace(",", " "))
-    print("   " + ("✓ cuadra" if abs(deuda - (meses[-1]["tarjeta"][1] or 0)) < 0.005
-                   else f"✗ descuadre {deuda - (meses[-1]['tarjeta'][1] or 0):.2f} €"))
+    print(f"según el extracto de {ult['mes'][0]}-{ult['mes'][1]:02d}  {objetivo:>9,.2f} €".replace(",", " "))
+    print("   " + ("✓ cuadra" if abs(deuda - objetivo) < 0.005
+                   else f"✗ descuadre {deuda - objetivo:.2f} €"))
     print(f"\nescrito: {salida}")
 
 

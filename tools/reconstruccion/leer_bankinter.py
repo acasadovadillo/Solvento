@@ -164,9 +164,36 @@ def leer_mes(pdf):
             "fondos": fondos, "movs": movs, "dudosas": dudosas, "tarj_movs": tarj_movs}
 
 
+def leer_csv(ruta):
+    """Un mes transcrito a mano, para cuando el banco aún no ha emitido su
+    extracto. Mismas garantías: la cadena de saldos del propio archivo se
+    comprueba igual que la de un PDF, y los saldos inicial y final se deducen
+    de ella en vez de escribirse aparte, que sería una cifra más que falsear."""
+    movs = []
+    for linea in ruta.read_text(encoding="utf-8").split("\n"):
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or linea.lower().startswith("fecha;"):
+            continue
+        f, con, imp, sal = linea.split(";")
+        d, mo, a = (int(x) for x in f.split("/"))
+        movs.append({"fecha": datetime.date(a, mo, d), "concepto": con.strip(),
+                     "importe": float(imp.replace(".", "").replace(",", ".")),
+                     "saldo": float(sal.replace(".", "").replace(",", "."))})
+    movs.sort(key=lambda m: m["fecha"])
+    ini = round(movs[0]["saldo"] - movs[0]["importe"], 2)
+    return {"pdf": ruta.name, "mes": (movs[0]["fecha"].year, movs[0]["fecha"].month),
+            "cc": (ini, movs[-1]["saldo"]), "tarjeta": (None, None), "fondos": {},
+            "movs": movs, "dudosas": [], "tarj_movs": []}
+
+
+def leer_todo(carpeta):
+    p = Path(carpeta)
+    meses = [leer_mes(x) for x in p.glob("*.pdf")] + [leer_csv(x) for x in p.glob("*.csv")]
+    return sorted([d for d in meses if d["mes"]], key=lambda d: d["mes"])
+
+
 def main(carpeta):
-    datos = sorted([d for d in (leer_mes(p) for p in Path(carpeta).glob("*.pdf")) if d["mes"]],
-                   key=lambda d: d["mes"])
+    datos = leer_todo(carpeta)
     fallos = 0
     print(f"{'mes':9}{'movs':>6}{'s.inicial':>12}{'s.final':>12}{'suma':>12}   cuadre")
     for d in datos:
@@ -190,8 +217,13 @@ def main(carpeta):
     print(f"\nTOTAL {sum(len(d['movs']) for d in datos)} movimientos · "
           f"{datos[0]['mes'][0]}-{datos[0]['mes'][1]:02d} → {datos[-1]['mes'][0]}-{datos[-1]['mes'][1]:02d} · "
           f"cierra en {datos[-1]['cc'][1]:,.2f} €".replace(",", " "))
-    print(f"MASTERCARD ORO (pasivo): {datos[-1]['tarjeta'][1] or 0:,.2f} €".replace(",", " "))
-    for nom, v in datos[-1]["fondos"].items():
+    # El último mes puede venir de un CSV transcrito, que solo trae la cuenta
+    # corriente: la tarjeta y los fondos se toman del último mes que los tenga.
+    ult_t = next((d for d in reversed(datos) if d["tarjeta"][1] is not None), datos[-1])
+    ult_f = next((d for d in reversed(datos) if d["fondos"]), datos[-1])
+    print(f"MASTERCARD ORO (pasivo): {ult_t['tarjeta'][1] or 0:,.2f} €  "
+          f"(a cierre de {ult_t['mes'][0]}-{ult_t['mes'][1]:02d})".replace(",", " "))
+    for nom, v in ult_f["fondos"].items():
         print(f"   fondo · {nom:34} {v[1]:>12,.2f} €".replace(",", " "))
     print(f"\n{'SIN INCIDENCIAS ✓' if not fallos else str(fallos) + ' INCIDENCIAS'}")
     return datos

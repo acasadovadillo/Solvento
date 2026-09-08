@@ -37,9 +37,8 @@ def leer_extracto(ruta):
     p = Path(ruta)
     if p.is_file():
         return leer_xls_santander(str(p))
-    from leer_bankinter import leer_mes
-    meses = sorted([d for d in (leer_mes(x) for x in p.glob("*.pdf")) if d["mes"]],
-                   key=lambda d: d["mes"])
+    from leer_bankinter import leer_todo
+    meses = leer_todo(p)
     filas, n = [], 0
     for d in meses:
         for m in d["movs"]:
