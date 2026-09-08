@@ -19,6 +19,7 @@
     { cuenta: "Santander",      accent: "#ec0000", logo: "img/account-logo-santander.png" },
     { cuenta: "Trade Republic", accent: "#ffffff", logo: "img/account-logo-trade-republic.png", cartera: "efectivo" },
     { cuenta: "MyInvestor",     accent: "#e12363", logo: "img/account-logo-myinvestor.png", cartera: "efectivo" },
+    { cuenta: "Revolut",        accent: "#191c1f", logo: "img/account-logo-revolut.svg" },
     { cuenta: "Efectivo",       accent: "#2d9e5f", logo: null, emoji: "💵" },
   ];
 
@@ -100,7 +101,20 @@
   const usarDoc = (doc) => { DOC = doc; };
   const cfgDoc = () => (DOC && DOC.config) || {};
 
-  const cuentas  = () => cfgDoc().cuentas  || CUENTAS_DEFECTO;
+  // Los logos son cosméticos y viven en el código, no en el documento cifrado.
+  // Una cuenta dada de alta desde fuera de la web —un script de importación, por
+  // ejemplo— no los trae, y sin este relleno se quedaría sin marca aunque el
+  // archivo estuviera en img/. Solo se completa lo que falta: lo que diga tu
+  // documento manda siempre.
+  const cuentas = () => {
+    const propias = cfgDoc().cuentas;
+    if (!propias) return CUENTAS_DEFECTO;
+    return propias.map((c) => {
+      if (c.logo) return c;
+      const d = CUENTAS_DEFECTO.find((x) => x.cuenta === c.cuenta);
+      return d && d.logo ? Object.assign({}, c, { logo: d.logo }) : c;
+    });
+  };
   const activos  = () => cfgDoc().activos  || ACTIVOS_DEFECTO;
   const objetivo = () => cfgDoc().objetivo || OBJETIVO_DEFECTO;
   // Los brókers de la sub-navegación de Cartera se deducen de las cuentas:
