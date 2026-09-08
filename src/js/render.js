@@ -741,7 +741,10 @@
       const revalorizacion = (r.coste > 0 && isFinite(r.ganancia))
         ? `<div style="color:${rc(r.ganancia)};font-weight:600;">${r.ganancia >= 0 ? "+" : ""}${fmtEur(r.ganancia)}</div><div style="color:${rc(r.rentPct)};font-size:0.76rem;">${fmtPct(r.rentPct)}</div>`
         : `<span style="color:#4b5563;">—</span>`;
-      return `<tr class="table-row">
+      // El reparto es por tipo, así que la fila resalta el tramo del suyo: varias
+      // propiedades del mismo tipo encienden el mismo tramo, que es lo correcto.
+      const tipoJs = String(r.tipo).replace(/'/g, "\\'");
+      return `<tr class="table-row" onmouseenter="v2Reparto('propiedades','${tipoJs}',true)" onmouseleave="v2Reparto('propiedades',null)">
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
           <span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span>
           <div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div>
@@ -762,7 +765,8 @@
       : "";
 
     return header("Propiedades", fmtEur(inm.total)) +
-      (donutItems.length ? vistaPanel("propiedades", "Distribución por tipo", donutItems, fmtEur(inm.total), "Total", null, { sinLeyenda: true }) : "") +
+      (donutItems.length ? vistaPanel("propiedades", "Distribución por tipo", donutItems, fmtEur(inm.total), "Total", null,
+                                      { sinLeyenda: true, desnudo: true }) : "") +
       rentaPanel +
       `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
