@@ -54,9 +54,11 @@ def main():
         f = fecha(m.get("fecha"))
         if not cta or cta not in cuentas or not f:
             continue
+        # Se mira la redacción propia Y la del banco: la primera dice mejor QUÉ
+        # fue, la segunda dice si fue una transferencia.
         sueltos.append({"m": m, "cta": cta, "f": f,
                         "imp": signo * abs(float(str(m.get("importe") or 0).replace(",", "."))),
-                        "txt": str(m.get("detalle") or "")})
+                        "txt": (str(m.get("detalle") or "") + " · " + str(m.get("detalle_banco") or "")).strip(" ·")})
 
     # Solo se consideran los que alguien ha marcado como transferencia propia.
     # Además del nombre del titular vale que el concepto NOMBRE DOS CUENTAS
@@ -72,9 +74,13 @@ def main():
 
     candidatos = [x for x in sueltos if propio(x)]
     usados, parejas, ambiguos = set(), [], []
-    for x in sorted(candidatos, key=lambda x: x["f"]):
-        if id(x["m"]) in usados or x["imp"] >= 0:
-            continue                                   # se recorre desde la salida
+    # Se recorre desde CUALQUIERA de las dos patas, no solo desde la salida. La
+    # marca de "es mío" puede estar en la entrada —"Incoming transfer from
+    # ALBERTO CASADO"— mientras la salida se llama "Traspaso por bono transporte
+    # julio"; exigiéndola en la salida, esos pares no se consideraban nunca.
+    for x in sorted(candidatos, key=lambda x: (x["f"], -abs(x["imp"]))):
+        if id(x["m"]) in usados:
+            continue
         opciones = []
         for y in sueltos:
             if id(y["m"]) in usados or y is x:
@@ -93,7 +99,8 @@ def main():
             continue
         y = opciones[0][1]
         usados.add(id(x["m"])); usados.add(id(y["m"]))
-        parejas.append((x, y))
+        # La salida es siempre el origen del traspaso, venga de x o de y
+        parejas.append((x, y) if x["imp"] < 0 else (y, x))
 
     # ── El efectivo ingresado en ventanilla vuelve de Efectivo ──
     # Es el reintegro de cajero al revés: dinero que sale del bolsillo y entra en

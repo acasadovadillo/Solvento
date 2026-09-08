@@ -21,7 +21,11 @@ Decisiones que merecen explicación:
   · El concepto del banco («Transaccion Contactless En...») es peor que el que
     escribió el usuario («Cena con Laura por ayudarme con la mudanza»). Manda el
     extracto en los hechos —fecha e importe—, no en la descripción: si había un
-    detalle escrito a mano, se conserva.
+    detalle escrito a mano, se conserva. Pero el del banco se guarda aparte, en
+    detalle_banco, y no por completismo: conservar solo la redacción propia
+    borraba la palabra que identificaba un traspaso. «Compra Decathlon» era en
+    realidad una transferencia a Trade Republic con la que después se pagó el
+    Decathlon, y sin el texto del banco no había forma de verlo.
 
   · Las retiradas de cajero se convierten en traspaso a Efectivo aquí mismo y no
     esperan a la fase de traspasos: su contrapartida es Efectivo, que no tiene
@@ -69,9 +73,9 @@ def nuevo_id(p="m"):
     return p + "".join(random.choice("0123456789abcdef") for _ in range(10))
 
 
-def base(fecha_es, importe, detalle, ref):
+def base(fecha_es, importe, detalle, ref, banco=""):
     return {"id": nuevo_id(), "marca_temporal": datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            "fecha": fecha_es, "importe": f"{abs(importe):.2f}", "tipo": "",
+            "fecha": fecha_es, "importe": f"{abs(importe):.2f}", "tipo": "", "detalle_banco": banco,
             "cuenta_origen": "", "cuenta_destino": "", "tipo_ingreso": "", "tipo_gasto": "",
             "tipo_prestamo": "", "persona_prestamo": "", "detalle": detalle, "imp_ref": ref}
 
@@ -139,6 +143,8 @@ def main():
             mov["fecha"] = f"{fl['fecha']:%d/%m/%Y}"          # §1: la fecha, del banco
             if str(mov.get("detalle") or "").strip() in ("", "-"):
                 mov["detalle"] = fl["concepto"]
+            elif mov["detalle"] != fl["concepto"]:
+                mov["detalle_banco"] = fl["concepto"]
             mov["imp_ref"] = f"{cuenta}|{fl['linea']}"
             nuevos.append(mov)
             informe["traspaso conservado"] += 1
@@ -157,7 +163,8 @@ def main():
             informe["actualizado del extracto"] += 1
         else:
             informe["alta nueva"] += 1
-        mov = base(f"{fl['fecha']:%d/%m/%Y}", fl["importe"], detalle, f"{cuenta}|{fl['linea']}")
+        mov = base(f"{fl['fecha']:%d/%m/%Y}", fl["importe"], detalle, f"{cuenta}|{fl['linea']}",
+                    fl["concepto"] if detalle != fl["concepto"] else "")
         if fl["importe"] < 0 and RE_CAJERO.search(fl["concepto"]):
             mov["tipo"] = "Traspaso"; mov["cuenta_origen"] = cuenta; mov["cuenta_destino"] = efectivo
             informe["cajero → traspaso a Efectivo"] += 1

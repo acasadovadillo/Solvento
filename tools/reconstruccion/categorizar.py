@@ -62,7 +62,9 @@ def main():
     for m in doc["movimientos"]:
         if m.get("tipo") not in ("Gasto", "Ingreso"):
             continue
-        texto = str(m.get("detalle") or "")
+        # Los dos textos: si el banco dice "TRANS INM" y el usuario "Compra
+        # Decathlon", las reglas deben poder ver ambas cosas.
+        texto = (str(m.get("detalle") or "") + " · " + str(m.get("detalle_banco") or "")).strip(" ·")
         campo = "tipo_gasto" if m.get("tipo") == "Gasto" else "tipo_ingreso"
         tenia = bool(str(m.get(campo) or "").strip())
         sentido = "in" if m.get("tipo") == "Ingreso" else "out"
