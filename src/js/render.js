@@ -732,6 +732,7 @@
       `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
       </div></div>` +
+      chartPanel("Evolución de la caja", "v2-chart-caja") +
       movimientosList();
   }
 
@@ -1216,6 +1217,10 @@
       if (cp) window.SolventoCharts.mount(cp, series.patrimonio, { color: "#10b981", id: "patr" });
       const cc = document.getElementById("v2-chart-cartera");
       if (cc) window.SolventoCharts.mount(cc, series.cartera, { color: "#8b5cf6", id: "cart" });
+      // Azul, el mismo color con el que la caja aparece en el reparto del
+      // patrimonio y en su tarjeta: la gráfica se reconoce sin leer el título.
+      const cj = document.getElementById("v2-chart-caja");
+      if (cj) window.SolventoCharts.mount(cj, series.caja, { color: "#3b82f6", id: "caja" });
       montarComparativa();
     }
     // ajustar treemap si la pestaña Cartera está activa; y en cualquier resize

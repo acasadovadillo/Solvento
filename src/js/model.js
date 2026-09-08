@@ -752,14 +752,19 @@
       .filter((x) => x && isFinite(x.v));
     const inmEn = (t) => inmCompra.reduce((s, x) => s + (x.t <= t ? x.v : 0), 0);
 
-    let liq = 0; const cartera = [], patrimonio = [];
+    // La caja se acumulaba ya para el patrimonio, pero no se devolvía, y era la
+    // única de las tres que no se podía ver por separado. Es la que dice si el
+    // mes se cerró con más dinero disponible o con menos, que es otra pregunta
+    // distinta de cuánto vale todo lo que tienes.
+    let liq = 0; const caja = [], cartera = [], patrimonio = [];
     for (const t of dates) {
       liq += deltaByDate[t];
       const cv = round2(invEn(t));
+      caja.push([t, round2(liq)]);
       cartera.push([t, cv]);
       patrimonio.push([t, round2(liq + cv + inmEn(t))]);
     }
-    return { cartera, patrimonio };
+    return { caja, cartera, patrimonio };
   }
 
   window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
