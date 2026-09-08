@@ -468,19 +468,21 @@
 
   // ── Páginas ──
   function pagePatrimonio(m) {
+    // El reparto va pegado a la cifra total, justo antes de las cuatro tarjetas:
+    // se lee como el desglose de ese número, y las tarjetas son la leyenda.
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
-      `<div class="v2-hub-grid">
+      vistaPanel("patrimonio", "Distribución del patrimonio",
+        [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
+         { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
+         { label: "Propiedades", value: m.inm.total, accent: "#a16207" }],
+        fmtEur(m.patrimonioNeto), "Neto", null, { sinLeyenda: true, desnudo: true }) +
+      `<div class="v2-hub-grid" style="margin-top:1.5rem;">
         ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja")}
         ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera")}
         ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades")}
         ${hubCard("Pasivos", fmtEur(m.pas.total), m.ratioPas, "#6b7280",
                   m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas", null, "pasivos")}
       </div>` +
-      vistaPanel("patrimonio", "Distribución del patrimonio",
-        [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
-         { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
-         { label: "Propiedades", value: m.inm.total, accent: "#a16207" }],
-        fmtEur(m.patrimonioNeto), "Neto", null, { sinLeyenda: true, desnudo: true }) +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio");
   }
 
