@@ -32,31 +32,36 @@
   }
 
   // ── Donut SVG (mismo método que la v1) ──
-  function donut(items, centerValue, centerLabel) {
+  function donut(items, centerValue, centerLabel, id) {
     const total = items.reduce((s, x) => s + (x.value > 0 ? x.value : 0), 0);
     let acum = 0;
-    const sectors = items.map((it) => {
+    // Sin <title>: las cifras salen en el globo, no en el tooltip del navegador
+    const sectors = items.map((it, i) => {
       const pct = total > 0 ? it.value / total * 100 : 0;
       const rot = acum * 3.6;
       acum += pct;
-      return `<circle class="sector" cx="21" cy="21" r="${R_DONUT}" fill="transparent" stroke="${it.accent}" stroke-width="3"
+      return `<circle class="sector rep-seg" data-label="${esc(it.label)}" data-pct="${fmtPct(pct)}" data-eur="${fmtEur(it.value)}"
+        onmouseenter="v2Reparto('${id}',${i})" onmouseleave="v2Reparto('${id}',null)"
+        cx="21" cy="21" r="${R_DONUT}" fill="transparent" stroke="${it.accent}" stroke-width="3"
         stroke-dasharray="${pct.toFixed(4)} ${(100 - pct).toFixed(4)}" stroke-dashoffset="25"
-        style="transform:rotate(${rot.toFixed(2)}deg);transform-origin:center;"><title>${esc(it.label)}: ${fmtEur(it.value)} (${pct.toFixed(1)}%)</title></circle>`;
+        style="transform:rotate(${rot.toFixed(2)}deg);transform-origin:center;"></circle>`;
     }).join("");
-    return `<div class="chart-wrapper">
+    return `<div class="chart-wrapper rep" id="rep-${id}" data-tipo="circular" onmouseleave="v2Reparto('${id}',null)">
         <svg class="donut" viewBox="0 0 42 42">${sectors}</svg>
         <div class="donut-center">
           <span style="font-size:1rem;font-weight:700;color:#fff;">${centerValue}</span>
           <span style="font-size:0.55rem;color:#6b7280;text-transform:uppercase;margin-top:0.2rem;">${esc(centerLabel)}</span>
         </div>
+        <div class="rep-tip" hidden></div>
       </div>`;
   }
   // fila = true: los ítems se ciñen a su contenido para poder ir uno al lado de
   // otro; en columna conservan el ancho fijo que alinea las cifras a la derecha.
   function legend(items, total, targets, fila, idPanel) {
+    // Ni porcentaje ni importe: los pone el globo al apuntar, aquí o en la gráfica
     const estiloItem = fila
       ? "display:flex;align-items:center;gap:0.55rem;font-size:0.85rem;"
-      : "display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.85rem;width:100%;max-width:280px;margin:0.3rem 0;";
+      : "display:flex;align-items:center;gap:0.55rem;font-size:0.9rem;margin:0.42rem 0;";
     return items.map((it, i) => {
       const p = total > 0 ? it.value / total * 100 : 0;
       let badge = "";
@@ -67,16 +72,8 @@
       }
       const punto = `<span style="width:9px;height:9px;background:${it.accent};border-radius:50%;flex-shrink:0;"></span>`;
       const nombre = `<span style="color:#9ca3af;font-weight:500;">${esc(it.label)}</span>`;
-      // En fila solo el punto y el nombre: las cifras salen en el globo al pasar
-      // por encima, aquí o sobre el tramo de la barra, que es lo mismo.
-      if (fila) {
-        return `<div class="leg-it" style="${estiloItem}"
-          onmouseenter="v2Barra('${idPanel}',${i})" onmouseleave="v2Barra('${idPanel}',null)">${punto}${nombre}${badge}</div>`;
-      }
-      return `<div style="${estiloItem}">
-        <div style="display:flex;align-items:center;gap:0.5rem;">${punto}${nombre}${badge}</div>
-        <span style="text-align:right;"><span style="color:#fff;font-weight:600;display:block;line-height:1.2;">${fmtPct(p)}</span><span style="color:#6b7280;font-size:0.72rem;display:block;line-height:1.2;">${fmtEur(it.value)}</span></span>
-      </div>`;
+      return `<div class="leg-it" style="${estiloItem}"
+        onmouseenter="v2Reparto('${idPanel}',${i})" onmouseleave="v2Reparto('${idPanel}',null)">${punto}${nombre}${badge}</div>`;
     }).join("");
   }
 
@@ -102,13 +99,13 @@
   function barraDistribucion(items, total, id) {
     const segs = items.map((it, i) => {
       const p = total > 0 ? it.value / total * 100 : 0;
-      return `<div class="bd-seg" data-label="${esc(it.label)}" data-pct="${fmtPct(p)}" data-eur="${fmtEur(it.value)}"
-        onmouseenter="v2Barra('${id}',${i})" onmouseleave="v2Barra('${id}',null)"
+      return `<div class="bd-seg rep-seg" data-label="${esc(it.label)}" data-pct="${fmtPct(p)}" data-eur="${fmtEur(it.value)}"
+        onmouseenter="v2Reparto('${id}',${i})" onmouseleave="v2Reparto('${id}',null)"
         style="width:${p.toFixed(2)}%;background:${it.accent};"></div>`;
     }).join("");
-    return `<div class="bd" id="bd-${id}" onmouseleave="v2Barra('${id}',null)">
+    return `<div class="bd rep" id="rep-${id}" data-tipo="barra" onmouseleave="v2Reparto('${id}',null)">
       <div class="bd-bar">${segs}</div>
-      <div class="bd-tip" hidden></div>
+      <div class="rep-tip" hidden></div>
     </div>`;
   }
 
@@ -142,9 +139,9 @@
            ${negativos.map((n) => esc(n.label) + " está en negativo (" + fmtEur(n.value) + ")").join(" · ")}, así que no entra en el reparto.</div>`
       : "";
     const cuerpo = vistaDe(id) === "circular"
-      ? `<div style="display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;">
-           ${donut(positivos, centroValor, centroEtiqueta)}
-           <div style="display:flex;flex-direction:column;align-items:stretch;">${legend(positivos, total, targets)}</div>
+      ? `<div style="display:flex;align-items:center;justify-content:center;gap:2.5rem;flex-wrap:wrap;">
+           ${donut(positivos, centroValor, centroEtiqueta, id)}
+           <div class="leg-col" id="leg-${id}">${legend(positivos, total, targets, false, id)}</div>
          </div>`
       : `${barraDistribucion(positivos, total, id)}
          <div class="leg-fila" id="leg-${id}">${legend(positivos, total, targets, true, id)}</div>`;
@@ -1037,11 +1034,14 @@
   }
   // Resalta un tramo de la barra de distribución y saca sus cifras en un globo.
   // Se dispara igual desde el tramo que desde su entrada de la leyenda.
-  window.v2Barra = function (id, i) {
-    const wrap = document.getElementById("bd-" + id);
+  // Resalta un tramo del reparto (segmento de la barra o sector del dónut) y saca
+  // sus cifras en un globo. Se dispara igual desde la gráfica que desde su
+  // entrada de la leyenda, porque las dos pasan el mismo índice.
+  window.v2Reparto = function (id, i) {
+    const wrap = document.getElementById("rep-" + id);
     if (!wrap) return;
-    const tip = wrap.querySelector(".bd-tip");
-    const segs = wrap.querySelectorAll(".bd-seg");
+    const tip = wrap.querySelector(".rep-tip");
+    const segs = wrap.querySelectorAll(".rep-seg");
     const leg = document.getElementById("leg-" + id);
     const items = leg ? leg.querySelectorAll(".leg-it") : [];
     if (i == null) {
@@ -1059,7 +1059,14 @@
     tip.innerHTML = `<div style="color:#9ca3af;">${esc(seg.dataset.label)}</div>
       <div style="margin-top:0.1rem;"><b>${esc(seg.dataset.pct)}</b> <span style="color:#6b7280;">·</span> <span style="color:#9ca3af;">${esc(seg.dataset.eur)}</span></div>`;
     tip.hidden = false;
-    // Centrado sobre el tramo, pero sin salirse por los lados del panel
+    if (wrap.dataset.tipo === "circular") {
+      // El dónut es pequeño y redondo: el globo va centrado encima, y quien
+      // señala el sector concreto es el propio resalte.
+      tip.style.left = "50%";
+      return;
+    }
+    // En la barra el globo se centra sobre el tramo, recortado contra los bordes
+    // para que un tramo diminuto pegado al margen no lo saque fuera del panel.
     const ancho = wrap.getBoundingClientRect().width;
     const centro = seg.offsetLeft + seg.offsetWidth / 2;
     const medio = tip.getBoundingClientRect().width / 2;

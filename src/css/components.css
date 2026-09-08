@@ -72,9 +72,7 @@
 }
 .chart-wrapper { position: relative; width: 200px; height: 200px; flex-shrink: 0; margin: 0 auto; }
 .donut { width: 100%; height: 100%; transform: rotate(-90deg); background: transparent; border-radius: 50%; }
-.sector { fill: none; stroke-width: 4.5; transition: stroke-width 0.2s, opacity 0.2s; cursor: pointer; }
-.sector:hover { stroke-width: 5.5; }
-.donut:hover .sector:not(:hover) { opacity: 0.4; }
+.sector { fill: none; stroke-width: 4.5; transition: stroke-width 0.2s, opacity 0.2s; cursor: default; }
 .donut-center {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   width: 120px; height: 120px; background: #1a1d27; border: 1px solid #2a2d3a;
@@ -153,27 +151,31 @@
   .leg-fila > .leg-it { width: 100%; max-width: 280px; justify-content: space-between; }
 }
 
-/* ── Barra de distribución ──
-   Sin texto dentro: la leyenda pone los nombres y las cifras salen en un globo
-   al pasar por encima, con el tramo correspondiente resaltado y el resto
-   atenuado. El resalte funciona igual desde la barra que desde la leyenda. */
+/* ── Reparto (barra y dónut) ──
+   Ninguna de las dos vistas lleva cifras a la vista: la leyenda pone los nombres
+   y los números salen en un globo al apuntar, con ese tramo resaltado y el resto
+   atenuado. El resalte se dispara igual desde la gráfica que desde la leyenda,
+   así que las reglas son las mismas para el segmento de la barra y el sector. */
 .bd { position: relative; }
 .bd-bar {
   display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: #1a1d27;
 }
-.bd-seg { cursor: default; transition: opacity 0.15s, filter 0.15s; }
-.bd.act .bd-seg { opacity: 0.3; }
-.bd.act .bd-seg.on { opacity: 1; filter: brightness(1.12); }
-.bd-tip {
+.bd-seg { cursor: default; }
+.rep-seg { transition: opacity 0.15s, filter 0.15s, stroke-width 0.2s; }
+.rep.act .rep-seg { opacity: 0.3; }
+.rep.act .rep-seg.on { opacity: 1; }
+.rep.act .bd-seg.on { filter: brightness(1.12); }
+.rep.act circle.rep-seg.on { stroke-width: 5.5; }
+.rep-tip {
   position: absolute; bottom: calc(100% + 0.55rem); transform: translateX(-50%);
   background: #000; color: #fff; border: 1px solid #2a2d3a; border-radius: 8px;
   padding: 0.45rem 0.65rem; font-size: 0.72rem; line-height: 1.45;
   white-space: nowrap; pointer-events: none; z-index: 6;
 }
-.bd-tip[hidden] { display: none; }
-.leg-fila .leg-it { cursor: default; transition: opacity 0.15s; }
-.leg-fila.act .leg-it { opacity: 0.4; }
-.leg-fila.act .leg-it.on { opacity: 1; }
+.rep-tip[hidden] { display: none; }
+.leg-it { cursor: default; transition: opacity 0.15s; }
+.leg-fila.act .leg-it, .leg-col.act .leg-it { opacity: 0.4; }
+.leg-fila.act .leg-it.on, .leg-col.act .leg-it.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
-  .bd-seg, .leg-fila .leg-it { transition: none; }
+  .rep-seg, .leg-it { transition: none; }
 }
