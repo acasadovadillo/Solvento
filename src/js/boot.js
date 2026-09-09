@@ -297,7 +297,17 @@
   // Lo local manda si hay algo sin subir: un cambio hecho aquí y todavía no
   // publicado vale más que la copia del repo, y adoptarla lo borraría.
   async function refrescarBlobRemoto() {
-    if (hayPendiente()) return;
+    // Un dispositivo con cambios sin subir se queda con los suyos, pero dejar
+    // eso en silencio es lo que convierte «no se actualiza» en un misterio: si
+    // además no hay token, esos cambios no se van a poder subir nunca y esta
+    // copia no volverá a moverse hasta que alguien lo sepa.
+    if (hayPendiente()) {
+      setError("login-error", SYNC.hasToken()
+        ? "Hay cambios sin subir en este dispositivo: se abre tu copia local, no la del repositorio."
+        : "Hay cambios guardados solo aquí y este dispositivo no puede subirlos, así que no se traen los del repositorio. Para volver a ver los datos actualizados, borra los datos del sitio en tu navegador.",
+        "#fbbf24");
+      return;
+    }
     let remote = null;
     try { remote = await SYNC.fetchRemoteBlob(null); } catch (e) { return; }
     if (!remote) return;
