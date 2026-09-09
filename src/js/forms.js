@@ -215,7 +215,18 @@
       field("m-centro", "Centro de coste", selectorArbol("m-centro", e.centro)) +
       field("m-tpres", "Tipo de préstamo", select("m-tpres", ["Dinero prestado", "Devolución"], e.tipo_prestamo || "Dinero prestado")) +
       field("m-persona", "Persona", input("m-persona", "text", e.persona_prestamo)) +
-      field("m-detalle", "Detalle", input("m-detalle", "text", e.detalle));
+      field("m-detalle", "Detalle", input("m-detalle", "text", e.detalle)) +
+      // Lo que dijo el banco, tal cual, y dónde estaba. Tu redacción explica QUÉ
+      // fue; esto prueba de dónde salió, y hasta ahora había que abrir el PDF
+      // del extracto para verlo. No se puede editar a propósito: es la fuente.
+      ((e.detalle_banco || e.imp_ref)
+        ? `<div style="background:#12141d;border:1px solid #232733;border-radius:10px;
+                 padding:0.6rem 0.8rem;margin-top:0.9rem;">
+             <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:#4b5563;font-weight:700;">Según el banco</div>
+             ${e.detalle_banco ? `<div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.78rem;color:#9ca3af;margin-top:0.3rem;word-break:break-word;">${esc(e.detalle_banco)}</div>` : ""}
+             ${e.imp_ref ? `<div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">Extracto: ${esc(e.imp_ref)}</div>` : ""}
+           </div>`
+        : "");
     shell(existing ? "Editar movimiento" : "Nuevo movimiento", body, () => {
       const tipo = G("m-tipo"), importe = parseFloat(G("m-importe"));
       if (!isFinite(importe) || importe <= 0) return "Introduce un importe válido";

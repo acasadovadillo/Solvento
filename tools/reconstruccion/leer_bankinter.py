@@ -31,6 +31,24 @@ MESES = {m: i + 1 for i, m in enumerate(
     "enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre".split())}
 RE_IMPORTE = re.compile(r"^-?[\d.]{1,12},\d{2}$")
 RE_FECHA   = re.compile(r"^(\d{2})-(\d{2})-(\d{2})$")
+# El PDF de Bankinter trae mal codificada alguna letra acentuada y pdftotext la
+# convierte en una interrogación. No se puede adivinar el acento en general —«?»
+# entre letras podría ser cualquier cosa—, así que se corrigen solo los conceptos
+# que sabemos leer, y se amplía esta tabla cuando aparezca otro.
+CORRECCIONES = {"CURENERG?A": "CURENERGÍA"}
+
+
+def arreglar(texto):
+    for malo, bueno in CORRECCIONES.items():
+        while malo in texto.upper():
+            i = texto.upper().index(malo)
+            original = texto[i:i + len(malo)]
+            # Se respeta cómo venía escrito: el mismo concepto aparece en
+            # mayúsculas en unos extractos y capitalizado en otros.
+            texto = texto[:i] + (bueno if original.isupper() else bueno.capitalize()) + texto[i + len(malo):]
+    return texto
+
+
 TOL_Y = 3.0     # puntos: dos palabras del mismo renglón nunca distan más
 
 
@@ -127,7 +145,7 @@ def leer_mes(pdf):
             desc = " ".join(w["t"] for w in f
                             if w["x"] > f[0]["x"] + 60 and w["x"] < xc - 5 and not RE_FECHA.match(w["t"]))
             movs.append({"fecha": datetime.date(2000 + int(a), int(mo), int(d)),
-                         "concepto": re.sub(r"[#$]+", " ", desc).strip(),
+                         "concepto": arreglar(re.sub(r"[#$]+", " ", desc).strip()),
                          "importe": importe, "saldo": saldo})
             anterior = saldo
 
@@ -158,7 +176,7 @@ def leer_mes(pdf):
         # a la derecha de donde empieza «Abonos» es un abono; a la izquierda, cargo
         signo = 1 if (x_abonos and mt.start(3) >= x_abonos - 4) else -1
         tarj_movs.append({"fecha": datetime.date(2000 + int(a), int(mo), int(d)),
-                          "concepto": mt.group(2).strip(), "importe": signo * valor})
+                          "concepto": arreglar(mt.group(2).strip()), "importe": signo * valor})
 
     return {"pdf": pdf.name, "mes": mes, "cc": cc, "tarjeta": tarjeta,
             "fondos": fondos, "movs": movs, "dudosas": dudosas, "tarj_movs": tarj_movs}
@@ -176,7 +194,7 @@ def leer_csv(ruta):
             continue
         f, con, imp, sal = linea.split(";")
         d, mo, a = (int(x) for x in f.split("/"))
-        movs.append({"fecha": datetime.date(a, mo, d), "concepto": con.strip(),
+        movs.append({"fecha": datetime.date(a, mo, d), "concepto": arreglar(con.strip()),
                      "importe": float(imp.replace(".", "").replace(",", ".")),
                      "saldo": float(sal.replace(".", "").replace(",", "."))})
     movs.sort(key=lambda m: m["fecha"])
