@@ -901,6 +901,39 @@
     </div></div>`;
   }
 
+  // La revisión se pinta entera aunque no haya nada: cuando todo está bien, eso
+  // también es información, y es la única forma de saber que se ha mirado.
+  function panelRevision() {
+    let r;
+    try { r = window.SolventoModel.revision(CURRENT_DOC, window.__PRICES || {}); }
+    catch (e) { return `<div style="color:#ef4444;font-size:0.85rem;">No se ha podido revisar: ${esc(e.message)}</div>`; }
+    if (!r.total) {
+      return `<div style="background:#0f2a1c;border:1px solid #10b981;border-radius:12px;padding:1rem 1.15rem;">
+        <div style="color:${GREEN};font-weight:700;font-size:0.95rem;">Todo en orden</div>
+        <div style="color:#6b7280;font-size:0.82rem;margin-top:0.25rem;">
+          Ninguna cuenta en negativo, ningún apunte huérfano, ninguna deuda imposible y ningún duplicado a la vista.</div></div>`;
+    }
+    const bloque = (a) => {
+      const err = a.nivel === "error";
+      const col = err ? RED : "#f59e0b";
+      const muestra = a.items.slice(0, 8).map((x) => `<li style="margin:0.15rem 0;">${esc(x)}</li>`).join("");
+      return `<div style="background:${err ? "#2b1414" : "#2a2109"};border:1px solid ${col};border-radius:12px;
+             padding:0.85rem 1rem;margin-bottom:0.75rem;">
+        <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:baseline;flex-wrap:wrap;">
+          <div style="color:${col};font-weight:700;font-size:0.9rem;">${esc(a.titulo)}</div>
+          <div style="color:${col};font-size:0.78rem;font-weight:600;">${a.n}</div>
+        </div>
+        <div style="color:#9ca3af;font-size:0.8rem;margin-top:0.2rem;">${esc(a.detalle)}</div>
+        <ul style="color:#6b7280;font-size:0.78rem;margin:0.5rem 0 0;padding-left:1.1rem;">${muestra}</ul>
+        ${a.items.length > 8 ? `<div style="color:#4b5563;font-size:0.75rem;margin-top:0.3rem;">…y ${a.items.length - 8} más</div>` : ""}
+      </div>`;
+    };
+    const resumen = `<div style="font-size:0.85rem;color:#9ca3af;margin-bottom:0.75rem;">
+      ${r.errores ? `<b style="color:${RED};">${r.errores} ${r.errores === 1 ? "cosa" : "cosas"} que hay que arreglar</b> · ` : ""}
+      ${r.total - r.errores} ${r.total - r.errores === 1 ? "aviso" : "avisos"} para mirar cuando puedas.</div>`;
+    return resumen + r.avisos.sort((a, b) => (a.nivel === "error" ? 0 : 1) - (b.nivel === "error" ? 0 : 1)).map(bloque).join("");
+  }
+
   function pagePasivos(m) {
     const pas = (m && m.pas) || { items: [], n: 0, total: 0 };
     if (!pas.n) {
@@ -1544,6 +1577,7 @@
     poner("aj-categorias", fr.categorias);
     poner("aj-categorias-ingreso", fr.categoriasIngreso);
     poner("aj-centros", fr.centros);
+    poner("aj-revision", panelRevision());
   };
   window.v2AjSec = (sec) => {
     document.querySelectorAll(".aj-sec").forEach((e) => e.classList.toggle("active", e.id === "aj-sec-" + sec));

@@ -572,6 +572,124 @@
     };
   }
 
+  // ── Revisión de salud ────────────────────────────────────────────────────
+  // Lo que rompe una contabilidad no suele avisar. Un movimiento cambia de
+  // cuenta al editarlo, una devolución se apunta dos veces, un pasivo se queda
+  // en negativo: nada de eso da error, simplemente pasa, y se descubre semanas
+  // después cuadrando a mano. Esto lo busca a propósito.
+  function revision(db, prices) {
+    const avisos = [];
+    const movs = (db.movimientos || []);
+    const cuentas = new Set(CFG.cuentas().map((c) => c.cuenta));
+    const pasivos = new Set((db.pasivos || []).map((d) => d.nombre || d.concepto));
+    const hoy = new Date(); hoy.setHours(23, 59, 59, 999);
+    const mete = (nivel, titulo, detalle, items) => {
+      if (items && !items.length) return;
+      avisos.push({ nivel, titulo, detalle, n: items ? items.length : 0, items: items || [] });
+    };
+    const etiqueta = (m) => `${m.fecha} · ${(m.detalle || m.tipo_gasto || m.tipo_ingreso || m.tipo || "").slice(0, 44)}`;
+
+    // Una deuda negativa no significa nada: significa que le falta un cargo o le
+    // sobra un pago. Y como el patrimonio no puede restar una deuda negativa, se
+    // esconde, así que sin esto no se entera nadie.
+    const pasNeg = (db.pasivos || [])
+      .filter((r) => r.calcular !== false && r.importe == null)
+      .filter((r) => saldoDeMovimientos(r.nombre || r.concepto, movs) < -0.005)
+      .map((r) => `${r.nombre || r.concepto}: ${round2(saldoDeMovimientos(r.nombre || r.concepto, movs))} €`);
+    mete("error", "Una deuda ha quedado en negativo",
+         "Le falta algún cargo o le sobra algún pago. Mientras esté así no aparece en Pasivos y tu patrimonio sale inflado.", pasNeg);
+
+    // Movimientos que apuntan a un sitio que ya no existe
+    const huerfanos = movs.filter((m) => {
+      const cs = [m.cuenta_origen, m.cuenta_destino].map((x) => String(x || "").trim()).filter(Boolean);
+      return cs.some((c) => c !== "-" && !cuentas.has(c) && !pasivos.has(c));
+    }).map(etiqueta);
+    mete("error", "Movimientos en una cuenta que no existe",
+         "Su cuenta no está dada de alta ni es un pasivo, así que su dinero no entra en ningún saldo.", huerfanos);
+
+    // Traspasos mal formados: si le falta una pata, el dinero se evapora
+    const traspasosMal = movs.filter((m) => m.tipo === "Traspaso" &&
+      (!String(m.cuenta_origen || "").trim() || !String(m.cuenta_destino || "").trim() ||
+       String(m.cuenta_origen).trim() === String(m.cuenta_destino).trim())).map(etiqueta);
+    mete("error", "Traspasos con origen y destino mal puestos",
+         "Un traspaso mueve dinero entre dos cuentas distintas: sin una de las dos, el dinero desaparece de un lado sin llegar al otro.", traspasosMal);
+
+    const importesMal = movs.filter((m) => !(num(m.importe) > 0)).map(etiqueta);
+    mete("error", "Movimientos sin importe válido", "Un importe vacío, cero o negativo no se puede sumar.", importesMal);
+
+    // Duplicados. Mismo día y mismo importe pasa constantemente —dos cafés, dos
+    // bizums—, así que además tienen que compartir una palabra DISTINTIVA: una
+    // que casi no aparezca en el resto de conceptos. «Bizum», «contactless» o el
+    // número de la tarjeta salen en cientos de apuntes y no dicen nada; el
+    // nombre de un comercio raro, sí. Así se detecta la fianza contada dos veces
+    // en dos cuentas distintas sin sepultarlo en falsos positivos.
+    const palabras = (m) => {
+      const t = ((m.detalle || "") + " " + (m.detalle_banco || ""))
+        .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return new Set(t.match(/[a-z]{5,}/g) || []);
+    };
+    const gastosIngresos = movs.filter((m) => m.tipo === "Gasto" || m.tipo === "Ingreso");
+    const frecuencia = {};
+    const suyas = gastosIngresos.map((m) => {
+      const p = palabras(m);
+      p.forEach((w) => { frecuencia[w] = (frecuencia[w] || 0) + 1; });
+      return p;
+    });
+    const tope = Math.max(3, Math.round(gastosIngresos.length * 0.02));
+    const porClave = {};
+    gastosIngresos.forEach((m, i) => {
+      const k = [m.fecha, round2(num(m.importe)), m.tipo].join("|");
+      (porClave[k] = porClave[k] || []).push(i);
+    });
+    const dupes = [];
+    for (const k in porClave) {
+      const idx = porClave[k];
+      for (let a = 0; a < idx.length; a++) {
+        for (let b = a + 1; b < idx.length; b++) {
+          const comunes = Array.from(suyas[idx[a]]).filter((w) => suyas[idx[b]].has(w) && frecuencia[w] <= tope);
+          if (comunes.length) {
+            dupes.push(`${etiqueta(gastosIngresos[idx[a]])}  ·  y  ${String(gastosIngresos[idx[b]].detalle || "").slice(0, 34)}`);
+          }
+        }
+      }
+    }
+    mete("aviso", "Posibles apuntes duplicados",
+         "Mismo día, mismo importe y un concepto que se parece. A veces es casualidad; otras es el mismo dinero contado dos veces.", dupes);
+
+    const futuros = movs.filter((m) => { const f = parseFechaES(m.fecha); return f && f > hoy; }).map(etiqueta);
+    mete("aviso", "Movimientos con fecha futura", "Puede ser una fecha mal tecleada.", futuros);
+
+    // Una cuenta corriente en negativo casi siempre es una imputación mal puesta
+    const saldos = computeSaldos(movs, db.inversiones).saldos.filter((c) => c.saldo < -0.005)
+      .map((c) => `${c.cuenta}: ${c.saldo.toFixed(2)} €`);
+    mete("aviso", "Cuentas con saldo negativo",
+         "Salvo que tengas descubierto de verdad, suele significar que un gasto está cargado en la cuenta equivocada.", saldos);
+
+    // Categorías o centros gemelos: los que solo se distinguen por tildes,
+    // mayúsculas o espacios de más terminan siendo dos líneas donde hay una.
+    const normal = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+    const gemelas = (lista) => {
+      const por = {};
+      Array.from(new Set(lista)).forEach((c) => { (por[normal(c)] = por[normal(c)] || []).push(c); });
+      return Object.values(por).filter((v) => v.length > 1).map((v) => v.join("  ·  "));
+    };
+    mete("aviso", "Categorías que solo se distinguen por una tilde o un espacio",
+         "Se cuentan como dos y parten en dos el gasto de la misma cosa.",
+         gemelas(movs.flatMap((m) => [m.tipo_gasto, m.tipo_ingreso]).filter(Boolean)));
+    mete("aviso", "Centros de coste gemelos", "Lo mismo, en el otro eje.",
+         gemelas(movs.map((m) => m.centro).filter(Boolean)));
+
+    // Un activo con posición que no se puede valorar arrastra el patrimonio
+    const inv = valuate(db, prices);
+    const sinPrecio = (inv.assets || []).filter((a) => a.unidades > 1e-9 && !isFinite(a.importe))
+      .map((a) => a.nombre);
+    mete("error", "Activos que no se pueden valorar",
+         "Tienen posición abierta pero ni precio de mercado ni valor liquidativo, así que no suman en la cartera.", sinPrecio);
+
+    const errores = avisos.filter((a) => a.nivel === "error").length;
+    return { avisos, errores, total: avisos.length };
+  }
+
   function buildGastos(db) {
     const porMes = {};
     const mesDe = (f) => {
@@ -878,5 +996,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();
