@@ -752,12 +752,21 @@
         ? `${Number(r.peso).toLocaleString("es-ES", { maximumFractionDigits: 2 })} g de ${esc(r.metal)} · ${fmtEur(r.precioGramo)}/g`
         : esc(r.tipo);
       const alquiler = r.alquilada
-        ? `<div style="font-size:0.74rem;color:${GREEN};margin-top:0.15rem;">Alquilada · ${fmtEur(r.renta)}/mes${isFinite(r.yieldNeto) ? " · " + r.yieldNeto.toFixed(1).replace(".", ",") + "% neto anual" : ""}</div>`
+        ? `<div style="font-size:0.74rem;color:${GREEN};margin-top:0.15rem;">
+             Alquilada · ${fmtEur(r.renta)}/mes${r.fuenteRenta === "real" ? " de media" : ""}${isFinite(r.yieldNeto) ? " · " + (r.yieldNeto < 0 ? "−" : "") + Math.abs(r.yieldNeto).toFixed(1).replace(".", ",") + "% neto anual" : ""}
+             <span style="color:#6b7280;">${r.fuenteRenta === "real" ? "· últimos 12 meses" : "· previsión escrita a mano"}</span></div>`
         : "";
       // Lo que de verdad ha costado y rentado, contado de los movimientos que
       // llevan su centro. La renta mensual de la ficha es una previsión; esto es
       // lo que pasó: comunidad, suministros, derramas y los meses que no cobró.
       const real = r.centro ? CENTROS_REAL[r.centro] : null;
+      // Cobrar por un inmueble que no consta alquilado es una contradicción, y
+      // callarla dejaría la renta fuera del panel de alquileres sin explicación.
+      const sinMarcar = !r.alquilada && real && real.ingreso > 0
+        ? `<div style="font-size:0.72rem;color:#f59e0b;margin-top:0.2rem;">
+             Cobras ${esc(fmtEur(real.ingreso))} por él y no está marcado como alquilado.
+             <button onclick="v2EditProp('${String(r.id).replace(/'/g, "\\'")}')" style="background:none;border:none;padding:0;color:inherit;font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Marcarlo</button></div>`
+        : "";
       const realLinea = real && (real.gasto || real.ingreso)
         ? `<div style="font-size:0.74rem;color:#6b7280;margin-top:0.25rem;">
              Real acumulado ${real.gasto ? `· <span style="color:${RED};">−${esc(fmtEur(real.gasto))}</span>` : ""}
@@ -779,7 +788,7 @@
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
           <span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span>
           <div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div>
-            <div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}${realLinea}</div></div></td>
+            <div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}${realLinea}${sinMarcar}</div></div></td>
         <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>
         <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${revalorizacion}</td>
@@ -791,7 +800,7 @@
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.75rem;">Alquileres</div>
           <div style="display:flex;gap:2rem;flex-wrap:wrap;">
             <div><div style="font-size:0.75rem;color:#6b7280;">En alquiler</div><div style="font-size:1.3rem;font-weight:800;color:#fff;">${inm.alquiladas}</div></div>
-            <div><div style="font-size:0.75rem;color:#6b7280;">Renta neta al año</div><div style="font-size:1.3rem;font-weight:800;color:${GREEN};">${fmtEur(inm.rentaAnualTotal)}</div></div>
+            <div><div style="font-size:0.75rem;color:#6b7280;">Renta neta al año</div><div style="font-size:1.3rem;font-weight:800;color:${rc(inm.rentaAnualTotal)};">${fmtEur(inm.rentaAnualTotal)}</div></div>
           </div></div></div>`
       : "";
 

@@ -682,10 +682,15 @@
       // los recibos de la comunidad y el alquiler cobrado están en los datos
       // pero no hay forma de saber que son de ESTE piso.
       field("p-centro", "Centro de coste", selectorArbol("p-centro", e.centro)) +
-      `<div id="p-alquiler" style="display:none;">
-        ${field("p-renta", "Renta mensual (€)", input("p-renta", "number", e.renta_mensual, 'step="0.01" min="0"'))}
-        ${field("p-gastos", "Gastos mensuales (€)", input("p-gastos", "number", e.gastos_mensuales, 'step="0.01" min="0" placeholder="comunidad, IBI, seguro…"'))}
-        <div style="font-size:0.75rem;color:#6b7280;margin-top:0.4rem;">Con esto calculo la rentabilidad del alquiler sobre lo que pagaste.</div>
+      // Ya no se preguntan importes. La renta sube, un mes no se cobra, llega una
+      // derrama: cualquier cifra escrita aquí envejece el mismo día. Lo que se
+      // ha cobrado y pagado por este inmueble está en los movimientos que llevan
+      // su centro, y de ahí se saca.
+      `<div id="p-alquiler" style="display:none;font-size:0.78rem;color:#6b7280;
+            background:#12141d;border:1px solid #232733;border-radius:10px;padding:0.7rem 0.85rem;margin-top:0.6rem;">
+        La renta y los gastos salen de tus movimientos, no de un importe escrito aquí:
+        se suman los ingresos y los gastos de los últimos doce meses imputados a su centro de coste.
+        <div id="p-alquiler-aviso" style="color:#f59e0b;margin-top:0.4rem;"></div>
       </div>`;
     shell(existing ? "Editar propiedad" : "Nueva propiedad", body, () => {
       const nombre = G("p-nombre");
@@ -698,7 +703,6 @@
         id: e.id || newId("p"), nombre, tipo,
         valor_compra: G("p-compra"), fecha_adquisicion: fromISO(G("p-fecha")),
         alquilada: document.getElementById("p-alq").checked,
-        renta_mensual: G("p-renta"), gastos_mensuales: G("p-gastos"),
       });
       const centro = G("p-centro");
       if (centro) rec.centro = centro; else delete rec.centro;
@@ -716,7 +720,6 @@
         if (!isFinite(v) || v < 0) return "Introduce un valor válido";
         rec.valor = String(v);
       }
-      if (rec.alquilada && !(parseFloat(rec.renta_mensual) > 0)) return "Indica la renta mensual del alquiler";
       upsert(doc.propiedades, rec);
       return null;
     });
@@ -726,6 +729,13 @@
       document.getElementById("p-porpeso").style.display = porPeso ? "block" : "none";
       document.getElementById("p-portasacion").style.display = porPeso ? "none" : "block";
       document.getElementById("p-alquiler").style.display = document.getElementById("p-alq").checked ? "block" : "none";
+      // Sin centro no hay nada que cruzar, y conviene decirlo aquí y no cuando
+      // la ficha aparezca vacía en la página de Propiedades.
+      const aviso = document.getElementById("p-alquiler-aviso");
+      if (aviso) {
+        aviso.textContent = document.getElementById("p-centro").value
+          ? "" : "Elige antes su centro de coste: sin él no se le puede imputar ningún cobro.";
+      }
     };
     // Se ofrecen los centros que ya existen, con los de inmuebles delante por ser
     // los únicos que tienen sentido aquí, pero sin impedir crear uno nuevo.
@@ -736,6 +746,7 @@
               (k) => (k === 0 ? "+ Nuevo centro…" : "+ Nuevo centro dentro…"));
     document.getElementById("p-tipo").addEventListener("change", refrescar);
     document.getElementById("p-alq").addEventListener("change", refrescar);
+    document.getElementById("p-centro").addEventListener("change", refrescar);
     refrescar();
   }
 

@@ -211,8 +211,15 @@
   //
   // Se lee tanto el formato nuevo como el antiguo (direccion/tasacion), así que
   // los inmuebles que ya tenías siguen valiendo sin migrar nada.
-  function valuatePropiedades(propiedades, prices) {
+  // Los movimientos entran aquí porque el alquiler de verdad no es el número que
+  // escribiste una vez, sino lo que se ha cobrado y pagado por ese inmueble. La
+  // ficha solo dice si está alquilado; las cifras salen de la caja.
+  function valuatePropiedades(propiedades, prices, movimientos) {
     const metales = (prices && prices.metales) || {};
+    // Ventana de doce meses: recoge un alquiler que se cobra una vez al año,
+    // absorbe el mes que se pagó la derrama y no arrastra lo de hace tres años.
+    const hace12 = new Date(); hace12.setFullYear(hace12.getFullYear() - 1);
+    const real = movimientos ? resumenCentros(movimientos, hace12) : {};
     const arr = (propiedades || []).map((r) => {
       const nombre = r.nombre || r.direccion || "Sin nombre";
       const tipo = r.tipo || "Otro";
@@ -234,11 +241,19 @@
       const ganancia = (isFinite(importe) && isFinite(coste)) ? round2(importe - coste) : NaN;
       const rentPct = (coste > 0 && isFinite(importe)) ? (importe / coste - 1) * 100 : NaN;
 
-      // Alquiler: rentabilidad anual sobre lo pagado (bruta y neta de gastos)
-      const renta = num(r.renta_mensual), gastos = num(r.gastos_mensuales) || 0;
-      const alquilada = !!r.alquilada && isFinite(renta) && renta > 0;
-      const rentaAnual = alquilada ? round2(renta * 12) : NaN;
-      const netoAnual = alquilada ? round2((renta - gastos) * 12) : NaN;
+      // Alquiler: rentabilidad anual sobre lo pagado (bruta y neta de gastos).
+      // Manda lo cobrado de verdad en el último año; los importes escritos a mano
+      // quedan de respaldo para un inmueble recién dado de alta o sin centro,
+      // porque enseñar cero donde aún no hay datos parecería un dato.
+      const centro = String(r.centro || "").trim();
+      const suyo = centro ? real[centro] : null;
+      const hayReal = !!suyo && (suyo.ingreso > 0 || suyo.gasto > 0);
+      const rentaManual = num(r.renta_mensual), gastosManual = num(r.gastos_mensuales) || 0;
+      const alquilada = !!r.alquilada && (hayReal ? suyo.ingreso > 0 : isFinite(rentaManual) && rentaManual > 0);
+      const renta = hayReal ? round2(suyo.ingreso / 12) : rentaManual;
+      const gastos = hayReal ? round2(suyo.gasto / 12) : gastosManual;
+      const rentaAnual = alquilada ? round2(hayReal ? suyo.ingreso : rentaManual * 12) : NaN;
+      const netoAnual = alquilada ? round2(hayReal ? suyo.ingreso - suyo.gasto : (rentaManual - gastosManual) * 12) : NaN;
       const base = coste > 0 ? coste : importe;   // sin precio de compra, sobre el valor actual
       const yieldBruto = alquilada && base > 0 ? rentaAnual / base * 100 : NaN;
       const yieldNeto  = alquilada && base > 0 ? netoAnual / base * 100 : NaN;
@@ -250,7 +265,7 @@
         porPeso, peso, metal, precioGramo,
         alquilada, renta, gastos, rentaAnual, netoAnual, yieldBruto, yieldNeto,
         baseYield: base,
-        centro: String(r.centro || "").trim(),
+        centro, fuenteRenta: hayReal ? "real" : "manual",
       };
     });
     arr.sort((a, b) => (isFinite(b.importe) ? b.importe : 0) - (isFinite(a.importe) ? a.importe : 0));
@@ -266,7 +281,7 @@
     const { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker } =
       computeSaldos(db.movimientos, db.inversiones);
     const inv = valuate(db, prices);
-    const inm = valuatePropiedades(db.propiedades || db.inmuebles, prices);
+    const inm = valuatePropiedades(db.propiedades || db.inmuebles, prices, db.movimientos);
     // La Cartera incluye el efectivo sin invertir de los brókers.
     // La Cartera es solo lo invertido; el efectivo de bróker ya cuenta en Caja.
     const carteraTotal = inv.total;
