@@ -971,6 +971,46 @@
     });
   }
 
+  // ── Imputar un centro a varios movimientos de golpe ──────────────────────
+  // Cuarenta y tres apuntes sueltos no se arreglan uno a uno, y reimportar el
+  // documento entero para eso es desproporcionado y pisa lo que hayas tocado
+  // desde la web. Se filtra en la lista y se imputan todos juntos.
+  function openImputarCentro(lista) {
+    const doc = DB.state.doc;
+    const afectados = (lista || []).filter((m) => m.tipo === "Gasto" || m.tipo === "Ingreso");
+    if (!afectados.length) {
+      window.SolventoBoot && window.SolventoBoot.toast("No hay gastos ni ingresos en el filtro");
+      return;
+    }
+    const suma = afectados.reduce((t, m) => t + Math.abs(parseFloat(String(m.importe).replace(",", ".")) || 0), 0);
+    const conCentro = afectados.filter((m) => String(m.centro || "").trim()).length;
+    const centros = uniq(centrosCfg()
+      .concat((doc.movimientos || []).map((m) => m.centro))
+      .concat((doc.propiedades || doc.inmuebles || []).map((r) => r.centro)));
+    const body =
+      `<div style="background:#12141d;border:1px solid #232733;border-radius:10px;padding:0.7rem 0.85rem;
+            font-size:0.82rem;color:#9ca3af;margin:0.5rem 0 0;">
+        Vas a imputar <b style="color:#fff;">${afectados.length}</b> movimiento${afectados.length === 1 ? "" : "s"}
+        (${esc(suma.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} €) al centro que elijas.
+        ${conCentro ? `<div style="color:#f59e0b;margin-top:0.4rem;">${conCentro} ya tiene${conCentro === 1 ? "" : "n"} centro y se sobrescribirá${conCentro === 1 ? "" : "n"}.</div>` : ""}
+      </div>` +
+      field("ic-centro", "Centro de coste", selectorArbol("ic-centro", ""));
+    shell("Imputar en bloque", body, () => {
+      const centro = G("ic-centro");
+      if (!centro) return "Elige un centro";
+      if (!confirm(`¿Imputar ${afectados.length} movimiento${afectados.length === 1 ? "" : "s"} a "${centro}"?`)) {
+        return "Cancelado: no se ha cambiado nada";
+      }
+      afectados.forEach((m) => { m.centro = centro; });
+      doc.config = doc.config || {};
+      doc.config.centros = doc.config.centros || [];
+      registrarRuta(doc.config.centros, centro);
+      return null;
+    });
+    wireArbol("ic-centro", centros, "— Elige centro —",
+              (k) => (k === 0 ? "+ Nuevo centro…" : "+ Nuevo centro dentro…"));
+  }
+
   // ── Borrado ──
   function del(collection, id) {
     const doc = DB.state.doc;
@@ -980,7 +1020,7 @@
   const findById = (coll, id) => (DB.state.doc[coll] || []).find((x) => x.id === id);
 
   window.SolventoForms = {
-    openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo,
+    openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
     fragmentosAjustes, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,

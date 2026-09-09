@@ -315,7 +315,7 @@
   // repintado (p.ej. tras guardar). Y al teclear se repinta SOLO la lista: si
   // se repintara la página entera, el buscador perdería el foco en cada letra.
   const PAGINA = 30;
-  const MOV = { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", pend: false, limite: PAGINA };
+  const MOV = { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", pend: false, sinCentro: false, limite: PAGINA };
   const OPS = { q: "", tipo: "", desde: "", hasta: "", limite: 40 };
   let OPS_BANCO = "";
 
@@ -338,6 +338,10 @@
       if (MOV.cuenta && r.cuenta_origen !== MOV.cuenta && r.cuenta_destino !== MOV.cuenta) return false;
       if (MOV.cat && r.tipo_gasto !== MOV.cat && r.tipo_ingreso !== MOV.cat) return false;
       if (MOV.pend && !window.SolventoModel.esPendiente(r)) return false;
+      // «Sin centro» solo tiene sentido donde el centro tiene sentido: un
+      // traspaso no es de nadie y saldría siempre en la lista, escondiendo lo
+      // que de verdad falta por imputar.
+      if (MOV.sinCentro && !((r.tipo === "Gasto" || r.tipo === "Ingreso") && !String(r.centro || "").trim())) return false;
       if (!enRango(r.fecha, MOV.desde, MOV.hasta)) return false;
       if (MOV.q && !contiene([r.detalle, r.tipo_gasto, r.tipo_ingreso, r.persona_prestamo,
                               r.cuenta_origen, r.cuenta_destino, r.importe, r.fecha].join(" "), MOV.q)) return false;
@@ -365,8 +369,17 @@
         ${rowActions(`v2EditMov('${r.id}')`, `v2DelMov('${r.id}')`)}</tr>`;
     }).join("");
     const quedan = todos.length - visibles.length;
-    return `<div style="font-size:0.78rem;color:#6b7280;margin:0.35rem 0 0.5rem;">
-        ${todos.length}${todos.length !== total ? " de " + total : ""} ${todos.length === 1 ? "movimiento" : "movimientos"}</div>
+    // Imputar en bloque solo se ofrece cuando hay un filtro puesto: sobre la
+    // lista entera sería una forma cómoda de estropearlo todo de una vez.
+    const hayFiltro = MOV.q || MOV.tipo || MOV.cuenta || MOV.cat || MOV.desde || MOV.hasta || MOV.pend || MOV.sinCentro;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin:0.35rem 0 0.5rem;">
+        <div style="font-size:0.78rem;color:#6b7280;">
+          ${todos.length}${todos.length !== total ? " de " + total : ""} ${todos.length === 1 ? "movimiento" : "movimientos"}</div>
+        ${hayFiltro && todos.length ? `<button onclick="v2MovImputar()"
+          style="background:none;border:1px solid #2a2d3a;border-radius:8px;color:#9ca3af;font-size:0.76rem;
+          font-family:inherit;padding:0.25rem 0.6rem;cursor:pointer;white-space:nowrap;">
+          Imputar centro a estos ${todos.length}</button>` : ""}
+      </div>
       <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Ningún movimiento coincide con el filtro</td></tr>'}</tbody></table>
       ${quedan > 0 ? `<div style="text-align:center;margin-top:0.75rem;">${addBtn("Ver " + Math.min(quedan, PAGINA) + " más (quedan " + quedan + ")", "v2MovMas()")}</div>` : ""}`;
   }
@@ -398,6 +411,15 @@
             style="background:${MOV.pend ? "#f59e0b" : "none"};border:1px solid #f59e0b;border-radius:8px;
             color:${MOV.pend ? "#12141d" : "#f59e0b"};font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;
             cursor:pointer;font-family:inherit;white-space:nowrap;">⚠ ${p.n} sin identificar</button>`;
+        })()}
+        ${(function () {
+          const mov = (CURRENT_DOC || {}).movimientos || [];
+          const n = mov.filter((m) => (m.tipo === "Gasto" || m.tipo === "Ingreso") && !String(m.centro || "").trim()).length;
+          if (!n && !MOV.sinCentro) return "";
+          return `<button onclick="v2MovSinCentro()" title="Gastos e ingresos sin centro de coste"
+            style="background:${MOV.sinCentro ? "#3b82f6" : "none"};border:1px solid #3b82f6;border-radius:8px;
+            color:${MOV.sinCentro ? "#fff" : "#3b82f6"};font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;
+            cursor:pointer;font-family:inherit;white-space:nowrap;">⊘ ${n} sin centro</button>`;
         })()}
         ${addBtn("Limpiar", "v2MovLimpiar()")}
       </div>
@@ -1407,6 +1429,17 @@
     pintarMov();
   };
   window.v2MovMas = () => { MOV.limite += PAGINA; pintarMov(); };
+  window.v2MovSinCentro = () => {
+    MOV.sinCentro = !MOV.sinCentro; MOV.limite = PAGINA;
+    render(CURRENT_DOC, window.__PRICES);
+    v2Tab("caja");
+  };
+  // Se imputan TODOS los que casan con el filtro, no solo los que se ven: la
+  // lista se pagina y quedarse en los primeros cincuenta sería una trampa.
+  window.v2MovImputar = () => {
+    if (!F()) return;
+    F().openImputarCentro(movimientosFiltrados());
+  };
   window.v2MovPendientes = () => {
     MOV.pend = !MOV.pend; MOV.limite = PAGINA;
     render(CURRENT_DOC, window.__PRICES);
@@ -1415,7 +1448,7 @@
     if (l) l.scrollIntoView({ block: "start", behavior: "smooth" });
   };
   window.v2MovLimpiar = () => {
-    Object.assign(MOV, { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", pend: false, limite: PAGINA });
+    Object.assign(MOV, { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", pend: false, sinCentro: false, limite: PAGINA });
     render(CURRENT_DOC, window.__PRICES);   // repintado completo para vaciar los campos
   };
   window.v2OpsFiltro = () => {
