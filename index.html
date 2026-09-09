@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Solvento v2</title>
+  <link rel="icon" href="img/logo-solvento.png" />
+  <!-- Instalable: icono en la pantalla de inicio y ventana sin barra de navegador -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="img/app/icon-180.png" />
+  <meta name="theme-color" content="#12141d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Solvento" />
+  <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
+  <link rel="stylesheet" href="src/css/base.css?v=p101" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p101" />
+  <link rel="stylesheet" href="src/css/components.css?v=p101" />
+  <style>
+    /* Arranque (login / importación) — cubre todo hasta desbloquear */
+    #boot-overlay input {
+      width: 100%; background: #12141d; border: 1px solid #2a2d3a; border-radius: 10px;
+      color: #e5e7eb; font-size: 0.95rem; padding: 0.8rem 1rem; outline: none;
+      font-family: inherit; margin-bottom: 0.75rem; transition: border-color 0.15s;
+    }
+    #boot-overlay input:focus { border-color: #6b7280; }
+    #boot-overlay button.primary {
+      width: 100%; background: #fff; border: none; border-radius: 10px; color: #000;
+      font-size: 0.95rem; font-weight: 700; padding: 0.8rem 1rem; cursor: pointer; font-family: inherit;
+    }
+    #boot-overlay button.primary:hover { opacity: 0.85; }
+    .boot-panel { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; }
+    .boot-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; margin: 1rem 0 0.35rem; color: #fff; }
+    .boot-sub { font-size: 0.82rem; color: #6b7280; margin-bottom: 1.75rem; text-align: center; }
+    .boot-err { display: none; font-size: 0.82rem; font-weight: 600; margin-top: 1rem; text-align: center; }
+    /* La proporción/donut y tablas reutilizan las clases de la v1 (components.css) */
+    .v2-hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; max-width: 1400px; margin: 0 auto; width: 100%; }
+    .v2-prop-bar { height: 6px; border-radius: 4px; overflow: hidden; display: flex; margin: 0 auto 1.5rem; background: #1a1d27; max-width: 1400px; }
+    .v2-wrap { max-width: 1400px; margin: 1.5rem auto 0; width: 100%; }
+    .user-wrap { position: relative; }
+    #user-btn { position: relative; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #2a2d3a; background: #1e2130; color: #9ca3af; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+    #user-btn:hover, #user-btn[aria-expanded="true"] { color: #fff; border-color: #4b5563; }
+    #user-badge { position: absolute; top: -1px; right: -1px; width: 9px; height: 9px; border-radius: 50%; background: #fbbf24; border: 2px solid #1a1d27; }
+    #user-menu { position: absolute; right: 0; top: calc(100% + 0.5rem); min-width: 210px; background: #171a24; border: 1px solid #2a2d3a; border-radius: 12px; padding: 0.35rem; z-index: 1200; box-shadow: 0 10px 30px rgba(0,0,0,0.55); }
+    #user-menu[hidden] { display: none !important; }
+    .um-head { padding: 0.55rem 0.7rem 0.6rem; border-bottom: 1px solid #232733; margin-bottom: 0.35rem; }
+    .um-title { font-size: 0.85rem; font-weight: 700; color: #fff; }
+    #sync-estado { font-size: 0.75rem; font-weight: 600; color: #6b7280; margin-top: 0.15rem; }
+    .um-item { display: block; width: 100%; text-align: left; background: none; border: none; color: #e5e7eb; font-family: inherit; font-size: 0.86rem; font-weight: 500; padding: 0.55rem 0.7rem; border-radius: 8px; cursor: pointer; }
+    .um-item:hover { background: #1e2130; }
+    .aj-layout { display: grid; grid-template-columns: 200px 1fr; gap: 2rem; align-items: start; }
+    .aj-nav { display: flex; flex-direction: column; gap: 0.15rem; position: sticky; top: 5rem; }
+    .aj-tab { background: none; border: none; text-align: left; color: #9ca3af; font-family: inherit; font-size: 0.88rem; font-weight: 500; padding: 0.55rem 0.75rem; border-radius: 8px; cursor: pointer; }
+    .aj-tab:hover { background: #1e2130; color: #e5e7eb; }
+    .aj-tab.active { background: #1e2130; color: #fff; font-weight: 700; }
+    .aj-body { min-width: 0; background: #171a24; border: 1px solid #232733; border-radius: 14px; padding: 1.75rem; }
+    .aj-sec { display: none; }
+    .aj-sec.active { display: block; }
+    .aj-sec h3 { font-size: 1.05rem; font-weight: 700; color: #fff; margin: 0 0 0.35rem; }
+    .aj-sec p { font-size: 0.85rem; color: #6b7280; margin: 0 0 1.1rem; }
+    .aj-sec input[type="password"], .aj-sec input[type="text"] { width: 100%; background: #12141d; border: 1px solid #2a2d3a; border-radius: 10px; color: #e5e7eb; font-size: 0.9rem; padding: 0.7rem 0.9rem; outline: none; font-family: inherit; }
+    @media (max-width: 720px) {
+      .aj-layout { grid-template-columns: 1fr; gap: 1rem; }
+      .aj-nav { flex-direction: row; overflow-x: auto; position: static; gap: 0.35rem; padding-bottom: 0.35rem; }
+      .aj-tab { white-space: nowrap; font-size: 0.8rem; padding: 0.45rem 0.7rem; }
+      .aj-body { padding: 1.25rem; }
+    }
+    .aj-sec button { border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.55rem 0.9rem; cursor: pointer; font-family: inherit; border: 1px solid #2a2d3a; background: #1e2130; color: #e5e7eb; }
+    .aj-sec button:hover { border-color: #4b5563; }
+    .aj-sec button.primary { background: #fff; color: #000; border: none; }
+    .aj-sec .filebtn { display: inline-block; border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.55rem 0.9rem; cursor: pointer; border: 1px solid #2a2d3a; background: #1e2130; color: #e5e7eb; }
+    .aj-sec small { color: #6b7280; font-size: 0.74rem; }
+  </style>
+</head>
+<body>
+
+<!-- ══ ARRANQUE: login (descifra) / importación inicial ══ -->
+<div id="boot-overlay" style="position:fixed;inset:0;background:#000;z-index:1000;display:flex;align-items:center;justify-content:center;padding:1.5rem;">
+  <form id="login-form" class="boot-panel" style="display:none;">
+    <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
+    <div class="boot-title">Solvento</div>
+    <div class="boot-sub">Introduce tu contraseña para descifrar tus datos</div>
+    <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" />
+    <button type="submit" class="primary">Desbloquear</button>
+    <div id="login-error" class="boot-err"></div>
+  </form>
+  <form id="import-form" class="boot-panel" style="display:none;">
+    <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
+    <div class="boot-title">Configura tu cifrado</div>
+    <div class="boot-sub">
+      Primera vez en este dispositivo. Elige una contraseña: cifrará todos tus datos en este
+      navegador. <b style="color:#e5e7eb;">Si la pierdes, no hay forma de recuperar los datos.</b>
+    </div>
+    <input id="imp-pass" type="password" placeholder="Nueva contraseña (mín. 6)" autocomplete="new-password" />
+    <input id="imp-pass2" type="password" placeholder="Repite la contraseña" autocomplete="new-password" />
+    <button type="submit" class="primary">Cifrar y entrar</button>
+    <div id="imp-error" class="boot-err"></div>
+  </form>
+  <div id="boot-checking" class="boot-panel" style="display:none;">
+    <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
+    <div class="boot-title">Solvento</div>
+    <div class="boot-sub">Buscando tus datos en GitHub…</div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app" style="display:none;">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <button type="button" class="nb-menu" id="brand-btn" onclick="v2Sidebar()"
+              title="Abrir el menú de secciones" aria-label="Abrir el menú de secciones"
+              aria-expanded="false" aria-controls="sidebar">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <span role="heading" aria-level="1" style="display:flex;">
+        <img src="img/logo-solvento.png" alt="Solvento" style="width:26px;height:26px;object-fit:contain;" />
+      </span>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.85rem;">
+      <div class="user-wrap">
+        <button id="user-btn" title="Tu cuenta" aria-haspopup="true" aria-expanded="false" onclick="v2UserMenu()">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
+            <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.5-8 5.5V21h16v-1.5c0-3-3.6-5.5-8-5.5Z"/>
+          </svg>
+          <span id="user-badge" hidden></span>
+        </button>
+        <div id="user-menu" hidden role="menu">
+          <div class="um-head">
+            <div class="um-title">Solvento</div>
+            <div id="sync-estado" title="Estado del guardado"></div>
+          </div>
+          <button class="um-item" role="menuitem" onclick="v2UserIr('ajustes')">⚙ Ajustes</button>
+          <button class="um-item" id="logout-btn" role="menuitem">🔒 Bloquear</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Panel lateral de secciones: se abre desde el logo -->
+  <div id="sidebar-backdrop" onclick="v2Sidebar(false)"></div>
+  <aside id="sidebar" aria-label="Secciones">
+    <div class="sn-head">
+      <img src="img/logo-solvento.png" alt="" />
+      <span class="sn-name">Solvento</span>
+      <button type="button" class="sn-close" onclick="v2Sidebar(false)" aria-label="Cerrar el menú" title="Cerrar">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+      </button>
+    </div>
+    <nav class="sn-list">
+        <button class="sn-item active" data-page="patrimonio" onclick="v2Tab('patrimonio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg><span>Patrimonio</span></button>
+        <button class="sn-item" data-page="caja" onclick="v2Tab('caja')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.01M18 12h.01"/></svg><span>Caja</span></button>
+        <button class="sn-item" data-page="balance" onclick="v2Tab('balance')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v13"/><path d="M3.5 14 7 17.5 10.5 14"/><path d="M17 19.5v-13"/><path d="M13.5 10 17 6.5 20.5 10"/></svg><span>Balance</span></button>
+        <button class="sn-item" data-page="cartera" onclick="v2Tab('cartera')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17.5 9 11l4 4 8-8.5"/><path d="M15.5 6.5H21V12"/></svg><span>Cartera</span></button>
+        <button class="sn-item" data-page="propiedades" onclick="v2Tab('propiedades')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5 12 4l8.5 6.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19v-8.5Z"/><path d="M9.5 20.5v-6h5v6"/></svg><span>Propiedades</span></button>
+        <button class="sn-item" data-page="pasivos" onclick="v2Tab('pasivos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19"/><path d="M6 14.5h4"/></svg><span>Pasivos</span></button>
+    </nav>
+  </aside>
+
+  <nav class="bottom-nav" id="v2-bottom-nav" aria-label="Secciones">
+    <button class="bottom-nav-item active" data-page="patrimonio" onclick="v2Tab('patrimonio')">Patrimonio</button>
+    <button class="bottom-nav-item" data-page="caja" onclick="v2Tab('caja')">Caja</button>
+    <button class="bottom-nav-item" data-page="balance" onclick="v2Tab('balance')">Balance</button>
+    <button class="bottom-nav-item" data-page="cartera" onclick="v2Tab('cartera')">Cartera</button>
+    <button class="bottom-nav-item" data-page="propiedades" onclick="v2Tab('propiedades')">Propiedades</button>
+    <button class="bottom-nav-item" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
+  </nav>
+
+  <div class="page active" id="v2-page-patrimonio"></div>
+  <div class="page" id="v2-page-caja"></div>
+  <div class="page" id="v2-page-balance"></div>
+  <div class="page" id="v2-page-cartera"></div>
+  <div class="page" id="v2-page-propiedades"></div>
+  <div class="page" id="v2-page-pasivos"></div>
+  <div class="page" id="v2-page-ajustes">
+    <div class="v2-wrap">
+      <div class="section-title" style="font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:0.35rem;">Ajustes</div>
+      <div style="font-size:0.85rem;color:#6b7280;margin-bottom:1.5rem;">Todo lo tuyo se guarda cifrado con tu contraseña.</div>
+      <div class="aj-layout">
+        <nav class="aj-nav" id="aj-nav">
+          <button class="aj-tab active" data-sec="cuentas" onclick="v2AjSec('cuentas')">Cuentas</button>
+          <button class="aj-tab" data-sec="cartera" onclick="v2AjSec('cartera')">Cartera y activos</button>
+          <button class="aj-tab" data-sec="categorias" onclick="v2AjSec('categorias')">Categorías</button>
+          <button class="aj-tab" data-sec="sync" onclick="v2AjSec('sync')">Sincronización</button>
+          <button class="aj-tab" data-sec="revision" onclick="v2AjSec('revision')">Revisión</button>
+          <button class="aj-tab" data-sec="seguridad" onclick="v2AjSec('seguridad')">Seguridad</button>
+        </nav>
+        <div class="aj-body">
+          <section class="aj-sec active" id="aj-sec-cuentas">
+            <h3>Cuentas</h3>
+            <p>Dónde tienes tu dinero. El efectivo de todas ellas cuenta como Caja.</p>
+            <div id="aj-cuentas"></div>
+          </section>
+
+          <section class="aj-sec" id="aj-sec-cartera">
+            <h3>Activos</h3>
+            <p>Los productos en los que inviertes. El ticker es lo que da el precio automático.</p>
+            <div id="aj-activos"></div>
+            <h3 style="margin-top:2rem;">Objetivo de asignación</h3>
+            <p>El reparto al que quieres tender entre renta variable y fija.</p>
+            <div id="aj-objetivo"></div>
+          </section>
+
+          <section class="aj-sec" id="aj-sec-categorias">
+            <h3>Categorías de gasto</h3>
+            <p>Las que se te ofrecen al registrar un gasto, con los niveles que quieras. Renombrar una arrastra el cambio a los movimientos que la usan; borrarla no los toca.</p>
+            <div id="aj-categorias"></div>
+
+            <h3 style="margin-top:2rem;">Categorías de ingreso</h3>
+            <p>Las del otro lado: alquileres, nóminas, devoluciones, repartos de gastos. Se mantienen igual que las de gasto.</p>
+            <div id="aj-categorias-ingreso"></div>
+
+            <h3 style="margin-top:2rem;">Centros de coste</h3>
+            <p>El otro eje: a qué inmueble, proyecto o persona se imputa cada apunte. La categoría dice qué se compró; el centro, para qué o para quién.</p>
+            <div id="aj-centros"></div>
+          </section>
+
+          <section class="aj-sec" id="aj-sec-revision">
+            <h3>Revisión de los datos</h3>
+            <p>Lo que rompe una contabilidad no avisa: un apunte cambia de cuenta al editarlo, una devolución se cuenta dos veces, una deuda se queda en negativo. Esto lo busca a propósito.</p>
+            <div id="aj-revision"></div>
+          </section>
+
+          <section class="aj-sec" id="aj-sec-sync">
+            <h3>Sincronización</h3>
+<p style="font-size:0.82rem;color:#9ca3af;margin:0 0 1.25rem;">Guarda tu bloque cifrado en tu repo de GitHub para tenerlo en el móvil y el Mac. Los datos viajan siempre cifrados con tu contraseña.</p>
+
+    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;font-weight:700;margin-bottom:0.5rem;">Token de GitHub</div>
+    <div style="display:flex;gap:0.4rem;align-items:stretch;">
+      <input id="sync-token" type="password" placeholder="github_pat_..." autocomplete="off" style="flex:1;" />
+      <button id="sync-token-ver" type="button" title="Mostrar u ocultar el token"
+        style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#9ca3af;font-size:0.9rem;padding:0 0.7rem;cursor:pointer;font-family:inherit;">👁</button>
+    </div>
+    <small style="display:block;margin:0.4rem 0 0.5rem;">Token <b>fine-grained</b> con permiso <b>Contents: Read and write</b> solo en este repo. Se guarda cifrado con tu contraseña; nunca se sube.</small>
+    <div id="sync-token-status" style="font-size:0.78rem;margin-bottom:0.5rem;"></div>
+    <label style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.78rem;color:#9ca3af;margin-bottom:0.75rem;cursor:pointer;">
+      <input type="checkbox" id="sync-token-viaja" style="margin-top:0.15rem;flex-shrink:0;">
+      <span>Guardar el token <b>con mis datos</b>, para no pegarlo en cada dispositivo.
+        <span style="color:#6b7280;display:block;margin-top:0.15rem;">Viajará cifrado con tu contraseña. Contrapartida: si esa contraseña fuese débil y alguien descifrara la copia del repositorio, tendría además permiso de escritura sobre él. Actívalo solo si tu contraseña es sólida.</span></span>
+    </label>
+    <button id="sync-save-token" class="primary" style="width:100%;margin-bottom:1.25rem;">Guardar token</button>
+
+    <div style="display:flex;gap:0.6rem;margin-bottom:0.75rem;">
+      <button id="sync-push" style="flex:1;">⬆️ Guardar en GitHub</button>
+      <button id="sync-pull" style="flex:1;">⬇️ Traer de GitHub</button>
+    </div>
+                <div id="sync-status" style="font-size:0.82rem;font-weight:600;margin-top:1rem;text-align:center;display:none;"></div>
+          </section>
+
+          <section class="aj-sec" id="aj-sec-seguridad">
+            <h3>Copia de seguridad</h3>
+            <p>Sin tu contraseña no hay forma de recuperar los datos. Una copia guardada aparte es tu única red.</p>
+            <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+              <button id="sync-export" style="flex:1;min-width:150px;">Exportar copia</button>
+              <label class="filebtn" style="flex:1;min-width:150px;text-align:center;">Importar copia<input id="sync-import" type="file" accept=".enc,application/octet-stream,application/json" style="display:none;" /></label>
+            </div>
+            <h3 style="margin-top:2rem;">Reconstrucción contable</h3>
+            <p>Para rehacer las cuentas desde los extractos del banco hace falta sacar los datos en claro y volver a meterlos. Un archivo en claro es tu vida financiera en texto legible: no lo dejes por ahí y bórralo al acabar.</p>
+            <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+              <button id="sync-export-claro" style="flex:1;min-width:150px;">⚠ Exportar en claro</button>
+              <label class="filebtn" style="flex:1;min-width:150px;text-align:center;">⚠ Reemplazar datos<input id="sync-reemplazar" type="file" accept=".json,application/json" style="display:none;" /></label>
+            </div>
+
+            <h3 style="margin-top:2rem;">Contraseña</h3>
+            <p>Descifra con la actual y vuelve a cifrar con la nueva. Tendrás que usarla en todos tus dispositivos.</p>
+            <button id="sync-password" style="width:100%;" onclick="v2Password()">🔑 Cambiar contraseña</button>
+          </section>
+        </div>
+      </div>
+      <div style="text-align:center;color:#6b7280;font-size:0.72rem;margin:3rem 0 1rem;">Solvento, versión 2.0</div>
+    </div>
+  </div>
+
+  <div class="page" id="v2-page-operaciones"></div>
+  <div class="page" id="v2-page-reporte"></div>
+</div>
+
+<!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
+
+
+<script src="src/js/crypto.js?v=p101"></script>
+<script src="src/js/config.js?v=p101"></script>
+<script src="src/js/model.js?v=p101"></script>
+<script src="src/js/charts.js?v=p101"></script>
+<script src="src/js/render.js?v=p101"></script>
+<script src="src/js/db.js?v=p101"></script>
+<script src="src/js/sync.js?v=p101"></script>
+<script src="src/js/forms.js?v=p101"></script>
+<script src="src/js/boot.js?v=p101"></script>
+  <script>
+    // Registro del service worker: si falla (navegador antiguo, http://), la app
+    // funciona igual, solo que sin instalación ni modo sin conexión.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("sw.js").catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>
