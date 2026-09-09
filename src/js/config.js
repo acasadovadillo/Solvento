@@ -60,6 +60,14 @@
     "Vehículo": "#0ea5e9", "Obra de arte": "#d946ef", "Reloj": "#f59e0b",
     "Metal precioso": "#eab308", "Coleccionable": "#8b5cf6", "Otro": "#6b7280",
   };
+  // Tipos de deuda. Tonos cálidos, distintos entre sí y sin robarle el rojo a
+  // las cifras en negativo: aquí el color identifica un tipo, no una alarma.
+  const TIPO_COLORES_PASIVO = {
+    "Hipoteca": "#b91c1c", "Préstamo personal": "#ea580c", "Préstamo coche": "#d97706",
+    "Tarjeta de crédito": "#e11d48", "Deuda con particular": "#9333ea", "Otro": "#6b7280",
+  };
+  const PASIVO_ACCENT_DEFAULT = "#9f1239";
+
   // Los que se valoran por peso piden gramos y metal en vez de tasación
   const TIPOS_POR_PESO = ["Metal precioso"];
   const INMUEBLE_ACCENT_DEFAULT = "#a16207";
@@ -149,6 +157,7 @@
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
+    TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT,
     assetLogo, SYNC,
   };
 })();

@@ -288,7 +288,7 @@
   }
   // Tarjeta del panel de Patrimonio. Si se le pasa `pagina`, es clicable y
   // navega a esa sección (con realce al pasar el cursor y una flecha de pista).
-  function hubCard(titulo, valor, pct, color, sub, subColor, pagina, reparto) {
+  function hubCard(titulo, valor, pct, color, sub, subColor, pagina, reparto, sufijo) {
     // Al señalar la tarjeta se resalta su tramo en la gráfica de reparto, que es
     // lo que ata los colores de una con los de la otra. Sin globo: la tarjeta ya
     // enseña el importe y el porcentaje.
@@ -307,7 +307,7 @@
       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:${color};margin-bottom:0.6rem;">${esc(titulo)}</div>
       <div style="font-size:1.7rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">${valor}</div>
       <div style="font-size:0.82rem;color:${subColor || "#9ca3af"};font-weight:600;margin-top:0.3rem;">${sub}</div>
-      <div style="font-size:0.78rem;color:#6b7280;margin-top:0.15rem;">${pct.toFixed(2)}% del patrimonio${flecha}</div>
+      <div style="font-size:0.78rem;color:#6b7280;margin-top:0.15rem;">${pct.toFixed(2)}% ${sufijo || "del patrimonio"}${flecha}</div>
     </div>`;
   }
 
@@ -515,22 +515,65 @@
 
   // ── Páginas ──
   function pagePatrimonio(m) {
-    // El reparto va pegado a la cifra total, justo antes de las cuatro tarjetas:
-    // se lee como el desglose de ese número, y las tarjetas son la leyenda.
+    // Arriba, lo que tienes: el reparto va pegado a su cifra y las tarjetas son
+    // su leyenda, así que reparten el BRUTO y suman 100 %. Mezclar ahí la deuda
+    // era pedirle a una misma gráfica que contara dos cosas de signo contrario.
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
-      vistaPanel("patrimonio", "Distribución del patrimonio",
+      vistaPanel("patrimonio", "Distribución de los activos",
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
          { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
          { label: "Propiedades", value: m.inm.total, accent: "#a16207" }],
-        fmtEur(m.patrimonioNeto), "Neto", null, { sinLeyenda: true, desnudo: true }) +
+        fmtEur(m.patrimonioBruto), "Activos", null, { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-hub-grid" style="margin-top:1.5rem;">
-        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja", "patrimonio")}
-        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera", "patrimonio")}
-        ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades", "patrimonio")}
-        ${hubCard("Pasivos", fmtEur(m.pas.total), m.ratioPas, "#6b7280",
-                  m.pas.n ? m.pas.n + (m.pas.n === 1 ? " deuda" : " deudas") : "Sin deudas registradas", null, "pasivos", "patrimonio")}
+        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja", "patrimonio", "de tus activos")}
+        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera", "patrimonio", "de tus activos")}
+        ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades", "patrimonio", "de tus activos")}
       </div>` +
+      panelDeuda(m) +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio");
+  }
+
+  // La deuda, justo debajo y con su propio reparto: la misma lectura que arriba
+  // —una gráfica y sus tarjetas de leyenda— pero contando lo que debes, por
+  // tipo, que es como se piensa una deuda: la hipoteca, la tarjeta, el coche.
+  function panelDeuda(m) {
+    const pas = m.pas || { items: [], n: 0, total: 0 };
+    if (!pas.n) {
+      return `<div class="v2-wrap" style="margin-top:2.5rem;">
+        <div class="dashboard-panel" style="text-align:center;padding:1.5rem;">
+          <div style="color:#9ca3af;font-weight:600;font-size:0.9rem;">Sin deudas registradas</div>
+          <div style="color:#4b5563;font-size:0.82rem;margin-top:0.3rem;">
+            Tu patrimonio neto es todo lo que tienes.
+            <button onclick="v2Tab('pasivos')" style="background:none;border:none;padding:0;color:#3b82f6;font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Registrar una deuda</button>
+          </div></div></div>`;
+    }
+    const color = (t) => CFG.TIPO_COLORES_PASIVO[t] || CFG.PASIVO_ACCENT_DEFAULT;
+    const porTipo = {};
+    pas.items.forEach((d) => {
+      const t = d.tipo || "Otro";
+      (porTipo[t] = porTipo[t] || { total: 0, n: 0, uno: d }).total += d.importe;
+      porTipo[t].n++;
+    });
+    const tipos = Object.keys(porTipo).sort((a, b) => porTipo[b].total - porTipo[a].total);
+    const items = tipos.map((t) => ({ label: t, value: porTipo[t].total, accent: color(t) }));
+    const tarjetas = tipos.map((t) => {
+      const g = porTipo[t];
+      // Con una sola deuda de ese tipo, su nombre dice más que «1 deuda».
+      const sub = g.n === 1 ? esc(g.uno.nombre) : g.n + " deudas";
+      return hubCard(t, fmtEur(g.total), pas.total ? g.total / pas.total * 100 : 0,
+                     color(t), sub, null, "pasivos", "pasivos", "de tu deuda");
+    }).join("");
+
+    return `<div class="v2-wrap" style="margin-top:3rem;">
+        <div style="display:flex;align-items:baseline;gap:0.75rem;flex-wrap:wrap;border-top:1px solid #2a2d3a;padding-top:1.75rem;">
+          <div style="font-size:1.15rem;font-weight:800;color:#fff;letter-spacing:-0.01em;">Deuda</div>
+          <div style="font-size:1.15rem;font-weight:800;color:${RED};letter-spacing:-0.01em;">−${esc(fmtEur(pas.total).replace("-", ""))}</div>
+          <div style="font-size:0.8rem;color:#6b7280;">pesa un ${m.ratioPas.toFixed(1).replace(".", ",")} % de lo que tienes</div>
+        </div>
+      </div>` +
+      vistaPanel("pasivos", "Distribución de la deuda", items,
+                 fmtEur(pas.total), "Deuda", null, { sinLeyenda: true, desnudo: true }) +
+      `<div class="v2-hub-grid" style="margin-top:1.5rem;">${tarjetas}</div>`;
   }
 
   // Una posición está cerrada cuando ya no queda nada de ella (vendida o

@@ -288,12 +288,19 @@
     const pas = valuatePasivos(db.pasivos, db.movimientos);
     // Patrimonio NETO = lo que tienes menos lo que debes.
     const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total - pas.total);
-    const ratioInv = patrimonioNeto ? carteraTotal / patrimonioNeto * 100 : 0;
-    const ratioInm = patrimonioNeto ? inm.total / patrimonioNeto * 100 : 0;
-    const ratioPas = patrimonioNeto ? pas.total / patrimonioNeto * 100 : 0;
+    // El BRUTO es lo que tienes, sin descontar lo que debes. Los pesos de caja,
+    // cartera y propiedades se miden sobre él y no sobre el neto: son la leyenda
+    // del reparto de los activos, y unas partes que no suman 100 % en un reparto
+    // no son un matiz, son un error de lectura.
+    const patrimonioBruto = round2(patrimonioLiquido + carteraTotal + inm.total);
+    const ratioInv = patrimonioBruto ? carteraTotal / patrimonioBruto * 100 : 0;
+    const ratioInm = patrimonioBruto ? inm.total / patrimonioBruto * 100 : 0;
+    // Este no es una parte del reparto: dice cuánto pesa la deuda sobre lo que
+    // tienes, que es la cifra que importa de una deuda.
+    const ratioPas = patrimonioBruto ? pas.total / patrimonioBruto * 100 : 0;
     const pctLiquidez = 100 - ratioInv - ratioInm;
     return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker,
-             inv, inm, pas, carteraTotal, patrimonioNeto,
+             inv, inm, pas, carteraTotal, patrimonioNeto, patrimonioBruto,
              ratioInv, ratioInm, ratioPas, pctLiquidez };
   }
 
