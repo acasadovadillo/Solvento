@@ -700,12 +700,14 @@
     const doc = DB.state.doc;
     const cats = categoriasCfg();
     // Cuenta la rama entera, no solo las hijas directas: borrar «Vivienda»
-    // afecta también a lo que cuelga de sus suministros.
+    // afecta también a lo que cuelga de sus suministros. Y cuenta solo gastos:
+    // este es el catálogo de gastos, y avisar de los ingresos que comparten
+    // nombre haría creer que se van a quedar sin categoría.
     const dentro = (v) => v === cat || String(v || "").indexOf(cat + SEP_RUTA) === 0;
-    const usos = (doc.movimientos || []).filter((m) => dentro(m.tipo_gasto) || dentro(m.tipo_ingreso)).length;
+    const usos = (doc.movimientos || []).filter((m) => m.tipo === "Gasto" && dentro(m.tipo_gasto)).length;
     const aviso = usos
-      ? `"${cat}" se usa en ${usos} movimiento${usos === 1 ? "" : "s"}. Quitarla del catálogo no los cambia: seguirán con esa categoría. ¿Seguir?`
-      : `¿Quitar "${cat}" del catálogo?`;
+      ? `"${cat}" se usa en ${usos} gasto${usos === 1 ? "" : "s"}. Quitarla del catálogo no los cambia: seguirán con esa categoría. ¿Seguir?`
+      : `¿Quitar "${cat}" del catálogo de gastos?`;
     if (!confirm(aviso)) return;
     // Al borrar una madre se van con ella sus subcategorías del catálogo
     doc.config.categorias = cats.filter((c) => !dentro(c));
