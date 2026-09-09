@@ -146,6 +146,45 @@
   display: flex; flex-wrap: wrap; align-items: center;
   gap: 0.5rem 1.75rem; margin-top: 1rem;
 }
+/* ── Tablas en pantalla estrecha ──
+   Una tabla que hay que arrastrar de lado para llegar a la columna que importa
+   es una tabla que no se lee. En el móvil se aprieta el espaciado y se retira la
+   columna prescindible: el peso de cada fila es un adorno cuando el importe y el
+   neto son lo que se busca. La marca .col-secundaria dice cuál sobra. */
+@media (max-width: 640px) {
+  /* La tarjeta se quedaba con 2rem de aire a cada lado: 64px que la tabla no
+     tiene para sus cifras. (layout.css ya lo intentaba, pero este archivo carga
+     después y su padding de 2rem ganaba el pulso.) */
+  .table-container { padding: 1.25rem; }
+  .minimal-table th { padding: 0.6rem 0.45rem; font-size: 0.68rem; }
+  .minimal-table td { padding: 0.7rem 0.45rem; }
+  .minimal-table .col-secundaria { display: none; }
+}
+
+/* En un móvil estrecho, las cifras largas —«18.291,71 €»— siguen empujando la
+   tabla fuera de la pantalla. Se aprieta un punto más y se baja el cuerpo de los
+   números, que es preferible a arrastrar la tabla de lado para leer el neto. */
+@media (max-width: 430px) {
+  .table-container { padding: 0.9rem; }
+  .minimal-table th { padding: 0.5rem 0.16rem; }
+  .minimal-table td { padding: 0.6rem 0.16rem; font-size: 0.8rem; }
+  /* La primera columna es la que cede espacio al resto. Un mínimo mayor la deja
+     más legible, pero devuelve la tabla al arrastre lateral: entre las dos
+     cosas, cabe entera. */
+  .minimal-table th:first-child, .minimal-table td:first-child { min-width: 5rem; }
+  /* Editar y borrar se estrechan, pero no se achican: se recorta el aire de los
+     lados y se mantiene el alto, que es lo que hace acertar con el dedo. */
+  .minimal-table td .fila-acc { padding: 0.35rem 0.12rem !important; }
+  /* Un nombre largo —«Bankinter Premium Moderado»— fija el ancho mínimo de su
+     columna y empuja las cifras fuera de la pantalla. Con «anywhere» el nombre
+     se parte solo cuando no cabe de otro modo; las cifras llevan nowrap propio,
+     así que nunca se parten: se parte el texto, no el dinero. */
+  .minimal-table td { overflow-wrap: anywhere; }
+  /* Y el texto solo se parte si se le deja: dentro de un flex, cada hijo se
+     niega a bajar de su contenido salvo que se le diga min-width: 0. */
+  .minimal-table td div, .minimal-table td span { min-width: 0; }
+}
+
 @media (max-width: 640px) {
   .leg-fila { gap: 0.15rem 0; }
   .leg-fila > .leg-it { width: 100%; max-width: 280px; justify-content: space-between; }

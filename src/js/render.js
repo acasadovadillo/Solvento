@@ -19,8 +19,8 @@
   const rc = (x) => (isFinite(x) && x < 0 ? RED : GREEN);
   const parseFechaES = (s) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || "")); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(0); };
   const addBtn = (label, onclick) => `<button onclick="${onclick}" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">${label}</button>`;
-  const delBtn = (onclick) => `<button onclick="event.stopPropagation();${onclick}" title="Borrar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">✕</button>`;
-  const editBtn = (onclick) => `<button onclick="event.stopPropagation();${onclick}" title="Editar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button>`;
+  const delBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Borrar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">✕</button>`;
+  const editBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Editar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button>`;
   const rowActions = (edit, del) => `<td style="text-align:right;width:1%;white-space:nowrap;">${editBtn(edit)}${delBtn(del)}</td>`;
 
   function logoImg(nombre, isin, size) {
@@ -319,7 +319,11 @@
   const OPS = { q: "", tipo: "", desde: "", hasta: "", limite: 40 };
   let OPS_BANCO = "";
 
-  const estiloFiltro = "background:#12141d;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.82rem;padding:0.4rem 0.6rem;outline:none;font-family:inherit;";
+  // Un <select> se estira hasta la más larga de sus opciones, y la lista de
+  // categorías tiene rutas de tres niveles: en el móvil ese desplegable medía
+  // 361 px en una pantalla de 375 y se salía por la derecha. Con el máximo al
+  // ancho disponible se encoge y recorta el texto, que se lee entero al abrirlo.
+  const estiloFiltro = "background:#12141d;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.82rem;padding:0.4rem 0.6rem;outline:none;font-family:inherit;max-width:100%;min-width:0;";
   const selFiltro = (id, opts, val, onchange) =>
     `<select id="${id}" onchange="${onchange}" style="${estiloFiltro}">` +
     opts.map((o) => `<option value="${esc(o[0])}" ${o[0] === val ? "selected" : ""}>${esc(o[1])}</option>`).join("") + `</select>`;
@@ -545,18 +549,18 @@
           <td style="text-align:right;color:#4b5563;">—</td></tr>`;
       }
       const rentCell = (a.coste > 0 && isFinite(a.importe))
-        ? `<div style="color:${rc(a.ganancia)};font-weight:600;">${a.ganancia >= 0 ? "+" : ""}${fmtEur(a.ganancia)}</div><div style="color:${rc(a.rentPct)};font-size:0.78rem;">${fmtPct(a.rentPct)}${isFinite(a.cagr) && a.coste >= 100 ? " · CAGR " + a.cagr.toFixed(1) + "%" : ""}</div>`
+        ? `<div style="color:${rc(a.ganancia)};font-weight:600;">${a.ganancia >= 0 ? "+" : ""}${fmtEur(a.ganancia)}</div><div style="color:${rc(a.rentPct)};font-size:0.78rem;">${fmtPct(a.rentPct)}${isFinite(a.cagr) && a.coste >= 100 ? '<span class="col-secundaria"> · CAGR ' + a.cagr.toFixed(1) + "%</span>" : ""}</div>`
         : `<span style="color:#4b5563;">—</span>`;
       return `<tr class="table-row">
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:#fff;font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(a.tipo)}${a.isin && a.isin !== "-" ? ' · <span style="font-family:ui-monospace,monospace;">' + esc(a.isin) + "</span>" : ""}</div></div></div></td>
         <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(a.importe)}</td>
         <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${a.coste ? fmtEur(a.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${rentCell}</td>
-        <td style="text-align:right;color:#3b82f6;font-weight:600;">${a.pct.toFixed(2)}%</td></tr>`;
+        <td class="col-secundaria" style="text-align:right;color:#3b82f6;font-weight:600;">${a.pct.toFixed(2)}%</td></tr>`;
     }).join("");
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cartera</div>
-      <table class="minimal-table"><thead><tr><th style="text-align:left;">Activo</th><th style="text-align:right;">Valor actual</th><th style="text-align:right;">Invertido</th><th style="text-align:right;">Rentabilidad</th><th style="text-align:right;">Peso</th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="minimal-table"><thead><tr><th style="text-align:left;">Activo</th><th style="text-align:right;">Valor actual</th><th style="text-align:right;">Invertido</th><th style="text-align:right;">Rentabilidad</th><th class="col-secundaria" style="text-align:right;">Peso</th></tr></thead><tbody>${rows}</tbody></table>
       <div style="margin-top:1rem;">${addBtn("Ver reporte mensual de activos →", "v2Tab('reporte')")}</div>
     </div></div>`;
   }
@@ -799,12 +803,12 @@
                ${deudas.length} ${deudas.length === 1 ? "deuda" : "deudas"}</button>
              · <span style="color:#ef4444;font-weight:600;">−${esc(fmtEur(deudas.reduce((t, d) => t + d.importe, 0)).replace("-", ""))}</span></div>`
         : "";
-      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
+      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
       vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", null,
                  { sinLeyenda: true, desnudo: true }) +
-      `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+      `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
       </div></div>` +
       chartPanel("Evolución de la caja", "v2-chart-caja") +
@@ -863,7 +867,7 @@
           <div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div>
             <div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}${realLinea}${sinMarcar}</div></div></td>
         <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>
-        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
+        <td class="col-secundaria" style="text-align:right;color:#9ca3af;white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${revalorizacion}</td>
         ${rowActions(`v2EditProp('${r.id}')`, `v2DelProp('${r.id}')`)}</tr>`;
     }).join("");
@@ -886,7 +890,7 @@
           <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Propiedades</div>
           ${addBtn("＋ Propiedad", "v2AddProp()")}
         </div>
-        <table class="minimal-table"><thead><tr><th style="text-align:left;">Propiedad</th><th style="text-align:right;">Valor actual</th><th style="text-align:right;">Compra</th><th style="text-align:right;">Revalorización</th><th></th></tr></thead>
+        <table class="minimal-table"><thead><tr><th style="text-align:left;">Propiedad</th><th style="text-align:right;">Valor actual</th><th class="col-secundaria" style="text-align:right;">Compra</th><th style="text-align:right;">Revalorización</th><th></th></tr></thead>
         <tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Sin propiedades</td></tr>'}</tbody></table>
       </div></div>`;
   }
@@ -1008,7 +1012,7 @@
       <td style="text-align:left;"><span style="color:#fff;font-weight:600;">${esc(d.nombre)}</span>${d.entidad ? `<div style="color:#6b7280;font-size:0.78rem;">${esc(d.entidad)}</div>` : ""}</td>
       <td style="text-align:left;color:#9ca3af;">${esc(d.tipo)}</td>
       <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(d.importe)}</td>
-      <td style="text-align:right;color:#9ca3af;">${(pas.total ? d.importe / pas.total * 100 : 0).toFixed(2)}%</td>
+      <td class="col-secundaria" style="text-align:right;color:#9ca3af;">${(pas.total ? d.importe / pas.total * 100 : 0).toFixed(2)}%</td>
       ${rowActions(`v2EditPas('${d.id}')`, `v2DelPas('${d.id}')`)}</tr>`).join("");
     return header("Pasivos", fmtEur(pas.total)) +
       `<div class="v2-wrap"><div class="table-container">
@@ -1017,7 +1021,7 @@
           ${addBtn("＋ Deuda", "v2AddPas()")}
         </div>
         <table class="minimal-table">
-        <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th style="text-align:right;">Peso</th><th></th></tr></thead>
+        <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div></div>` + panelPrestamos();
   }
 
@@ -1278,7 +1282,7 @@
         <td style="text-align:right;color:${tono(prof)};white-space:nowrap;">${n.total ? fmtEur(n.total) : "—"}</td>
         <td style="text-align:right;color:${ing ? GREEN : "#4b5563"};white-space:nowrap;">${ing ? fmtEur(ing) : "—"}</td>
         <td style="text-align:right;color:${ing ? rc(neto) : tono(prof)};font-weight:600;white-space:nowrap;">${ing ? (neto >= 0 ? "+" : "−") + fmtEur(Math.abs(neto)) : "−" + fmtEur(n.total)}</td>
-        <td style="text-align:right;color:#6b7280;white-space:nowrap;">${(base ? n.total / base * 100 : 0).toFixed(1)}%</td></tr>`;
+        <td class="col-secundaria" style="text-align:right;color:#6b7280;white-space:nowrap;">${(base ? n.total / base * 100 : 0).toFixed(1)}%</td></tr>`;
       if (!hijas.length || !abierta) return html;
       if (n.propio > 0.005) {
         html += `<tr class="table-row" style="background:${FONDO[Math.min(prof + 1, 3)]};">
@@ -1305,7 +1309,8 @@
       <table class="minimal-table">
         <thead><tr>
           <th style="text-align:left;">Centro</th><th style="text-align:right;">Gasto</th>
-          <th style="text-align:right;">Ingreso</th><th style="text-align:right;">Neto</th><th style="text-align:right;">Peso</th>
+          <th style="text-align:right;">Ingreso</th><th style="text-align:right;">Neto</th>
+          <th class="col-secundaria" style="text-align:right;">Peso</th>
         </tr></thead><tbody>${filas}</tbody></table>
     </div></div>`;
   }
