@@ -1039,6 +1039,32 @@
     if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
   }
 
+  // Pasa la corrección de textos a los apuntes ya guardados. Solo toca lo que
+  // sabe traducir: lo que no está en la tabla se queda como está y se sigue
+  // viendo en la revisión, para arreglarlo a mano en su movimiento.
+  function arreglarTextos() {
+    const doc = DB.state.doc;
+    const M = window.SolventoModel;
+    const cambios = [];
+    (doc.movimientos || []).forEach((m) => {
+      ["detalle", "detalle_banco"].forEach((campo) => {
+        const antes = m[campo];
+        if (!antes) return;
+        const despues = M.arreglarTexto(antes);
+        if (despues !== antes) cambios.push({ m, campo, antes, despues });
+      });
+    });
+    if (!cambios.length) {
+      alert("No hay ningún texto que yo sepa arreglar. Los que salen en el aviso hay que corregirlos a mano, en su movimiento.");
+      return;
+    }
+    const muestra = cambios.slice(0, 5).map((c) => `  ${c.antes}\n  → ${c.despues}`).join("\n\n");
+    if (!confirm(`Voy a corregir ${cambios.length} ${cambios.length === 1 ? "texto" : "textos"}:\n\n${muestra}` +
+                 (cambios.length > 5 ? `\n\n…y ${cambios.length - 5} más.` : "") + "\n\n¿Adelante?")) return;
+    cambios.forEach((c) => { c.m[c.campo] = c.despues; });
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
+  }
+
   function restaurarRevisiones() {
     const doc = DB.state.doc;
     const n = ((doc.config || {}).revision_ok || []).length;
@@ -1057,7 +1083,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, marcarRevisado, restaurarRevisiones, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),

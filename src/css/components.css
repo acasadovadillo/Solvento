@@ -108,6 +108,8 @@
   vertical-align: middle;
 }
 .table-row { transition: background 0.15s; }
+/* Fila de contexto: solo existe en pantalla estrecha (ver el bloque de 430px) */
+.minimal-table .fila-detalle { display: none; }
 .table-row:hover { background: #222533; }
 .table-row:last-child td { border-bottom: none !important; }
 
@@ -171,7 +173,7 @@
   /* La primera columna es la que cede espacio al resto. Un mínimo mayor la deja
      más legible, pero devuelve la tabla al arrastre lateral: entre las dos
      cosas, cabe entera. */
-  .minimal-table th:first-child, .minimal-table td:first-child { min-width: 5rem; }
+  .minimal-table th:first-child, .minimal-table td:first-child { min-width: 4.75rem; }
   /* Editar y borrar se estrechan, pero no se achican: se recorta el aire de los
      lados y se mantiene el alto, que es lo que hace acertar con el dedo. */
   .minimal-table td .fila-acc { padding: 0.35rem 0.12rem !important; }
@@ -183,6 +185,11 @@
   /* Y el texto solo se parte si se le deja: dentro de un flex, cada hijo se
      niega a bajar de su contenido salvo que se le diga min-width: 0. */
   .minimal-table td div, .minimal-table td span { min-width: 0; }
+  /* El contexto de una propiedad —lo que renta, lo que ha costado de verdad—
+     baja a su propia fila, a todo lo ancho, donde se lee como la frase que es. */
+  .minimal-table .solo-ancho { display: none; }
+  .minimal-table .fila-detalle { display: table-row; }
+  .minimal-table .fila-detalle td { padding-top: 0; padding-bottom: 0.7rem; }
 }
 
 @media (max-width: 640px) {

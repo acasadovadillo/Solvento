@@ -861,15 +861,24 @@
       // El reparto es por tipo, así que la fila resalta el tramo del suyo: varias
       // propiedades del mismo tipo encienden el mismo tramo, que es lo correcto.
       const tipoJs = String(r.tipo).replace(/'/g, "\\'");
+      // «Alquilada · 500,00 €/mes de media · 3,2 % neto anual» es una frase, y
+      // una frase no cabe en una columna de móvil sin quedar en fideo vertical.
+      // En pantalla ancha va bajo el nombre, donde acompaña; en el móvil baja a
+      // una fila propia a todo lo ancho. Se escribe dos veces pero solo se ve
+      // una: el CSS enseña la que toca según el ancho.
+      // Con la descripción dentro también, a la celda del nombre solo le queda el
+      // nombre: deja de partirse por la mitad y las cifras recuperan su sitio.
+      const contexto = `<div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}${realLinea}${sinMarcar}`;
       return `<tr class="table-row" onmouseenter="v2Reparto('propiedades','${tipoJs}',true)" onmouseleave="v2Reparto('propiedades',null)">
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
           <span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span>
           <div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div>
-            <div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}${realLinea}${sinMarcar}</div></div></td>
+            <div class="solo-ancho">${contexto}</div></div></div></td>
         <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>
         <td class="col-secundaria" style="text-align:right;color:#9ca3af;white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${revalorizacion}</td>
-        ${rowActions(`v2EditProp('${r.id}')`, `v2DelProp('${r.id}')`)}</tr>`;
+        ${rowActions(`v2EditProp('${r.id}')`, `v2DelProp('${r.id}')`)}</tr>` +
+        `<tr class="fila-detalle"><td colspan="5">${contexto}</td></tr>`;
     }).join("");
 
     const rentaPanel = inm.alquiladas
@@ -989,6 +998,7 @@
         </div>
         <div style="color:#9ca3af;font-size:0.8rem;margin-top:0.2rem;">${esc(a.detalle)}</div>
         <ul style="color:#6b7280;font-size:0.78rem;margin:0.5rem 0 0;padding-left:1.1rem;">${muestra}</ul>
+        ${a.accion ? `<div style="margin-top:0.6rem;">${addBtn(esc(a.accion.texto), a.accion.fn)}</div>` : ""}
         ${a.items.length > 8 ? `<div style="color:#4b5563;font-size:0.75rem;margin-top:0.3rem;">…y ${a.items.length - 8} más</div>` : ""}
       </div>`;
     };
@@ -1687,6 +1697,7 @@
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(window.__MODEL);
   };
   window.v2RevOk = (clave) => F() && F().marcarRevisado(clave);
+  window.v2ArreglarTextos = () => F() && F().arreglarTextos();
   window.v2RevRestaurar = () => F() && F().restaurarRevisiones();
   window.v2CentroRango = (r) => { CENTROS.rango = r; render(CURRENT_DOC, window.__PRICES); };
   window.v2CatToggle = (nombre) => {

@@ -577,6 +577,48 @@
   // cuenta al editarlo, una devolución se apunta dos veces, un pasivo se queda
   // en negativo: nada de eso da error, simplemente pasa, y se descubre semanas
   // después cuadrando a mano. Esto lo busca a propósito.
+  // ── Texto mal codificado ─────────────────────────────────────────────────
+  // Los PDF de Bankinter traen la Í rota y pdftotext la convierte en
+  // interrogación: «CURENERG?A». leer_bankinter.py ya lo arregla al importar,
+  // pero eso no toca lo que se guardó antes de que existiera esa corrección.
+  // Esta tabla es la misma de allí, y aquí actúa sobre los apuntes ya guardados.
+  const CORRECCIONES = { "CURENERG?A": "CURENERGÍA" };
+  // Una interrogación entre dos letras nunca es una pregunta: es una letra que
+  // no sobrevivió a la conversión del PDF.
+  const RE_MAL = /[A-Za-zÀ-ÖØ-öø-ÿ]\?[A-Za-zÀ-ÖØ-öø-ÿ]/;
+  const estaMal = (t) => RE_MAL.test(String(t || ""));
+
+  function arreglarTexto(texto) {
+    let t = String(texto || "");
+    for (const malo in CORRECCIONES) {
+      const bueno = CORRECCIONES[malo];
+      let i = t.toUpperCase().indexOf(malo);
+      while (i >= 0) {
+        const original = t.slice(i, i + malo.length);
+        // Se respeta cómo venía escrito: el mismo concepto aparece en
+        // mayúsculas en unos extractos y capitalizado en otros.
+        const puesto = original === original.toUpperCase()
+          ? bueno
+          : bueno.charAt(0) + bueno.slice(1).toLowerCase();
+        t = t.slice(0, i) + puesto + t.slice(i + malo.length);
+        i = t.toUpperCase().indexOf(malo, i + puesto.length);
+      }
+    }
+    return t;
+  }
+
+  // Los que se pueden arreglar solos y los que habrá que mirar a mano.
+  function textosMalCodificados(movs) {
+    const out = [];
+    for (const m of movs || []) {
+      const campos = ["detalle", "detalle_banco"].filter((c) => estaMal(m[c]));
+      if (!campos.length) continue;
+      out.push({ id: m.id, campos, texto: String(m.detalle || m.detalle_banco || ""),
+                 sabemos: campos.some((c) => arreglarTexto(m[c]) !== m[c]) });
+    }
+    return out;
+  }
+
   function revision(db, prices) {
     const avisos = [];
     // Lo que ya has mirado y está bien no vuelve a preguntarse. Sin esto, un
@@ -591,14 +633,14 @@
     // Cada hallazgo lleva una clave estable para poder descartarlo: los errores
     // no se descartan —hay que arreglarlos— y los avisos sí, porque son juicios
     // y el que sabe si dos cafés del mismo día son dos cafés eres tú.
-    const mete = (nivel, titulo, detalle, items) => {
+    const mete = (nivel, titulo, detalle, items, accion) => {
       const vivos = (items || []).filter((x) => {
         if (nivel === "error" || !x.clave) return true;
         if (descartados.has(x.clave)) { descartadosN++; return false; }
         return true;
       });
       if (!vivos.length) return;
-      avisos.push({ nivel, titulo, detalle, n: vivos.length, items: vivos });
+      avisos.push({ nivel, titulo, detalle, n: vivos.length, items: vivos, accion: accion || null });
     };
     const etiqueta = (m) => `${m.fecha} · ${(m.detalle || m.tipo_gasto || m.tipo_ingreso || m.tipo || "").slice(0, 44)}`;
 
@@ -695,6 +737,19 @@
          gemelas(movs.flatMap((m) => [m.tipo_gasto, m.tipo_ingreso]).filter(Boolean)));
     mete("aviso", "Centros de coste gemelos", "Lo mismo, en el otro eje.",
          gemelas(movs.map((m) => m.centro).filter(Boolean)));
+
+    // Letras que no sobrevivieron al PDF. No afecta a ninguna cuenta: solo se lee
+    // mal, y por eso es aviso y no error.
+    const malCodificados = textosMalCodificados(movs);
+    const arreglables = malCodificados.filter((x) => x.sabemos).length;
+    mete("aviso", "Texto con letras mal codificadas",
+         "Un PDF con la Í rota deja «CURENERG?A» en el concepto. No cambia ninguna cifra, solo se lee mal.",
+         malCodificados.map((x) => ({ clave: "moji:" + x.id, texto: x.texto.slice(0, 60) })),
+         arreglables ? { fn: "v2ArreglarTextos()",
+                         texto: arreglables === malCodificados.length
+                           ? (arreglables === 1 ? "Arreglarlo" : "Arreglarlos")
+                           : (arreglables === 1 ? "Arreglar el que sé"
+                                                : "Arreglar los " + arreglables + " que sé") } : null);
 
     // Un activo con posición que no se puede valorar arrastra el patrimonio
     const inv = valuate(db, prices);
@@ -1083,5 +1138,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();
