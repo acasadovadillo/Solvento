@@ -579,13 +579,26 @@
   // después cuadrando a mano. Esto lo busca a propósito.
   function revision(db, prices) {
     const avisos = [];
+    // Lo que ya has mirado y está bien no vuelve a preguntarse. Sin esto, un
+    // aviso con diez falsos positivos se ignora entero a los tres días, y con él
+    // se ignoran los verdaderos.
+    const descartados = new Set(((db.config || {}).revision_ok) || []);
+    let descartadosN = 0;
     const movs = (db.movimientos || []);
     const cuentas = new Set(CFG.cuentas().map((c) => c.cuenta));
     const pasivos = new Set((db.pasivos || []).map((d) => d.nombre || d.concepto));
     const hoy = new Date(); hoy.setHours(23, 59, 59, 999);
+    // Cada hallazgo lleva una clave estable para poder descartarlo: los errores
+    // no se descartan —hay que arreglarlos— y los avisos sí, porque son juicios
+    // y el que sabe si dos cafés del mismo día son dos cafés eres tú.
     const mete = (nivel, titulo, detalle, items) => {
-      if (items && !items.length) return;
-      avisos.push({ nivel, titulo, detalle, n: items ? items.length : 0, items: items || [] });
+      const vivos = (items || []).filter((x) => {
+        if (nivel === "error" || !x.clave) return true;
+        if (descartados.has(x.clave)) { descartadosN++; return false; }
+        return true;
+      });
+      if (!vivos.length) return;
+      avisos.push({ nivel, titulo, detalle, n: vivos.length, items: vivos });
     };
     const etiqueta = (m) => `${m.fecha} · ${(m.detalle || m.tipo_gasto || m.tipo_ingreso || m.tipo || "").slice(0, 44)}`;
 
@@ -595,7 +608,7 @@
     const pasNeg = (db.pasivos || [])
       .filter((r) => r.calcular !== false && r.importe == null)
       .filter((r) => saldoDeMovimientos(r.nombre || r.concepto, movs) < -0.005)
-      .map((r) => `${r.nombre || r.concepto}: ${round2(saldoDeMovimientos(r.nombre || r.concepto, movs))} €`);
+      .map((r) => ({ texto: `${r.nombre || r.concepto}: ${round2(saldoDeMovimientos(r.nombre || r.concepto, movs))} €` }));
     mete("error", "Una deuda ha quedado en negativo",
          "Le falta algún cargo o le sobra algún pago. Mientras esté así no aparece en Pasivos y tu patrimonio sale inflado.", pasNeg);
 
@@ -603,18 +616,18 @@
     const huerfanos = movs.filter((m) => {
       const cs = [m.cuenta_origen, m.cuenta_destino].map((x) => String(x || "").trim()).filter(Boolean);
       return cs.some((c) => c !== "-" && !cuentas.has(c) && !pasivos.has(c));
-    }).map(etiqueta);
+    }).map((m) => ({ texto: etiqueta(m) }));
     mete("error", "Movimientos en una cuenta que no existe",
          "Su cuenta no está dada de alta ni es un pasivo, así que su dinero no entra en ningún saldo.", huerfanos);
 
     // Traspasos mal formados: si le falta una pata, el dinero se evapora
     const traspasosMal = movs.filter((m) => m.tipo === "Traspaso" &&
       (!String(m.cuenta_origen || "").trim() || !String(m.cuenta_destino || "").trim() ||
-       String(m.cuenta_origen).trim() === String(m.cuenta_destino).trim())).map(etiqueta);
+       String(m.cuenta_origen).trim() === String(m.cuenta_destino).trim())).map((m) => ({ texto: etiqueta(m) }));
     mete("error", "Traspasos con origen y destino mal puestos",
          "Un traspaso mueve dinero entre dos cuentas distintas: sin una de las dos, el dinero desaparece de un lado sin llegar al otro.", traspasosMal);
 
-    const importesMal = movs.filter((m) => !(num(m.importe) > 0)).map(etiqueta);
+    const importesMal = movs.filter((m) => !(num(m.importe) > 0)).map((m) => ({ texto: etiqueta(m) }));
     mete("error", "Movimientos sin importe válido", "Un importe vacío, cero o negativo no se puede sumar.", importesMal);
 
     // Duplicados. Mismo día y mismo importe pasa constantemente —dos cafés, dos
@@ -648,7 +661,9 @@
         for (let b = a + 1; b < idx.length; b++) {
           const comunes = Array.from(suyas[idx[a]]).filter((w) => suyas[idx[b]].has(w) && frecuencia[w] <= tope);
           if (comunes.length) {
-            dupes.push(`${etiqueta(gastosIngresos[idx[a]])}  ·  y  ${String(gastosIngresos[idx[b]].detalle || "").slice(0, 34)}`);
+            const ids = [gastosIngresos[idx[a]].id, gastosIngresos[idx[b]].id].sort().join("|");
+            dupes.push({ clave: "dup:" + ids,
+                         texto: `${etiqueta(gastosIngresos[idx[a]])}  ·  y  ${String(gastosIngresos[idx[b]].detalle || "").slice(0, 34)}` });
           }
         }
       }
@@ -656,12 +671,13 @@
     mete("aviso", "Posibles apuntes duplicados",
          "Mismo día, mismo importe y un concepto que se parece. A veces es casualidad; otras es el mismo dinero contado dos veces.", dupes);
 
-    const futuros = movs.filter((m) => { const f = parseFechaES(m.fecha); return f && f > hoy; }).map(etiqueta);
+    const futuros = movs.filter((m) => { const f = parseFechaES(m.fecha); return f && f > hoy; })
+      .map((m) => ({ clave: "fut:" + m.id, texto: etiqueta(m) }));
     mete("aviso", "Movimientos con fecha futura", "Puede ser una fecha mal tecleada.", futuros);
 
     // Una cuenta corriente en negativo casi siempre es una imputación mal puesta
     const saldos = computeSaldos(movs, db.inversiones).saldos.filter((c) => c.saldo < -0.005)
-      .map((c) => `${c.cuenta}: ${c.saldo.toFixed(2)} €`);
+      .map((c) => ({ clave: "neg:" + c.cuenta, texto: `${c.cuenta}: ${c.saldo.toFixed(2)} €` }));
     mete("aviso", "Cuentas con saldo negativo",
          "Salvo que tengas descubierto de verdad, suele significar que un gasto está cargado en la cuenta equivocada.", saldos);
 
@@ -671,7 +687,8 @@
     const gemelas = (lista) => {
       const por = {};
       Array.from(new Set(lista)).forEach((c) => { (por[normal(c)] = por[normal(c)] || []).push(c); });
-      return Object.values(por).filter((v) => v.length > 1).map((v) => v.join("  ·  "));
+      return Object.values(por).filter((v) => v.length > 1)
+        .map((v) => ({ clave: "gem:" + normal(v[0]), texto: v.join("  ·  ") }));
     };
     mete("aviso", "Categorías que solo se distinguen por una tilde o un espacio",
          "Se cuentan como dos y parten en dos el gasto de la misma cosa.",
@@ -682,12 +699,12 @@
     // Un activo con posición que no se puede valorar arrastra el patrimonio
     const inv = valuate(db, prices);
     const sinPrecio = (inv.assets || []).filter((a) => a.unidades > 1e-9 && !isFinite(a.importe))
-      .map((a) => a.nombre);
+      .map((a) => ({ texto: a.nombre }));
     mete("error", "Activos que no se pueden valorar",
          "Tienen posición abierta pero ni precio de mercado ni valor liquidativo, así que no suman en la cartera.", sinPrecio);
 
     const errores = avisos.filter((a) => a.nivel === "error").length;
-    return { avisos, errores, total: avisos.length };
+    return { avisos, errores, total: avisos.length, descartados: descartadosN };
   }
 
   function buildGastos(db) {

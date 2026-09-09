@@ -901,6 +901,16 @@
     </div></div>`;
   }
 
+  // Lo descartado no desaparece del todo: se dice cuántos son y se puede volver
+  // a mirarlos, porque un «está bien» de hace seis meses puede haber dejado de
+  // serlo y esconder cosas para siempre es como no revisar.
+  const pieRevisados = (r) => (r.descartados
+    ? `<div style="font-size:0.78rem;color:#4b5563;margin-top:0.75rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+         ${r.descartados} ${r.descartados === 1 ? "aviso marcado como revisado" : "avisos marcados como revisados"}
+         <button onclick="v2RevRestaurar()" style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#6b7280;
+           font-family:inherit;font-size:0.72rem;padding:0.15rem 0.45rem;cursor:pointer;">Volver a mirarlos</button></div>`
+    : "");
+
   // La revisión se pinta entera aunque no haya nada: cuando todo está bien, eso
   // también es información, y es la única forma de saber que se ha mirado.
   function panelRevision() {
@@ -911,12 +921,20 @@
       return `<div style="background:#0f2a1c;border:1px solid #10b981;border-radius:12px;padding:1rem 1.15rem;">
         <div style="color:${GREEN};font-weight:700;font-size:0.95rem;">Todo en orden</div>
         <div style="color:#6b7280;font-size:0.82rem;margin-top:0.25rem;">
-          Ninguna cuenta en negativo, ningún apunte huérfano, ninguna deuda imposible y ningún duplicado a la vista.</div></div>`;
+          Ninguna cuenta en negativo, ningún apunte huérfano, ninguna deuda imposible y ningún duplicado a la vista.</div></div>`
+        + pieRevisados(r);
     }
     const bloque = (a) => {
       const err = a.nivel === "error";
       const col = err ? RED : "#f59e0b";
-      const muestra = a.items.slice(0, 8).map((x) => `<li style="margin:0.15rem 0;">${esc(x)}</li>`).join("");
+      const muestra = a.items.slice(0, 8).map((x) => {
+        const boton = x.clave
+          ? `<button onclick="v2RevOk('${String(x.clave).replace(/'/g, "\\'")}')" title="Marcarlo como revisado: no volverá a salir"
+               style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#6b7280;font-family:inherit;
+               font-size:0.68rem;padding:0 0.35rem;margin-left:0.4rem;cursor:pointer;white-space:nowrap;">está bien</button>`
+          : "";
+        return `<li style="margin:0.15rem 0;">${esc(x.texto)}${boton}</li>`;
+      }).join("");
       return `<div style="background:${err ? "#2b1414" : "#2a2109"};border:1px solid ${col};border-radius:12px;
              padding:0.85rem 1rem;margin-bottom:0.75rem;">
         <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:baseline;flex-wrap:wrap;">
@@ -931,7 +949,7 @@
     const resumen = `<div style="font-size:0.85rem;color:#9ca3af;margin-bottom:0.75rem;">
       ${r.errores ? `<b style="color:${RED};">${r.errores} ${r.errores === 1 ? "cosa" : "cosas"} que hay que arreglar</b> · ` : ""}
       ${r.total - r.errores} ${r.total - r.errores === 1 ? "aviso" : "avisos"} para mirar cuando puedas.</div>`;
-    return resumen + r.avisos.sort((a, b) => (a.nivel === "error" ? 0 : 1) - (b.nivel === "error" ? 0 : 1)).map(bloque).join("");
+    return resumen + r.avisos.sort((a, b) => (a.nivel === "error" ? 0 : 1) - (b.nivel === "error" ? 0 : 1)).map(bloque).join("") + pieRevisados(r);
   }
 
   function pagePasivos(m) {
@@ -1621,6 +1639,8 @@
     PRESTAMOS[nombre] = !PRESTAMOS[nombre];
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(window.__MODEL);
   };
+  window.v2RevOk = (clave) => F() && F().marcarRevisado(clave);
+  window.v2RevRestaurar = () => F() && F().restaurarRevisiones();
   window.v2CentroRango = (r) => { CENTROS.rango = r; render(CURRENT_DOC, window.__PRICES); };
   window.v2CatToggle = (nombre) => {
     ABIERTAS[nombre] = !ABIERTAS[nombre];

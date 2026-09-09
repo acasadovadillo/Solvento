@@ -1019,6 +1019,23 @@
               (k) => (k === 0 ? "+ Nuevo centro…" : "+ Nuevo centro dentro…"));
   }
 
+  // ── Revisión: marcar lo que ya has mirado ────────────────────────────────
+  function marcarRevisado(clave) {
+    const doc = DB.state.doc;
+    if (!doc.config) doc.config = {};
+    if (!Array.isArray(doc.config.revision_ok)) doc.config.revision_ok = [];
+    if (!doc.config.revision_ok.includes(clave)) doc.config.revision_ok.push(clave);
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
+  }
+
+  function restaurarRevisiones() {
+    const doc = DB.state.doc;
+    const n = ((doc.config || {}).revision_ok || []).length;
+    if (!n || !confirm(`¿Volver a revisar los ${n} avisos que diste por buenos?`)) return;
+    doc.config.revision_ok = [];
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
+  }
+
   // ── Borrado ──
   function del(collection, id) {
     const doc = DB.state.doc;
@@ -1029,7 +1046,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, marcarRevisado, restaurarRevisiones, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
