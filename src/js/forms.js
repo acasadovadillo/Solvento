@@ -190,7 +190,7 @@
     const noInv = (arr) => arr.filter((c) => String(c).trim().toLowerCase() !== "inversiones");
     // Catálogo + lo que ya exista en el histórico, por si algo no está dado de alta
     const catGasto = noInv(uniq(categoriasCfg().concat((doc.movimientos || []).map((m) => m.tipo_gasto)))).sort();
-    const catIngreso = noInv(uniq((doc.movimientos || []).map((m) => m.tipo_ingreso)));
+    const catIngreso = noInv(uniq(categoriasIngresoCfg().concat((doc.movimientos || []).map((m) => m.tipo_ingreso)))).sort();
     const centros = uniq(((doc.config || {}).centros || []).concat((doc.movimientos || []).map((m) => m.centro)));
     const body =
       field("m-fecha", "Fecha", input("m-fecha", "date", toISO(e.fecha || hoyES()))) +
@@ -235,6 +235,7 @@
       // solo existiría mientras exista el movimiento que la estrenó, y al
       // borrarlo desaparecería del desplegable con él.
       if (rec.tipo_gasto) registrarRuta(categoriasCfg(), rec.tipo_gasto);
+      if (rec.tipo_ingreso) registrarRuta(categoriasIngresoCfg(), rec.tipo_ingreso);
       if (rec.centro) {
         doc.config = doc.config || {};
         doc.config.centros = doc.config.centros || [];
@@ -412,11 +413,15 @@
       nueva: "v2CatNueva", renombrar: "v2CatRenombrar", borrar: "v2CatBorrar",
     }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría", "v2CatNueva('')", "#3b82f6")}</div>`;
 
+    const categoriasIngreso = catalogoArbol(categoriasIngresoCfg(), {
+      nueva: "v2CatIngNueva", renombrar: "v2CatIngRenombrar", borrar: "v2CatIngBorrar",
+    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría de ingreso", "v2CatIngNueva('')", "#3b82f6")}</div>`;
+
     const centros = catalogoArbol(centrosCfg(), {
       nueva: "v2CenNueva", renombrar: "v2CenRenombrar", borrar: "v2CenBorrar",
     }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir centro", "v2CenNueva('')", "#3b82f6")}</div>`;
 
-    return { cuentas, activos, objetivo, categorias, centros };
+    return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros };
   }
 
   function openCuentaCfg(i) {
@@ -606,6 +611,73 @@
     }
   }
 
+  // Las categorías de ingreso no tenían catálogo: vivían solo dentro de los
+  // movimientos que ya las usaban. Se sacan de ahí la primera vez y a partir de
+  // entonces se mantienen como las de gasto, que es lo que permite renombrarlas
+  // sin perseguir apunte por apunte.
+  function categoriasIngresoCfg() {
+    const doc = DB.state.doc;
+    if (!doc.config) doc.config = {};
+    if (!doc.config.categorias_ingreso) {
+      doc.config.categorias_ingreso = uniq((doc.movimientos || []).map((m) => m.tipo_ingreso)).sort();
+    }
+    return doc.config.categorias_ingreso;
+  }
+
+  // Renombrar una categoría toca los dos campos a propósito: gasto e ingreso
+  // comparten espacio de nombres, y una ruta como «Rentas > Alquileres» puede
+  // aparecer en los dos lados de un reparto de gastos.
+  const arrastrarCategoria = (doc) => (cambia, soloContar) => {
+    (doc.movimientos || []).forEach((m) => {
+      const g = cambia(m.tipo_gasto), i = cambia(m.tipo_ingreso);
+      if (!soloContar) { if (g !== m.tipo_gasto) m.tipo_gasto = g; if (i !== m.tipo_ingreso) m.tipo_ingreso = i; }
+    });
+    if (soloContar) return;
+    ["presupuesto", "clasificacion"].forEach((clave) => {
+      const mapa = (doc.config || {})[clave];
+      if (!mapa) return;
+      Object.keys(mapa).forEach((k) => {
+        const nuevo = cambia(k);
+        if (nuevo !== k) { mapa[nuevo] = mapa[k]; delete mapa[k]; }
+      });
+    });
+  };
+
+  function openCategoriaIngresoNueva(padre) {
+    const lista = categoriasIngresoCfg();
+    const body =
+      (padre ? `<div style="font-size:0.8rem;color:#9ca3af;margin:0.5rem 0 0;">Dentro de <b style="color:#fff;">${esc(padre)}</b></div>` : "") +
+      field("ki-nombre", padre ? "Nombre de la subcategoría" : "Nombre de la categoría",
+            input("ki-nombre", "text", "", padre ? 'placeholder="Alquileres"' : 'placeholder="Rentas"'));
+    shell(padre ? "Nueva subcategoría de ingreso" : "Nueva categoría de ingreso", body, () => {
+      const n = G("ki-nombre");
+      if (!n) return "Escribe un nombre";
+      if (n.includes(">")) return 'El nombre no puede llevar el símbolo ">"';
+      const completa = padre ? `${padre}${SEP_RUTA}${n}` : n;
+      if (lista.some((c) => c.toLowerCase() === completa.toLowerCase())) return "Esa categoría ya existe";
+      registrarRuta(lista, completa);
+      lista.sort();
+      return null;
+    }, refrescarAjustes);
+  }
+
+  function renombrarCategoriaIngresoCfg(cat) {
+    renombrarRuta("Renombrar categoría de ingreso", cat, categoriasIngresoCfg(), arrastrarCategoria(DB.state.doc));
+  }
+
+  function borrarCategoriaIngresoCfg(cat) {
+    const doc = DB.state.doc;
+    const lista = categoriasIngresoCfg();
+    const dentro = (v) => v === cat || String(v || "").indexOf(cat + SEP_RUTA) === 0;
+    const usos = (doc.movimientos || []).filter((m) => dentro(m.tipo_ingreso)).length;
+    const aviso = usos
+      ? `"${cat}" se usa en ${usos} ingreso${usos === 1 ? "" : "s"}. Quitarla del catálogo no los cambia: seguirán con esa categoría. ¿Seguir?`
+      : `¿Quitar "${cat}" del catálogo?`;
+    if (!confirm(aviso)) return;
+    doc.config.categorias_ingreso = lista.filter((c) => !dentro(c));
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
+  }
+
   function openCategoriaNueva(madre) {
     const cats = categoriasCfg();
     const body =
@@ -705,25 +777,7 @@
   }
 
   function renombrarCategoriaCfg(cat) {
-    const doc = DB.state.doc;
-    // Una categoría de gasto y una de ingreso comparten espacio de nombres, y
-    // los presupuestos y la clasificación 50/30/20 se guardan por esa misma ruta.
-    const arrastrar = (cambia, soloContar) => {
-      (doc.movimientos || []).forEach((m) => {
-        const g = cambia(m.tipo_gasto), i = cambia(m.tipo_ingreso);
-        if (!soloContar) { if (g !== m.tipo_gasto) m.tipo_gasto = g; if (i !== m.tipo_ingreso) m.tipo_ingreso = i; }
-      });
-      if (soloContar) return;
-      ["presupuesto", "clasificacion"].forEach((clave) => {
-        const mapa = (doc.config || {})[clave];
-        if (!mapa) return;
-        Object.keys(mapa).forEach((k) => {
-          const nuevo = cambia(k);
-          if (nuevo !== k) { mapa[nuevo] = mapa[k]; delete mapa[k]; }
-        });
-      });
-    };
-    renombrarRuta("Renombrar categoría", cat, categoriasCfg(), arrastrar);
+    renombrarRuta("Renombrar categoría", cat, categoriasCfg(), arrastrarCategoria(DB.state.doc));
   }
 
   // ── Objetivos de la regla 50/30/20 ──
@@ -926,6 +980,7 @@
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo,
     fragmentosAjustes, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),

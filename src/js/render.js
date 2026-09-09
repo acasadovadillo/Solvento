@@ -1456,6 +1456,7 @@
     poner("aj-activos", fr.activos);
     poner("aj-objetivo", fr.objetivo);
     poner("aj-categorias", fr.categorias);
+    poner("aj-categorias-ingreso", fr.categoriasIngreso);
     poner("aj-centros", fr.centros);
   };
   window.v2AjSec = (sec) => {
@@ -1526,6 +1527,9 @@
   window.v2CatNueva = (madre) => F() && F().openCategoriaNueva(madre);
   window.v2CatBorrar = (cat) => F() && F().borrarCategoriaCfg(cat);
   window.v2CatRenombrar = (cat) => F() && F().renombrarCategoriaCfg(cat);
+  window.v2CatIngNueva = (padre) => F() && F().openCategoriaIngresoNueva(padre);
+  window.v2CatIngBorrar = (cat) => F() && F().borrarCategoriaIngresoCfg(cat);
+  window.v2CatIngRenombrar = (cat) => F() && F().renombrarCategoriaIngresoCfg(cat);
   window.v2CenNueva = (padre) => F() && F().openCentroNuevo(padre);
   window.v2CenBorrar = (c) => F() && F().borrarCentroCfg(c);
   window.v2CenRenombrar = (c) => F() && F().renombrarCentroCfg(c);
