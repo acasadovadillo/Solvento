@@ -185,6 +185,14 @@
   // ── Movimiento ──
   function openMovimiento(existing) {
     const doc = DB.state.doc, e = existing || {};
+    // Una tarjeta de crédito no es una cuenta, pero sus compras salen de ella y
+    // hay que poder elegirla. Y si el movimiento viene de un sitio que ya no
+    // está en ninguna lista, se añade también: el desplegable enseñaba la
+    // primera opción y al guardar la escribía encima, así que abrir un apunte
+    // para cambiarle la categoría le cambiaba la cuenta sin decir nada.
+    const donde = uniq(CUENTAS()
+      .concat((doc.pasivos || []).map((d) => d.nombre || d.concepto))
+      .concat([e.cuenta_origen, e.cuenta_destino]));
     // "Inversiones" ya no es una categoría de movimiento (las compras se
     // registran como operaciones, que mueven el efectivo solas).
     const noInv = (arr) => arr.filter((c) => String(c).trim().toLowerCase() !== "inversiones");
@@ -196,8 +204,8 @@
       field("m-fecha", "Fecha", input("m-fecha", "date", toISO(e.fecha || hoyES()))) +
       field("m-tipo", "Tipo", select("m-tipo", ["Gasto", "Ingreso", "Traspaso", "Préstamo"], e.tipo || "Gasto")) +
       field("m-importe", "Importe (€)", input("m-importe", "number", e.importe, 'step="0.01" min="0"')) +
-      field("m-origen", "Cuenta origen", select("m-origen", CUENTAS(), e.cuenta_origen || CUENTAS()[0])) +
-      field("m-destino", "Cuenta destino", select("m-destino", CUENTAS(), e.cuenta_destino || CUENTAS()[0])) +
+      field("m-origen", "Cuenta origen", select("m-origen", donde, e.cuenta_origen || donde[0])) +
+      field("m-destino", "Cuenta destino", select("m-destino", donde, e.cuenta_destino || donde[0])) +
       field("m-catg", "Categoría de gasto", selectorArbol("m-catg", e.tipo_gasto)) +
       field("m-cati", "Categoría de ingreso", selectorArbol("m-cati", e.tipo_ingreso)) +
       // El centro de coste es el segundo eje: la categoría dice QUÉ se compró y
