@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# Solvento — la prueba de humo, antes de que salga de este ordenador.
+#
+# GitHub Pages publica lo que hay en main: cuando Actions ejecuta la prueba, la
+# web ya está desplegada y el aviso llega tarde. El único sitio donde una
+# comprobación puede impedir de verdad un despliegue es aquí, antes del push.
+# El workflow sigue existiendo, pero para lo que este hook no ve: lo que se
+# empuja desde otro ordenador o desde la propia web de GitHub.
+#
+# Se instala con:  sh tools/instalar.sh
+# Si un día hay que empujar sin pasar por aquí, --no-verify.
+
+set -u
+
+raiz=$(git rev-parse --show-toplevel)
+humo="$raiz/tools/pruebas/humo.js"
+[ -f "$humo" ] || exit 0
+
+JSC="/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc"
+
+if command -v node >/dev/null 2>&1; then
+  motor="node"
+elif [ -x "$JSC" ]; then
+  motor="$JSC"
+else
+  # Sin motor de JavaScript no se puede comprobar nada, pero tampoco es razón
+  # para impedirte trabajar: se avisa y se sigue. En Actions se comprobará.
+  printf '⚠ Sin node ni jsc: no he podido pasar la prueba de humo.\n' >&2
+  exit 0
+fi
+
+salida=$(cd "$raiz" && "$motor" "$humo" 2>&1) || {
+  printf '\n✗ Push detenido: las cuentas no cuadran.\n\n'
+  # jsc no sabe salir con un código de error sin lanzar una excepción, así que
+  # se le quita la traza: el listado de arriba ya dice qué invariante ha caído.
+  printf '%s\n' "$salida" | grep -v -e '^Exception: Error: fallo$' -e 'humo\.js:[0-9]' | sed 's/^/    /'
+  printf '\nArréglalo antes de publicar, o empuja con --no-verify si sabes que\n'
+  printf 'ese invariante ya no aplica (y entonces cámbialo en humo.js).\n\n'
+  exit 1
+}
+
+printf '✓ %s\n' "$(printf '%s\n' "$salida" | grep -c '✓') comprobaciones en verde"
+exit 0

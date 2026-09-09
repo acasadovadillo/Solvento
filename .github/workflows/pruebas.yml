@@ -1,0 +1,52 @@
+name: Prueba de humo
+
+# Doce invariantes del motor de cálculo: cosas que tienen que cumplirse pase lo
+# que pase (que la suma de los flujos mensuales sea la caja de hoy, que el árbol
+# de categorías sume el gasto del mes, que un préstamo devuelto quede saldado).
+# Si una deja de cumplirse, algo se ha roto aunque la pantalla parezca normal:
+# un cambio de una línea tumbó las tres gráficas y nadie se enteró hasta abrirlas.
+#
+# Corre con datos inventados —tools/pruebas/datos-ejemplo.json—, así que este
+# workflow no ve ni puede ver nada tuyo.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "data.enc"          # tus guardados cifrados no cambian el código
+      - "prices.json"       # ni los precios que sube el otro workflow
+      - "fundamentals.json"
+      - "changelog.txt"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  humo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Las cuentas cuadran entre sí
+        run: node tools/pruebas/humo.js
+
+      - name: Avisar por correo si algo se ha roto
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{secrets.MAIL_USERNAME}}
+          password: ${{secrets.MAIL_PASSWORD}}
+          subject: "⚠️ Solvento — una comprobación ha fallado (${{github.run_id}})"
+          to: acasadovadillo@gmail.com
+          from: Finanzas Personales Bot
+          body: |
+            La prueba de humo ha fallado en ${{ github.sha }}.
+
+            Algo del motor de cálculo ha dejado de cuadrar. La web ya está
+            desplegada con ese cambio, así que conviene mirarlo ahora:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

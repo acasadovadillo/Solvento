@@ -41,7 +41,17 @@ pintar) y `window.__ERROR`.
 
 ## Antes de desplegar
 
-1. `jsc tools/pruebas/humo.js` → *todo en orden*.
+El paso 1 ya no depende de que te acuerdes: el hook de `pre-push` pasa la prueba
+de humo y, si un invariante cae, el push no sale de tu ordenador. Es el único
+sitio donde una comprobación puede impedir de verdad un despliegue —GitHub Pages
+publica lo que hay en `main`, así que cuando Actions ejecuta la prueba la web ya
+está desplegada—. El workflow `pruebas.yml` sigue existiendo para lo que el hook
+no ve: lo que se empuje desde otro ordenador o desde la web de GitHub. Se
+instala con `sh tools/instalar.sh`.
+
+Lo demás sigue siendo tuyo:
+
+1. `jsc tools/pruebas/humo.js` → *todo en orden* (o deja que lo haga el hook).
 2. Montar el banco, abrirlo y mirar la consola: **sin errores**.
 3. Recorrer las páginas que tocó el cambio; si tocó un formulario, abrirlo y
    guardar una vez.
