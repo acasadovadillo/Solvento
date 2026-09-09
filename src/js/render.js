@@ -742,6 +742,47 @@
       `<div id="v2-cartera-inner">${carteraInner(m, prices)}</div>`;
   }
 
+  // ── Flujo de caja mensual ────────────────────────────────────────────────
+  // La gráfica de arriba enseña el saldo; esto enseña el movimiento. Son la
+  // misma historia contada de dos maneras, y por eso la suma de los netos da
+  // exactamente el saldo de hoy: si no lo diera, una de las dos mentiría.
+  function panelFlujo(m) {
+    const f = window.SolventoModel.flujoMensual(CURRENT_DOC || {});
+    if (!f.meses.length) return "";
+    const varios = new Set(f.meses.map((x) => x.ym.slice(0, 4))).size > 1;
+    const tope = Math.max(...f.meses.map((x) => Math.max(x.entradas, x.salidas))) || 1;
+    const cols = f.meses.map((x) => {
+      const he = (x.entradas / tope * 100).toFixed(1), hs = (x.salidas / tope * 100).toFixed(1);
+      const enero = x.ym.slice(5) === "01";
+      return `<div title="${esc(x.label)} · entra ${fmtEur(x.entradas)} · sale ${fmtEur(x.salidas)} · neto ${x.neto >= 0 ? "+" : "−"}${fmtEur(Math.abs(x.neto))}"
+        style="flex:1 0 auto;min-width:34px;display:flex;flex-direction:column;align-items:center;gap:0.35rem;
+        ${enero && varios ? "border-left:1px solid #2a2d3a;" : ""}">
+        <div style="display:flex;align-items:flex-end;gap:2px;height:96px;width:100%;justify-content:center;">
+          <div style="width:42%;max-width:15px;height:${he}%;background:${GREEN};border-radius:2px 2px 0 0;opacity:0.75;"></div>
+          <div style="width:42%;max-width:15px;height:${hs}%;background:${RED};border-radius:2px 2px 0 0;opacity:0.75;"></div>
+        </div>
+        <div style="font-size:0.6rem;color:${x.neto >= 0 ? GREEN : RED};font-weight:600;white-space:nowrap;">
+          ${x.neto >= 0 ? "+" : "−"}${Math.abs(Math.round(x.neto))}</div>
+        <div style="font-size:0.62rem;color:#4b5563;white-space:nowrap;">${esc(x.label.split(" ")[0])}${varios ? `<span style="display:block;font-size:0.56rem;color:#374151;">${x.ym.slice(2, 4)}</span>` : ""}</div>
+      </div>`;
+    }).join("");
+    const med = f.media;
+    return `<div class="v2-wrap"><div class="dashboard-panel">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Entra y sale por mes</div>
+        <div style="font-size:0.78rem;color:#9ca3af;">
+          Media de ${med.n} meses · entra <b style="color:${GREEN};">${esc(fmtEur(med.entradas))}</b>
+          · sale <b style="color:${RED};">${esc(fmtEur(med.salidas))}</b>
+          · queda <b style="color:${rc(med.neto)};">${med.neto >= 0 ? "+" : "−"}${esc(fmtEur(Math.abs(med.neto)))}</b></div>
+      </div>
+      <div style="display:flex;gap:0.3rem;align-items:flex-end;overflow-x:auto;padding-bottom:0.25rem;">${cols}</div>
+      <div style="font-size:0.72rem;color:#4b5563;margin-top:0.75rem;">
+        Sin traspasos entre tus cuentas, que no son ni entrada ni salida. Sí cuentan las compras de inversión y los
+        recibos de la tarjeta: ese dinero sale de la caja. Por eso la suma de los ${f.meses.length} netos es
+        exactamente tu caja de hoy, ${esc(fmtEur(m.patrimonioLiquido))}.</div>
+    </div></div>`;
+  }
+
   function pageCaja(m) {
     const cuentas = m.saldosCaja || m.saldos;
     const items = cuentas.filter((s) => s.saldo !== 0).map((s) => ({ label: s.cuenta, value: s.saldo, accent: s.accent }));
@@ -767,6 +808,7 @@
         <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
       </div></div>` +
       chartPanel("Evolución de la caja", "v2-chart-caja") +
+      panelFlujo(m) +
       movimientosList();
   }
 

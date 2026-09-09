@@ -707,6 +707,76 @@
     return { avisos, errores, total: avisos.length, descartados: descartadosN };
   }
 
+  // ── Flujo de caja mensual ────────────────────────────────────────────────
+  // No es lo mismo que ingresos y gastos: aquí entra TODO lo que mueve el dinero
+  // de las cuentas —incluidas las compras de inversión, que sacan dinero de la
+  // caja aunque no sean un gasto, y los ajustes de efectivo, que sí se gastaron—
+  // y quedan fuera los traspasos entre cuentas propias, que no son ni entrada ni
+  // salida. La suma de los netos mensuales tiene que dar el saldo de caja de
+  // hoy: si no lo diera, una de las dos cifras estaría mintiendo.
+  function flujoMensual(db) {
+    const cuentas = new Set(CFG.cuentas().map((c) => c.cuenta));
+    const isC = (c) => c && c !== "-" && cuentas.has(c);
+    const porMes = {};
+    const mes = (f) => `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}`;
+    const anota = (ym, campo, valor) => {
+      const m = porMes[ym] || (porMes[ym] = { ym, entradas: 0, salidas: 0 });
+      m[campo] += valor;
+    };
+    for (const m of db.movimientos || []) {
+      if (esMovInversion(m)) continue;
+      const f = parseFechaES(m.fecha); if (!f) continue;
+      const imp = Math.abs(num(m.importe) || 0);
+      const o = String(m.cuenta_origen || "").trim(), d = String(m.cuenta_destino || "").trim();
+      const ym = mes(f);
+      switch (m.tipo) {
+        case "Ingreso": if (isC(d)) anota(ym, "entradas", imp); break;
+        case "Gasto": if (isC(o)) anota(ym, "salidas", imp); break;
+        case "Préstamo":
+          if (m.tipo_prestamo === "Dinero prestado" && isC(o)) anota(ym, "salidas", imp);
+          else if (m.tipo_prestamo === "Devolución" && isC(d)) anota(ym, "entradas", imp);
+          break;
+        case "Traspaso":
+          // Entre dos cuentas propias no es ni entrada ni salida. Pero pagar el
+          // recibo de la tarjeta también es un traspaso, y ahí el dinero sale de
+          // verdad: la tarjeta es un pasivo, no una cuenta. Sin esto, los 4.734 €
+          // de recibos de la Eurocard no aparecían por ninguna parte y la suma de
+          // los netos no daba el saldo de caja.
+          if (isC(o) && !isC(d)) anota(ym, "salidas", imp);
+          else if (isC(d) && !isC(o)) anota(ym, "entradas", imp);
+          break;
+        default: break;
+      }
+    }
+    for (const r of db.inversiones || []) {
+      if (SIN_EFECTIVO.has(r.tipo_movimiento || "Compra")) continue;
+      const f = parseFechaES(r.fecha); if (!f) continue;
+      const coste = num(r.coste);
+      if (!isFinite(coste) || !isC(String(r.cuenta || "").trim())) continue;
+      // Una venta devuelve dinero a la cuenta: su coste viene en negativo
+      if (coste >= 0) anota(mes(f), "salidas", coste); else anota(mes(f), "entradas", -coste);
+    }
+    const etiqueta = (ym) => {
+      const [a, mm] = ym.split("-");
+      return new Date(+a, +mm - 1, 1).toLocaleDateString("es-ES", { month: "short", year: "numeric" });
+    };
+    const meses = Object.values(porMes).sort((a, b) => a.ym.localeCompare(b.ym)).map((m) => ({
+      ym: m.ym, label: etiqueta(m.ym),
+      entradas: round2(m.entradas), salidas: round2(m.salidas), neto: round2(m.entradas - m.salidas),
+    }));
+    const n = Math.min(12, meses.length) || 1;
+    const ult = meses.slice(-n);
+    return {
+      meses,
+      media: {
+        entradas: round2(ult.reduce((t, m) => t + m.entradas, 0) / n),
+        salidas: round2(ult.reduce((t, m) => t + m.salidas, 0) / n),
+        neto: round2(ult.reduce((t, m) => t + m.neto, 0) / n),
+        n,
+      },
+    };
+  }
+
   function buildGastos(db) {
     const porMes = {};
     const mesDe = (f) => {
@@ -1013,5 +1083,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();
