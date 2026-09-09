@@ -287,11 +287,35 @@
     }
   }
 
+  // El bloque cifrado se adoptaba una vez y se quedaba congelado para siempre.
+  // En el dispositivo de quien guarda —que tiene token— eso no se nota, porque
+  // cada cambio sube y baja; pero en uno sin token —el móvil de alguien a quien
+  // le enseñas la web— se seguían viendo los números del día que entró por
+  // primera vez, sin ninguna pista de que estaban viejos. Ahora se comprueba el
+  // repo en cada arranque.
+  //
+  // Lo local manda si hay algo sin subir: un cambio hecho aquí y todavía no
+  // publicado vale más que la copia del repo, y adoptarla lo borraría.
+  async function refrescarBlobRemoto() {
+    if (hayPendiente()) return;
+    let remote = null;
+    try { remote = await SYNC.fetchRemoteBlob(null); } catch (e) { return; }
+    if (!remote) return;
+    const local = DB.getStoredBlob();
+    if (local && JSON.stringify(local) === JSON.stringify(remote.blob)) return;
+    DB.storeBlob(remote.blob);
+    setError("login-error", "Se ha traído la última versión de tus datos.", "#10b981");
+  }
+
   async function startBoot() {
     document.documentElement.style.overflow = "hidden";
     $("boot-overlay").style.display = "flex";
     setError("login-error", ""); setError("imp-error", "");
-    if (DB.hasData()) { panel("login"); $("login-pass").value = ""; $("login-pass").focus(); return; }
+    if (DB.hasData()) {
+      panel("login"); $("login-pass").value = ""; $("login-pass").focus();
+      refrescarBlobRemoto();          // en segundo plano, mientras escribes
+      return;
+    }
     // Sin bloque local: ¿existe en el repo? (lectura pública, sin token)
     panel("checking");
     let remote = null;

@@ -15,6 +15,14 @@
   const SHA_KEY = "solvento_data_sha";
 
   const apiUrl = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${SYNC.path}`;
+  // La API de contenidos NO devuelve el cuerpo de un fichero de más de 1 MB:
+  // contesta con encoding "none" y content vacío. El bloque cifrado pasó de ese
+  // tamaño al reconstruir la contabilidad, así que la lectura pública dejó de
+  // funcionar sin avisar: quien ya tenía copia local seguía como si nada y un
+  // dispositivo nuevo se encontraba la pantalla de importar. El contenido se
+  // lee por «raw», que no tiene ese límite; la API se sigue usando para el sha,
+  // que es lo que hace falta para escribir.
+  const rawUrl = () => `https://raw.githubusercontent.com/${SYNC.owner}/${SYNC.repo}/${SYNC.branch}/${SYNC.path}`;
 
   // JSON (ASCII/UTF-8) ⇄ base64 respetando UTF-8
   const b64enc = (str) => btoa(unescape(encodeURIComponent(str)));
@@ -66,7 +74,21 @@
     const res = await ghGet(token);
     if (!res) return null;
     setSha(res.sha);
-    return { blob: JSON.parse(res.content), sha: res.sha };
+    let blob = null;
+    if (res.content) { try { blob = JSON.parse(res.content); } catch (e) { blob = null; } }
+    if (!blob) blob = await fetchBlobRaw();
+    if (!blob) throw new Error("No se ha podido leer el bloque cifrado del repositorio");
+    return { blob, sha: res.sha };
+  }
+
+  // Lectura pública sin límite de tamaño. Sirve para cualquier repo público;
+  // si el tuyo fuera privado, esta vía no responde y la única sería la API.
+  async function fetchBlobRaw() {
+    try {
+      const r = await fetch(rawUrl() + "?_=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) return null;
+      return JSON.parse(await r.text());
+    } catch (e) { return null; }
   }
 
   // Cifra el doc y lo sube al repo. Devuelve el nuevo sha.
@@ -129,6 +151,6 @@
 
   window.SolventoSync = {
     ghGet, ghPut, storeToken, loadToken, hasToken, clearToken,
-    fetchRemoteBlob, push, pushTickers, getSha, setSha,
+    fetchRemoteBlob, fetchBlobRaw, push, pushTickers, getSha, setSha,
   };
 })();
