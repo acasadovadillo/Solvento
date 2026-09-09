@@ -48,6 +48,7 @@
       try { await SYNC.storeToken(DB.state.token, password); } catch (e) {}
     }
     updateSyncUi();
+    pintarLectura();
     if (!DB.state.token) pintarEstado("sintoken", "Añade tu token en ⚙ Ajustes → Sincronización y el guardado será automático");
     else if (hayPendiente()) reintentarPendiente();
     else pintarEstado("ok", "Tus cambios se guardan solos en GitHub");
@@ -103,6 +104,51 @@
                                 estado === "dudoso" || estado === "roto");
     const btn = $("user-btn");
     if (btn) btn.title = txt ? "Tu cuenta · " + txt : "Tu cuenta";
+  }
+
+  // ── Modo lectura ─────────────────────────────────────────────────────────
+  // Solvento se comparte enseñando la dirección y la contraseña: quien entra ve
+  // los datos, pero sin token de GitHub no puede publicarlos. Antes eso
+  // significaba que sus cambios se quedaban en su móvil y a los dos días veía
+  // unas cifras que ya no coincidían con las de nadie. Ahora, sin token, la
+  // aplicación se abre en modo lectura y lo dice.
+  //
+  // No es una cerradura —quien tiene la contraseña puede descifrarlo todo, eso
+  // es lo que significa zero-knowledge— sino una señal: esto no es tuyo, no lo
+  // toques. Contra el despiste, no contra nadie.
+  const EDITAR_IGUAL = "solvento_editar_sin_token";
+  const esInvitado = () => !SYNC.hasToken() && localStorage.getItem(EDITAR_IGUAL) !== "1";
+  function editarIgualmente() {
+    localStorage.setItem(EDITAR_IGUAL, "1");
+    pintarLectura();
+    render();                            // los botones de editar vuelven a su sitio
+    toast("Puedes editar en este dispositivo · añade tu token para que se suba", "#fbbf24");
+  }
+  function pintarLectura() {
+    const invitado = esInvitado();
+    document.body.classList.toggle("modo-lectura", invitado);
+    const nav = document.getElementById("v2-bottom-nav");
+    let b = document.getElementById("v2-banner-lectura");
+    if (!invitado) {
+      if (b) b.remove();
+      if (nav) nav.style.bottom = "";     // la barra de pestañas vuelve a su sitio
+      return;
+    }
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "v2-banner-lectura";
+      b.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:1200;background:#2a2109;border-top:1px solid #f59e0b;" +
+        "color:#fbbf24;font-size:0.8rem;padding:0.55rem 1rem;display:flex;gap:0.75rem;align-items:center;justify-content:center;flex-wrap:wrap;";
+      document.body.appendChild(b);
+    }
+    b.innerHTML = '<span>Modo lectura · estás viendo unos datos que no se guardan en este dispositivo.</span>' +
+      '<button onclick="window.SolventoBoot.editarIgualmente()" style="background:none;border:1px solid #f59e0b;border-radius:6px;' +
+      'color:#fbbf24;font-family:inherit;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;cursor:pointer;">Son míos, quiero editar aquí</button>';
+    // La barra de pestañas del móvil vive abajo: se le hace sitio.
+    if (nav) nav.style.bottom = b.offsetHeight + "px";
+  }
+  function avisoLectura() {
+    toast("Modo lectura: aquí no se guarda nada. Si son tuyos, pulsa «Son míos» abajo.", "#fbbf24");
   }
 
   // Cifra y guarda en este dispositivo (siempre, pase lo que pase con la red).
@@ -176,6 +222,9 @@
   // Guardar el documento tras una edición: cifra, guarda local y sube si se puede.
   async function saveDoc() {
     if (!DB.state.doc || !DB.state.password) return;
+    // Los formularios ya no se abren en modo lectura, pero alguna acción suelta
+    // podría llegar hasta aquí: que no se guarde ni se suba nada.
+    if (esInvitado()) { render(); avisoLectura(); return; }
     render();
     await guardarLocal();
     if (!DB.state.token) {
@@ -403,6 +452,8 @@
     aplicarTokenViajero(t);
     $("sync-token").type = "password";   // se queda puesto, pero oculto
     updateSyncUi();
+    pintarLectura();                     // con token ya no es un invitado
+    render();                            // y vuelven los botones de editar
     setError("sync-status", "Token guardado ✓ · a partir de ahora se guarda solo", "#10b981");
     if (hayPendiente()) await reintentarPendiente(); else pintarEstado("ok");
   }
@@ -536,6 +587,6 @@
     startBoot();
   }
 
-  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword };
+  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura };
   document.addEventListener("DOMContentLoaded", init);
 })();

@@ -157,7 +157,16 @@
     }
   }
 
+  // En modo lectura los formularios ni se abren: es más honesto que dejar
+  // rellenar uno entero para decir al final que no se guarda nada.
+  function soloLectura() {
+    const B = window.SolventoBoot;
+    if (B && B.esInvitado && B.esInvitado()) { B.avisoLectura(); return true; }
+    return false;
+  }
+
   function shell(titulo, bodyHtml, onSubmit, despues) {
+    if (soloLectura()) return;
     const m = ensureModal();
     m.querySelector(".modal-card").innerHTML =
       `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
@@ -184,6 +193,7 @@
 
   // ── Movimiento ──
   function openMovimiento(existing) {
+    if (soloLectura()) return;
     const doc = DB.state.doc, e = existing || {};
     // Una tarjeta de crédito no es una cuenta, pero sus compras salen de ella y
     // hay que poder elegirla. Y si el movimiento viene de un sitio que ya no
@@ -287,6 +297,7 @@
 
   // ── Operación de inversión (Compra / Venta) ──
   function openInversion(existing) {
+    if (soloLectura()) return;
     const doc = DB.state.doc, e = existing || {};
     const conocidos = {};
     CFG.activos().forEach((a) => (conocidos[a.nombre] = a));
@@ -598,6 +609,7 @@
   // cada movimiento, así que cambiarla solo en el catálogo dejaría dos donde
   // había una, y la mitad de la historia colgando de la vieja.
   function renombrarRuta(titulo, ruta, lista, arrastrar) {
+    if (soloLectura()) return;
     const partes = partesRuta(ruta);
     const viejo = partes[partes.length - 1];
     const body =
@@ -877,6 +889,7 @@
 
   // ── Inmueble ──
   function openPropiedad(existing) {
+    if (soloLectura()) return;
     const doc = DB.state.doc, e = existing || {};
     if (!Array.isArray(doc.propiedades)) doc.propiedades = doc.inmuebles || [];
     const tipos = Object.keys(CFG.TIPO_COLORES_INMUEBLE);
@@ -995,6 +1008,7 @@
   // documento entero para eso es desproporcionado y pisa lo que hayas tocado
   // desde la web. Se filtra en la lista y se imputan todos juntos.
   function openImputarCentro(lista) {
+    if (soloLectura()) return;
     const doc = DB.state.doc;
     const afectados = (lista || []).filter((m) => m.tipo === "Gasto" || m.tipo === "Ingreso");
     if (!afectados.length) {
@@ -1032,6 +1046,7 @@
 
   // ── Revisión: marcar lo que ya has mirado ────────────────────────────────
   function marcarRevisado(clave) {
+    if (soloLectura()) return;
     const doc = DB.state.doc;
     if (!doc.config) doc.config = {};
     if (!Array.isArray(doc.config.revision_ok)) doc.config.revision_ok = [];
@@ -1043,6 +1058,7 @@
   // sabe traducir: lo que no está en la tabla se queda como está y se sigue
   // viendo en la revisión, para arreglarlo a mano en su movimiento.
   function arreglarTextos() {
+    if (soloLectura()) return;
     const doc = DB.state.doc;
     const M = window.SolventoModel;
     const cambios = [];
@@ -1066,6 +1082,7 @@
   }
 
   function restaurarRevisiones() {
+    if (soloLectura()) return;
     const doc = DB.state.doc;
     const n = ((doc.config || {}).revision_ok || []).length;
     if (!n || !confirm(`¿Volver a revisar los ${n} avisos que diste por buenos?`)) return;
@@ -1075,6 +1092,7 @@
 
   // ── Borrado ──
   function del(collection, id) {
+    if (soloLectura()) return;
     const doc = DB.state.doc;
     doc[collection] = (doc[collection] || []).filter((m) => m.id !== id);
     if (window.SolventoBoot && window.SolventoBoot.saveDoc) window.SolventoBoot.saveDoc();

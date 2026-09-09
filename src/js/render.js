@@ -18,7 +18,10 @@
   const GREEN = "#10b981", RED = "#ef4444";
   const rc = (x) => (isFinite(x) && x < 0 ? RED : GREEN);
   const parseFechaES = (s) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || "")); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(0); };
-  const addBtn = (label, onclick) => `<button onclick="${onclick}" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">${label}</button>`;
+  // Los botones de «＋ algo» son los de crear: en modo lectura se esconden (ver
+  // .modo-lectura en components.css). Los demás usos de addBtn son navegación
+  // —«Ver reporte mensual»— y esos se quedan.
+  const addBtn = (label, onclick) => `<button class="${String(label).indexOf("＋") === 0 ? "solo-editor" : ""}" onclick="${onclick}" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">${label}</button>`;
   const delBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Borrar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">✕</button>`;
   const editBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Editar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button>`;
   const rowActions = (edit, del) => `<td style="text-align:right;width:1%;white-space:nowrap;">${editBtn(edit)}${delBtn(del)}</td>`;
@@ -803,13 +806,13 @@
                ${deudas.length} ${deudas.length === 1 ? "deuda" : "deudas"}</button>
              · <span style="color:#ef4444;font-weight:600;">−${esc(fmtEur(deudas.reduce((t, d) => t + d.importe, 0)).replace("-", ""))}</span></div>`
         : "";
-      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
+      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button class="solo-editor" onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
       vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", null,
                  { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-        <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
+        <div class="solo-editor" style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
       </div></div>` +
       chartPanel("Evolución de la caja", "v2-chart-caja") +
       panelFlujo(m) +

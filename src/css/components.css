@@ -113,6 +113,16 @@
 .table-row:hover { background: #222533; }
 .table-row:last-child td { border-bottom: none !important; }
 
+/* ── Modo lectura ──
+   Sin token de GitHub, la aplicación enseña pero no guarda: los botones de
+   crear, editar y borrar se retiran para no prometer lo que no puede cumplir.
+   No es una cerradura (quien tiene la contraseña lo ve todo, así funciona el
+   cifrado de extremo a extremo): es una señal de que esos datos no son de este
+   dispositivo. */
+body.modo-lectura .solo-editor,
+body.modo-lectura .fila-acc { display: none !important; }
+body.modo-lectura { padding-bottom: 7rem; }
+
 /* ── Gastos layout ── */
 .gastos-layout { display: grid; grid-template-columns: 220px 1fr; gap: 2rem; align-items: start; }
 .minimalist-table {
