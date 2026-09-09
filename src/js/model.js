@@ -515,6 +515,27 @@
     return idx;
   }
 
+  // ── Lo que falta por identificar ─────────────────────────────────────────
+  // Durante la reconstrucción, un apunte sin identificar paraba todo hasta saber
+  // qué era: una categoría inventada es peor que ninguna, porque contamina el
+  // reparto y no se distingue de las buenas. Esa red vivía en los scripts; aquí
+  // es lo mismo, para que un apunte raro no se quede meses sin que nadie lo vea.
+  const RE_PENDIENTE = /pendiente de identificar/i;
+  function pendientes(movimientos) {
+    const items = (movimientos || []).filter((m) => {
+      if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") return false;
+      const cat = String((m.tipo === "Gasto" ? m.tipo_gasto : m.tipo_ingreso) || "").trim();
+      return !cat || RE_PENDIENTE.test(cat);
+    });
+    return { items, n: items.length,
+             importe: round2(items.reduce((t, m) => t + Math.abs(num(m.importe) || 0), 0)) };
+  }
+  const esPendiente = (m) => {
+    if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") return false;
+    const cat = String((m.tipo === "Gasto" ? m.tipo_gasto : m.tipo_ingreso) || "").trim();
+    return !cat || RE_PENDIENTE.test(cat);
+  };
+
   function buildGastos(db) {
     const porMes = {};
     const mesDe = (f) => {
@@ -821,5 +842,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

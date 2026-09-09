@@ -315,7 +315,7 @@
   // repintado (p.ej. tras guardar). Y al teclear se repinta SOLO la lista: si
   // se repintara la página entera, el buscador perdería el foco en cada letra.
   const PAGINA = 30;
-  const MOV = { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", limite: PAGINA };
+  const MOV = { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", pend: false, limite: PAGINA };
   const OPS = { q: "", tipo: "", desde: "", hasta: "", limite: 40 };
   let OPS_BANCO = "";
 
@@ -337,6 +337,7 @@
       if (MOV.tipo && r.tipo !== MOV.tipo) return false;
       if (MOV.cuenta && r.cuenta_origen !== MOV.cuenta && r.cuenta_destino !== MOV.cuenta) return false;
       if (MOV.cat && r.tipo_gasto !== MOV.cat && r.tipo_ingreso !== MOV.cat) return false;
+      if (MOV.pend && !window.SolventoModel.esPendiente(r)) return false;
       if (!enRango(r.fecha, MOV.desde, MOV.hasta)) return false;
       if (MOV.q && !contiene([r.detalle, r.tipo_gasto, r.tipo_ingreso, r.persona_prestamo,
                               r.cuenta_origen, r.cuenta_destino, r.importe, r.fecha].join(" "), MOV.q)) return false;
@@ -390,6 +391,14 @@
         ${selFiltro("v2-mov-cat", cats, MOV.cat, "v2MovFiltro()")}
         <input id="v2-mov-desde" type="date" value="${esc(MOV.desde)}" onchange="v2MovFiltro()" title="Desde" style="${estiloFiltro}">
         <input id="v2-mov-hasta" type="date" value="${esc(MOV.hasta)}" onchange="v2MovFiltro()" title="Hasta" style="${estiloFiltro}">
+        ${(function () {
+          const p = window.SolventoModel.pendientes((CURRENT_DOC || {}).movimientos);
+          if (!p.n && !MOV.pend) return "";
+          return `<button onclick="v2MovPendientes()" title="Movimientos sin categoría o marcados como pendientes"
+            style="background:${MOV.pend ? "#f59e0b" : "none"};border:1px solid #f59e0b;border-radius:8px;
+            color:${MOV.pend ? "#12141d" : "#f59e0b"};font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;
+            cursor:pointer;font-family:inherit;white-space:nowrap;">⚠ ${p.n} sin identificar</button>`;
+        })()}
         ${addBtn("Limpiar", "v2MovLimpiar()")}
       </div>
       <div id="v2-mov-lista">${movimientosTabla()}</div>
@@ -1157,7 +1166,25 @@
       label: gr.nombre, value: gr.total,
       accent: CFG.SERIE_COLORES[i % CFG.SERIE_COLORES.length],
     }));
-    return header("Balance", fmtEur(mes.ahorro)) + hero +
+    // El aviso va antes que nada: si hay dinero sin identificar, todo lo que
+    // viene debajo —el reparto, las medias, el árbol— está contado con él dentro
+    // y conviene saberlo antes de leerlo.
+    const pend = window.SolventoModel.pendientes((CURRENT_DOC || {}).movimientos);
+    const avisoPend = pend.n
+      ? `<div class="v2-wrap"><div style="background:#3f2d0a;border:1px solid #a16207;border-radius:12px;
+             padding:0.85rem 1rem;display:flex;align-items:center;gap:0.85rem;flex-wrap:wrap;">
+          <div style="flex:1;min-width:14rem;">
+            <div style="color:#fbbf24;font-weight:700;font-size:0.9rem;">
+              ${pend.n} movimiento${pend.n === 1 ? "" : "s"} sin identificar · ${esc(fmtEur(pend.importe))}</div>
+            <div style="color:#d9a441;font-size:0.78rem;margin-top:0.15rem;">
+              Sin categoría no entran en el reparto ni en el árbol: ese dinero se gastó, pero no se sabe en qué.</div>
+          </div>
+          <button onclick="v2MovPendientes()" style="background:#fbbf24;border:none;border-radius:8px;color:#12141d;
+            font-size:0.82rem;font-weight:700;padding:0.45rem 0.8rem;cursor:pointer;font-family:inherit;white-space:nowrap;">
+            Verlos</button>
+        </div></div>`
+      : "";
+    return header("Balance", fmtEur(mes.ahorro)) + avisoPend + hero +
       panelRegla(mes) +
       barrasIngresoGasto(g) +
       (itemsCat.length ? vistaPanel("categorias", "En qué se va el dinero · " + mes.label,
@@ -1380,8 +1407,15 @@
     pintarMov();
   };
   window.v2MovMas = () => { MOV.limite += PAGINA; pintarMov(); };
+  window.v2MovPendientes = () => {
+    MOV.pend = !MOV.pend; MOV.limite = PAGINA;
+    render(CURRENT_DOC, window.__PRICES);
+    v2Tab("caja");
+    const l = document.getElementById("v2-mov-lista");
+    if (l) l.scrollIntoView({ block: "start", behavior: "smooth" });
+  };
   window.v2MovLimpiar = () => {
-    Object.assign(MOV, { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", limite: PAGINA });
+    Object.assign(MOV, { q: "", tipo: "", cuenta: "", cat: "", desde: "", hasta: "", pend: false, limite: PAGINA });
     render(CURRENT_DOC, window.__PRICES);   // repintado completo para vaciar los campos
   };
   window.v2OpsFiltro = () => {
