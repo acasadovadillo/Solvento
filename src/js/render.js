@@ -1422,6 +1422,7 @@
     poner("aj-activos", fr.activos);
     poner("aj-objetivo", fr.objetivo);
     poner("aj-categorias", fr.categorias);
+    poner("aj-centros", fr.centros);
   };
   window.v2AjSec = (sec) => {
     document.querySelectorAll(".aj-sec").forEach((e) => e.classList.toggle("active", e.id === "aj-sec-" + sec));
@@ -1490,6 +1491,10 @@
   window.v2CfgObjetivo = () => F() && F().openObjetivoCfg();
   window.v2CatNueva = (madre) => F() && F().openCategoriaNueva(madre);
   window.v2CatBorrar = (cat) => F() && F().borrarCategoriaCfg(cat);
+  window.v2CatRenombrar = (cat) => F() && F().renombrarCategoriaCfg(cat);
+  window.v2CenNueva = (padre) => F() && F().openCentroNuevo(padre);
+  window.v2CenBorrar = (c) => F() && F().borrarCentroCfg(c);
+  window.v2CenRenombrar = (c) => F() && F().renombrarCentroCfg(c);
   window.v2EditPas = (id) => F() && F().editPasivo(id);
   window.v2DelPas = (id) => { if (F() && confirm("¿Borrar esta deuda?")) F().deletePasivo(id); };
   window.v2CarteraTab = (id) => {

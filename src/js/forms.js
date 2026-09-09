@@ -408,24 +408,15 @@
       `${(+obj["Renta variable"] || 0).toFixed(0)}% / ${(+obj["Renta fija"] || 0).toFixed(0)}%`,
       miniBtn("✎", "v2CfgObjetivo()"));
 
-    const cats = categoriasCfg();
-    const madres = uniq(cats.map(madreDe)).sort();
-    const categorias = madres.map((m) => {
-      const hijas = cats.filter((x) => madreDe(x) === m && hijaDe(x));
-      const jsM = String(m).replace(/'/g, "\\'");
-      const filasHijas = hijas.map((h) => {
-        const jsH = String(h).replace(/'/g, "\\'");
-        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0 0.35rem 1.4rem;border-bottom:1px solid #1e222c;">
-          <div style="flex:1;color:#9ca3af;font-size:0.84rem;">${esc(hijaDe(h))}</div>${miniBtn("✕", `v2CatBorrar('${jsH}')`)}</div>`;
-      }).join("");
-      return `<div style="padding:0.5rem 0;border-bottom:1px solid #232733;">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <div style="flex:1;color:#e5e7eb;font-weight:600;font-size:0.9rem;">${esc(m)}</div>
-          ${miniBtn("＋ sub", `v2CatNueva('${jsM}')`, "#3b82f6")}${miniBtn("✕", `v2CatBorrar('${jsM}')`)}</div>
-        ${filasHijas}</div>`;
-    }).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría", "v2CatNueva('')", "#3b82f6")}</div>`;
+    const categorias = catalogoArbol(categoriasCfg(), {
+      nueva: "v2CatNueva", renombrar: "v2CatRenombrar", borrar: "v2CatBorrar",
+    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría", "v2CatNueva('')", "#3b82f6")}</div>`;
 
-    return { cuentas, activos, objetivo, categorias };
+    const centros = catalogoArbol(centrosCfg(), {
+      nueva: "v2CenNueva", renombrar: "v2CenRenombrar", borrar: "v2CenBorrar",
+    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir centro", "v2CenNueva('')", "#3b82f6")}</div>`;
+
+    return { cuentas, activos, objetivo, categorias, centros };
   }
 
   function openCuentaCfg(i) {
@@ -553,6 +544,68 @@
   const hijaDe  = (c) => { const i = String(c).indexOf(">"); return i < 0 ? null : String(c).slice(i + 1).trim(); };
 
 
+  // ── Catálogo en árbol para Ajustes ───────────────────────────────────────
+  // Sirve igual para categorías y para centros, y llega hasta donde llegue la
+  // ruta más profunda. Antes solo pintaba dos niveles, así que una categoría de
+  // tres —«Vivienda > Suministros > Luz»— existía en los movimientos y no se
+  // podía tocar desde aquí.
+  function catalogoArbol(rutas, acc) {
+    const hijasDe = (padre) => {
+      const base = padre ? partesRuta(padre).length : 0;
+      const dentro = padre ? rutas.filter((r) => r === padre || r.indexOf(padre + SEP_RUTA) === 0) : rutas;
+      return uniq(dentro.map((r) => partesRuta(r).slice(0, base + 1).join(SEP_RUTA)))
+        .filter((r) => r && r !== padre)
+        .sort((a, b) => a.localeCompare(b, "es"));
+    };
+    const pinta = (padre, prof) => hijasDe(padre).map((ruta) => {
+      const nombre = partesRuta(ruta).slice(-1)[0];
+      const js = String(ruta).replace(/'/g, "\\'");
+      return `<div style="display:flex;align-items:center;gap:0.4rem;border-bottom:1px solid #1e222c;
+                  padding:0.35rem 0 0.35rem ${(prof * 1.4).toFixed(1)}rem;">
+          <div style="flex:1;color:${prof ? "#9ca3af" : "#e5e7eb"};font-weight:${prof ? 400 : 600};
+               font-size:${prof ? "0.84rem" : "0.9rem"};">${esc(nombre)}</div>
+          ${miniBtn("＋", `${acc.nueva}('${js}')`, "#3b82f6")}${miniBtn("✎", `${acc.renombrar}('${js}')`)}${miniBtn("✕", `${acc.borrar}('${js}')`)}
+        </div>` + pinta(ruta, prof + 1);
+    }).join("");
+    return pinta("", 0) || `<div style="color:#6b7280;font-size:0.84rem;padding:0.5rem 0;">Todavía no hay ninguno.</div>`;
+  }
+
+  // Renombrar no es cambiar una etiqueta: la ruta está escrita tal cual dentro de
+  // cada movimiento, así que cambiarla solo en el catálogo dejaría dos donde
+  // había una, y la mitad de la historia colgando de la vieja.
+  function renombrarRuta(titulo, ruta, lista, arrastrar) {
+    const partes = partesRuta(ruta);
+    const viejo = partes[partes.length - 1];
+    const body =
+      `<div style="font-size:0.8rem;color:#9ca3af;margin:0.5rem 0 0;">${esc(ruta)}</div>` +
+      field("rn-nombre", "Nuevo nombre", input("rn-nombre", "text", viejo)) +
+      `<div id="rn-aviso" style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;"></div>`;
+    shell(titulo, body, () => {
+      const n = G("rn-nombre");
+      if (!n) return "Escribe un nombre";
+      if (n.includes(">")) return 'El nombre no puede llevar el símbolo ">"';
+      if (n === viejo) return null;
+      const nueva = partes.slice(0, -1).concat(n).join(SEP_RUTA);
+      if (lista.some((r) => r.toLowerCase() === nueva.toLowerCase())) return "Ya existe otra con ese nombre";
+      // La rama entera se mueve con su padre: al renombrar «Suministros», su Luz
+      // y su Gas tienen que seguir colgando de ella.
+      const cambia = (v) => (v === ruta || String(v || "").indexOf(ruta + SEP_RUTA) === 0)
+        ? nueva + String(v).slice(ruta.length) : v;
+      for (let i = 0; i < lista.length; i++) lista[i] = cambia(lista[i]);
+      arrastrar(cambia);
+      return null;
+    }, refrescarAjustes);
+    // Decir cuántos apuntes se van a tocar antes de tocarlos
+    const aviso = document.getElementById("rn-aviso");
+    if (aviso) {
+      let n = 0;
+      arrastrar((v) => { if (v === ruta || String(v || "").indexOf(ruta + SEP_RUTA) === 0) n++; return v; }, true);
+      aviso.textContent = n
+        ? `Se actualizarán ${n} apunte${n === 1 ? "" : "s"} que la usan.`
+        : "No hay ningún apunte usándola todavía.";
+    }
+  }
+
   function openCategoriaNueva(madre) {
     const cats = categoriasCfg();
     const body =
@@ -574,14 +627,103 @@
   function borrarCategoriaCfg(cat) {
     const doc = DB.state.doc;
     const cats = categoriasCfg();
-    const usos = (doc.movimientos || []).filter((m) => m.tipo_gasto === cat || madreDe(m.tipo_gasto || "") === cat).length;
+    // Cuenta la rama entera, no solo las hijas directas: borrar «Vivienda»
+    // afecta también a lo que cuelga de sus suministros.
+    const dentro = (v) => v === cat || String(v || "").indexOf(cat + SEP_RUTA) === 0;
+    const usos = (doc.movimientos || []).filter((m) => dentro(m.tipo_gasto) || dentro(m.tipo_ingreso)).length;
     const aviso = usos
       ? `"${cat}" se usa en ${usos} movimiento${usos === 1 ? "" : "s"}. Quitarla del catálogo no los cambia: seguirán con esa categoría. ¿Seguir?`
       : `¿Quitar "${cat}" del catálogo?`;
     if (!confirm(aviso)) return;
     // Al borrar una madre se van con ella sus subcategorías del catálogo
-    doc.config.categorias = cats.filter((c) => c !== cat && madreDe(c) !== cat);
+    doc.config.categorias = cats.filter((c) => !dentro(c));
     if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
+  }
+
+  // ── Centros de coste ─────────────────────────────────────────────────────
+  // El segundo eje también necesita catálogo: hasta ahora solo existía en los
+  // movimientos que ya lo usaban, así que uno recién inventado no aparecía en
+  // ningún desplegable hasta que alguien volvía a escribirlo igual.
+  function centrosCfg() {
+    const doc = DB.state.doc;
+    if (!doc.config) doc.config = {};
+    if (!doc.config.centros) {
+      doc.config.centros = uniq((doc.movimientos || []).map((m) => m.centro)
+        .concat((doc.propiedades || doc.inmuebles || []).map((r) => r.centro))).sort();
+    }
+    return doc.config.centros;
+  }
+
+  function openCentroNuevo(padre) {
+    const lista = centrosCfg();
+    const body =
+      (padre ? `<div style="font-size:0.8rem;color:#9ca3af;margin:0.5rem 0 0;">Dentro de <b style="color:#fff;">${esc(padre)}</b></div>` : "") +
+      field("cn-nombre", padre ? "Nombre del centro de dentro" : "Nombre del centro",
+            input("cn-nombre", "text", "", padre ? 'placeholder="Garaje"' : 'placeholder="Inmuebles"'));
+    shell(padre ? "Nuevo centro dentro" : "Nuevo centro de coste", body, () => {
+      const n = G("cn-nombre");
+      if (!n) return "Escribe un nombre";
+      if (n.includes(">")) return 'El nombre no puede llevar el símbolo ">"';
+      const completa = padre ? `${padre}${SEP_RUTA}${n}` : n;
+      if (lista.some((c) => c.toLowerCase() === completa.toLowerCase())) return "Ese centro ya existe";
+      registrarRuta(lista, completa);
+      lista.sort();
+      return null;
+    }, refrescarAjustes);
+  }
+
+  // Los movimientos y las propiedades llevan el centro escrito dentro, así que
+  // renombrarlo o borrarlo tiene que pasar por ellos.
+  const arrastrarCentro = (doc) => (cambia, soloContar) => {
+    (doc.movimientos || []).forEach((m) => {
+      const v = cambia(m.centro);
+      if (!soloContar && v !== m.centro) m.centro = v;
+    });
+    (doc.propiedades || doc.inmuebles || []).forEach((r) => {
+      const v = cambia(r.centro);
+      if (!soloContar && v !== r.centro) r.centro = v;
+    });
+  };
+
+  function renombrarCentroCfg(centro) {
+    const doc = DB.state.doc;
+    renombrarRuta("Renombrar centro de coste", centro, centrosCfg(), arrastrarCentro(doc));
+  }
+
+  function borrarCentroCfg(centro) {
+    const doc = DB.state.doc;
+    const lista = centrosCfg();
+    const dentro = (v) => v === centro || String(v || "").indexOf(centro + SEP_RUTA) === 0;
+    const usos = (doc.movimientos || []).filter((m) => dentro(m.centro)).length
+               + (doc.propiedades || doc.inmuebles || []).filter((r) => dentro(r.centro)).length;
+    const aviso = usos
+      ? `"${centro}" se usa en ${usos} apunte${usos === 1 ? "" : "s"}. Quitarlo del catálogo no los cambia: seguirán imputados ahí. ¿Seguir?`
+      : `¿Quitar "${centro}" del catálogo?`;
+    if (!confirm(aviso)) return;
+    doc.config.centros = lista.filter((c) => !dentro(c));
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
+  }
+
+  function renombrarCategoriaCfg(cat) {
+    const doc = DB.state.doc;
+    // Una categoría de gasto y una de ingreso comparten espacio de nombres, y
+    // los presupuestos y la clasificación 50/30/20 se guardan por esa misma ruta.
+    const arrastrar = (cambia, soloContar) => {
+      (doc.movimientos || []).forEach((m) => {
+        const g = cambia(m.tipo_gasto), i = cambia(m.tipo_ingreso);
+        if (!soloContar) { if (g !== m.tipo_gasto) m.tipo_gasto = g; if (i !== m.tipo_ingreso) m.tipo_ingreso = i; }
+      });
+      if (soloContar) return;
+      ["presupuesto", "clasificacion"].forEach((clave) => {
+        const mapa = (doc.config || {})[clave];
+        if (!mapa) return;
+        Object.keys(mapa).forEach((k) => {
+          const nuevo = cambia(k);
+          if (nuevo !== k) { mapa[nuevo] = mapa[k]; delete mapa[k]; }
+        });
+      });
+    };
+    renombrarRuta("Renombrar categoría", cat, categoriasCfg(), arrastrar);
   }
 
   // ── Objetivos de la regla 50/30/20 ──
@@ -783,7 +925,8 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo,
-    fragmentosAjustes, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
+    fragmentosAjustes, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editPropiedad: (id) => openPropiedad(findById("propiedades", id) || findById("inmuebles", id)),
