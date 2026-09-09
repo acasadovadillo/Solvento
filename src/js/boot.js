@@ -90,6 +90,8 @@
       ok:        ["✓ Sincronizado", "#10b981"],
       pendiente: ["⚠ Sin subir", "#fbbf24"],
       sintoken:  ["⚠ Sin sincronizar", "#fbbf24"],
+      dudoso:    ["⚠ Sin comprobar", "#fbbf24"],
+      roto:      ["✗ Guardado ilegible", "#ef4444"],
     };
     const [txt, col] = mapa[estado] || ["", "#6b7280"];
     el.textContent = txt;
@@ -97,7 +99,8 @@
     el.title = detalle || "Estado del guardado";
     // Punto de aviso sobre el avatar: así se ve que algo pasa sin abrir el menú
     const badge = $("user-badge");
-    if (badge) badge.hidden = !(estado === "pendiente" || estado === "sintoken");
+    if (badge) badge.hidden = !(estado === "pendiente" || estado === "sintoken" ||
+                                estado === "dudoso" || estado === "roto");
     const btn = $("user-btn");
     if (btn) btn.title = txt ? "Tu cuenta · " + txt : "Tu cuenta";
   }
@@ -112,9 +115,25 @@
     if (!DB.state.token) return false;
     pintarEstado("guardando");
     try {
-      await SYNC.push(DB.state.doc, DB.state.password, DB.state.token, mensaje || "Solvento: cambios desde la web");
+      const r = await SYNC.push(DB.state.doc, DB.state.password, DB.state.token, mensaje || "Solvento: cambios desde la web");
       marcarPendiente(false);
-      pintarEstado("ok", "Tus cambios están guardados en GitHub");
+      pintarEstado("ok", "Guardado en GitHub · comprobando que se puede releer…");
+      // Que GitHub acepte los bytes no prueba nada; que se vuelvan a leer, sí.
+      // Eso tarda unos segundos y no tiene por qué hacerte esperar: la pantalla
+      // se corrige sola cuando la comprobación termina.
+      Promise.resolve((r && r.verificacion) || { ok: true }).then((v) => {
+        if (v.ok) {
+          pintarEstado("ok", "Guardado y comprobado: lo subido se vuelve a leer" +
+                       (v.movimientos ? " (" + v.movimientos + " movimientos)" : ""));
+        } else if (v.grave) {
+          pintarEstado("roto", "Se subió, pero al releerlo falla: " + v.motivo +
+                       ". No borres nada y comprueba una copia antes de seguir guardando.");
+          toast("Lo guardado no se puede releer · " + v.motivo, "#ef4444");
+        } else {
+          pintarEstado("dudoso", "Se subió, pero no he podido comprobarlo (" + v.motivo +
+                       "). Se vuelve a intentar en el próximo guardado.");
+        }
+      });
       return true;
     } catch (e) {
       await guardarLocal();

@@ -1,0 +1,74 @@
+#!/bin/sh
+#
+# Solvento — puerta de salida del repositorio.
+#
+# El 8 de septiembre de 2026, un «git add -A» metió 64 archivos personales
+# —extractos en PDF, excels, una exportación en claro— en un repositorio
+# público. El .gitignore ya cubre esas carpetas, pero un .gitignore es una
+# promesa: solo actúa sobre lo que aún no está seguido, y basta un «add -f» o
+# una carpeta nueva para saltárselo. Esto es una puerta: mira lo que está a
+# punto de subir y, si reconoce un dato personal, no deja pasar el commit.
+#
+# Se instala con:  git config core.hooksPath .githooks
+# (o de una vez:   sh tools/instalar.sh)
+#
+# Si algún día bloquea algo legítimo, la salida dice qué archivo y por qué.
+# Corrige la causa; --no-verify existe, pero es la puerta abierta.
+
+set -u
+
+CARPETAS='(^|/)[A-Z0-9_]*DATOS/|(^|/)Solvento_EXPORT/|(^|/)Solvento_COPIAS/|(^|/)copias/'
+NOMBRES='EN-CLARO|EN_CLARO|extracto'
+EXTENSIONES='\.(pdf|xls|xlsx|xlsm|ods|csv|tsv|ofx|qif|n43|aeb43|numbers)$'
+LIMITE_BYTES=2097152          # 2 MB; data.enc está exento, es el bloque cifrado
+IBAN='(^|[^A-Za-z0-9])ES[0-9]{2}([ ]?[0-9]{4}){5}([^0-9]|$)'   # con espacios o sin ellos
+
+lista=$(mktemp -t solvento-hook)
+motivos=$(mktemp -t solvento-hook-motivos)
+trap 'rm -f "$lista" "$motivos"' EXIT
+
+# --diff-filter=ACMR: lo que se añade, copia, modifica o renombra. Un borrado
+# no puede filtrar nada.
+git diff --cached --name-only --diff-filter=ACMR > "$lista"
+[ -s "$lista" ] || exit 0
+
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+
+  if printf '%s' "$f" | grep -Eq "$CARPETAS"; then
+    printf '  · %s — carpeta de datos de banco\n' "$f"
+    continue
+  fi
+  if printf '%s' "$f" | grep -Eiq "$NOMBRES"; then
+    printf '  · %s — el nombre dice que son datos en claro\n' "$f"
+    continue
+  fi
+  if printf '%s' "$f" | grep -Eiq "$EXTENSIONES"; then
+    printf '  · %s — extracto o libro de cuentas (aquí no vive ninguno)\n' "$f"
+    continue
+  fi
+
+  # Lo que pesa de más suele ser un volcado, no código.
+  tam=$(git cat-file -s ":$f" 2>/dev/null || echo 0)
+  if [ "$f" != "data.enc" ] && [ "$tam" -gt "$LIMITE_BYTES" ]; then
+    printf '  · %s — pesa %s KB; por encima de 2 MB, míralo antes\n' "$f" "$((tam / 1024))"
+    continue
+  fi
+
+  # Y por último el contenido: un IBAN español dentro de un archivo de este
+  # repositorio no tiene ninguna razón de estar ahí, se llame como se llame el
+  # archivo. data.enc queda fuera: es ruido cifrado, no hay nada que leer.
+  [ "$f" = "data.enc" ] && continue
+  if git show ":$f" 2>/dev/null | head -c 2000000 | grep -Eq "$IBAN"; then
+    printf '  · %s — contiene algo con forma de IBAN\n' "$f"
+  fi
+done < "$lista" > "$motivos"
+
+[ -s "$motivos" ] || exit 0
+
+printf '\n✗ Commit detenido: esto es un repositorio PÚBLICO.\n\n'
+cat "$motivos"
+printf '\nSácalos del commit con:\n'
+printf '    git restore --staged <archivo>\n'
+printf '\nY si esa carpeta no debería estar aquí nunca, añádela al .gitignore.\n\n'
+exit 1

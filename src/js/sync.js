@@ -91,7 +91,43 @@
     } catch (e) { return null; }
   }
 
-  // Cifra el doc y lo sube al repo. Devuelve el nuevo sha.
+  // Comprueba que lo que acaba de subirse se puede volver a leer.
+  //
+  // Un guardado que "sale bien" solo demuestra que GitHub aceptó unos bytes. Lo
+  // que importa es lo contrario: que esos bytes, releídos y descifrados, siguen
+  // siendo tus movimientos. Así que se baja lo publicado y se descifra con la
+  // misma contraseña, que es la única prueba que vale.
+  //
+  // El CDN de raw.githubusercontent puede servir todavía la versión anterior
+  // durante unos segundos. Eso NO es un fallo del guardado, así que se
+  // distingue: si el texto no coincide se reintenta, y si sigue sin coincidir se
+  // dice que no se ha podido comprobar (grave: false), no que esté roto.
+  async function verificarGuardado(contentStr, doc, password) {
+    for (let intento = 0; intento < 3; intento++) {
+      if (intento) await new Promise((r) => setTimeout(r, 1500 * intento));
+      let texto;
+      try {
+        const r = await fetch(rawUrl() + "?_=" + Date.now(), { cache: "no-store" });
+        if (!r.ok) continue;
+        texto = await r.text();
+      } catch (e) { continue; }
+      if (texto !== contentStr) continue;      // el CDN va con retraso; se reintenta
+      try {
+        const vuelta = await C.decryptDoc(JSON.parse(texto), password);
+        const subidos = (doc.movimientos || []).length;
+        const leidos = (vuelta.movimientos || []).length;
+        if (subidos !== leidos) {
+          return { ok: false, grave: true, motivo: "subiste " + subidos + " movimientos y se leen " + leidos };
+        }
+        return { ok: true, movimientos: leidos };
+      } catch (e) {
+        return { ok: false, grave: true, motivo: "lo guardado no se puede descifrar" };
+      }
+    }
+    return { ok: false, grave: false, motivo: "GitHub aún servía la versión anterior" };
+  }
+
+  // Cifra el doc y lo sube al repo. Devuelve { sha, verificacion }.
   //
   // El sha identifica la versión del fichero en GitHub y se cachea en este
   // navegador. Si el fichero cambió por otra vía (otro dispositivo, o un commit
@@ -112,13 +148,21 @@
 
     let sha = getSha();
     if (!sha) { const cur = await ghGet(token); if (cur) sha = cur.sha; } // ya existía
+    let nuevoSha;
     try {
-      return await intentar(sha);
+      nuevoSha = await intentar(sha);
     } catch (e) {
       if (e.code !== "CONFLICT") throw e;
       const cur = await ghGet(token);           // sha fresco y reintento
-      return await intentar(cur ? cur.sha : null);
+      nuevoSha = await intentar(cur ? cur.sha : null);
     }
+    // La comprobación NO se espera: descifrar un documento entero son unos
+    // segundos, y el guardado ya está hecho. Va en segundo plano y la pantalla
+    // se actualiza cuando termine. Nunca falla hacia fuera: lo que no se pudo
+    // comprobar se cuenta como no comprobado, no como roto.
+    const verificacion = verificarGuardado(contentStr, doc, password)
+      .catch((e) => ({ ok: false, grave: false, motivo: e.message || "no se pudo comprobar" }));
+    return { sha: nuevoSha, verificacion };
   }
 
 
@@ -151,6 +195,6 @@
 
   window.SolventoSync = {
     ghGet, ghPut, storeToken, loadToken, hasToken, clearToken,
-    fetchRemoteBlob, fetchBlobRaw, push, pushTickers, getSha, setSha,
+    fetchRemoteBlob, fetchBlobRaw, push, pushTickers, getSha, setSha, verificarGuardado,
   };
 })();

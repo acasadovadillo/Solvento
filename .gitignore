@@ -33,3 +33,8 @@ posiciones.tsv
 reclasificaciones.tsv
 _prueba-*.html
 _datos-prueba.json
+
+# Las copias del bloque cifrado viven fuera del repositorio; por si alguien
+# apunta el destino aquí dentro, que no puedan subirse igualmente.
+Solvento_COPIAS/
+copias/
