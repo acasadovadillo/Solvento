@@ -860,13 +860,13 @@
                ${deudas.length} ${deudas.length === 1 ? "deuda" : "deudas"}</button>
              · <span style="color:#ef4444;font-weight:600;">−${esc(fmtEur(deudas.reduce((t, d) => t + d.importe, 0)).replace("-", ""))}</span></div>`
         : "";
-      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button class="solo-editor" onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
+      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button class="solo-editor fila-acc" onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
       vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", null,
                  { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-        <div class="solo-editor" style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
+        <div class="solo-editor solo-edicion" style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
       </div></div>` +
       chartPanel("Evolución de la caja", "v2-chart-caja") +
       panelFlujo(m) +
@@ -1755,6 +1755,23 @@
   };
   window.v2RevOk = (clave) => F() && F().marcarRevisado(clave);
   window.v2ArreglarTextos = () => F() && F().arreglarTextos();
+
+  // Modo edición: no toca los datos, solo decide si cada fila enseña su lápiz y
+  // su aspa. Empieza apagado en cada arranque a propósito —lo peligroso no es
+  // editar, es tener el botón de borrar debajo del dedo sin haberlo pedido— y no
+  // se recuerda entre sesiones por lo mismo.
+  window.v2ModoEdicion = () => {
+    const on = !document.body.classList.contains("modo-edicion");
+    document.body.classList.toggle("modo-edicion", on);
+    const b = document.getElementById("edit-btn");
+    if (b) {
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.title = on ? "Modo edición activado · pulsa para volver a solo mirar"
+                   : "Modo edición: enseña los botones de editar y borrar de cada fila";
+    }
+    const B = window.SolventoBoot;
+    if (B && B.toast) B.toast(on ? "Modo edición · cada fila enseña editar y borrar" : "Modo edición apagado", on ? "#3b82f6" : "#9ca3af");
+  };
   window.v2RevRestaurar = () => F() && F().restaurarRevisiones();
   window.v2CentroRango = (r) => { CENTROS.rango = r; render(CURRENT_DOC, window.__PRICES); };
   window.v2CatToggle = (nombre) => {

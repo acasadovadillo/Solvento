@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p125" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p125" />
-  <link rel="stylesheet" href="src/css/components.css?v=p125" />
+  <link rel="stylesheet" href="src/css/base.css?v=p127" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p127" />
+  <link rel="stylesheet" href="src/css/components.css?v=p127" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -120,6 +120,13 @@
       </span>
     </div>
     <div style="display:flex;align-items:center;gap:0.85rem;">
+      <button type="button" class="nb-menu solo-editor" id="edit-btn" onclick="v2ModoEdicion()"
+              title="Modo edición: enseña los botones de editar y borrar de cada fila"
+              aria-label="Modo edición" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
       <div class="user-wrap">
         <button id="user-btn" title="Tu cuenta" aria-haspopup="true" aria-expanded="false" onclick="v2UserMenu()">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
@@ -280,15 +287,15 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p125"></script>
-<script src="src/js/config.js?v=p125"></script>
-<script src="src/js/model.js?v=p125"></script>
-<script src="src/js/charts.js?v=p125"></script>
-<script src="src/js/render.js?v=p125"></script>
-<script src="src/js/db.js?v=p125"></script>
-<script src="src/js/sync.js?v=p125"></script>
-<script src="src/js/forms.js?v=p125"></script>
-<script src="src/js/boot.js?v=p125"></script>
+<script src="src/js/crypto.js?v=p127"></script>
+<script src="src/js/config.js?v=p127"></script>
+<script src="src/js/model.js?v=p127"></script>
+<script src="src/js/charts.js?v=p127"></script>
+<script src="src/js/render.js?v=p127"></script>
+<script src="src/js/db.js?v=p127"></script>
+<script src="src/js/sync.js?v=p127"></script>
+<script src="src/js/forms.js?v=p127"></script>
+<script src="src/js/boot.js?v=p127"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

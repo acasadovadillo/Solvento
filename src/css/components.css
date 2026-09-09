@@ -121,6 +121,13 @@
    dispositivo. */
 body.modo-lectura .solo-editor,
 body.modo-lectura .fila-acc { display: none !important; }
+
+/* ── Modo edición ──
+   Editar y borrar viven en cada fila, y verlos siempre es incómodo —mil aspas
+   en una lista de movimientos— y peligroso: la de borrar está a un dedo de la
+   de editar. Salen solo cuando se enciende el modo, desde la barra de arriba. */
+body:not(.modo-edicion) .fila-acc,
+body:not(.modo-edicion) .solo-edicion { display: none; }
 body.modo-lectura { padding-bottom: 7rem; }
 
 /* ── Gastos layout ── */

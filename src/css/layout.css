@@ -15,6 +15,9 @@
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .nb-menu:hover, .nb-menu[aria-expanded="true"] { color: #fff; border-color: #4b5563; background: #232733; }
+/* Encendido tiene que verse de un vistazo: mientras esté así, cada fila enseña
+   su lápiz y su aspa, y eso conviene saberlo sin tener que mirar la tabla. */
+.nb-menu[aria-pressed="true"] { color: #fff; border-color: #3b82f6; background: #1d283f; }
 
 /* ── Hamburger (mobile only) ── */
 
