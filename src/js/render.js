@@ -514,11 +514,24 @@
   }
 
   // ── Páginas ──
+  // Cabecera de bloque: el rótulo, su total y, si viene a cuento, una nota. La
+  // usan los dos bloques de Patrimonio para que se lean como pareja.
+  function cabeceraBloque(titulo, importe, color, nota, primero) {
+    return `<div class="v2-wrap" style="margin-top:${primero ? "2rem" : "3rem"};">
+      <div style="display:flex;align-items:baseline;gap:0.75rem;flex-wrap:wrap;${primero ? "" : "border-top:1px solid #2a2d3a;padding-top:1.75rem;"}">
+        <div style="font-size:1.15rem;font-weight:800;color:#fff;letter-spacing:-0.01em;">${esc(titulo)}</div>
+        <div style="font-size:1.15rem;font-weight:800;color:${color};letter-spacing:-0.01em;">${importe}</div>
+        ${nota ? `<div style="font-size:0.8rem;color:#6b7280;">${nota}</div>` : ""}
+      </div>
+    </div>`;
+  }
+
   function pagePatrimonio(m) {
     // Arriba, lo que tienes: el reparto va pegado a su cifra y las tarjetas son
     // su leyenda, así que reparten el BRUTO y suman 100 %. Mezclar ahí la deuda
     // era pedirle a una misma gráfica que contara dos cosas de signo contrario.
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
+      cabeceraBloque("Activos", fmtEur(m.patrimonioBruto), GREEN, "", true) +
       vistaPanel("patrimonio", "Distribución de los activos",
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
          { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
@@ -539,7 +552,8 @@
   function panelDeuda(m) {
     const pas = m.pas || { items: [], n: 0, total: 0 };
     if (!pas.n) {
-      return `<div class="v2-wrap" style="margin-top:2.5rem;">
+      return cabeceraBloque("Pasivos", fmtEur(0), "#6b7280", "", false) +
+        `<div class="v2-wrap" style="margin-top:1rem;">
         <div class="dashboard-panel" style="text-align:center;padding:1.5rem;">
           <div style="color:#9ca3af;font-weight:600;font-size:0.9rem;">Sin deudas registradas</div>
           <div style="color:#4b5563;font-size:0.82rem;margin-top:0.3rem;">
@@ -564,13 +578,8 @@
                      color(t), sub, null, "pasivos", "pasivos", "de tu deuda");
     }).join("");
 
-    return `<div class="v2-wrap" style="margin-top:3rem;">
-        <div style="display:flex;align-items:baseline;gap:0.75rem;flex-wrap:wrap;border-top:1px solid #2a2d3a;padding-top:1.75rem;">
-          <div style="font-size:1.15rem;font-weight:800;color:#fff;letter-spacing:-0.01em;">Deuda</div>
-          <div style="font-size:1.15rem;font-weight:800;color:${RED};letter-spacing:-0.01em;">−${esc(fmtEur(pas.total).replace("-", ""))}</div>
-          <div style="font-size:0.8rem;color:#6b7280;">pesa un ${m.ratioPas.toFixed(1).replace(".", ",")} % de lo que tienes</div>
-        </div>
-      </div>` +
+    return cabeceraBloque("Pasivos", "−" + esc(fmtEur(pas.total).replace("-", "")), RED,
+                          "pesa un " + m.ratioPas.toFixed(1).replace(".", ",") + " % de lo que tienes", false) +
       vistaPanel("pasivos", "Distribución de la deuda", items,
                  fmtEur(pas.total), "Deuda", null, { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-hub-grid" style="margin-top:1.5rem;">${tarjetas}</div>`;
