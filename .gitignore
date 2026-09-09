@@ -11,3 +11,25 @@ __pycache__/
 CONTEXT.md
 HANDOFF.md
 NEXT_STEPS.md
+
+# ── Nada personal entra aquí ─────────────────────────────────────────────
+# El repositorio es PÚBLICO. Los extractos del banco, los ficheros de trabajo
+# de la reconstrucción y cualquier export en claro se quedan fuera: lo único
+# tuyo que puede vivir aquí es data.enc, que va cifrado.
+BANKINTER_DATOS/
+SANTANDER_DATOS/
+MYINVESTOR_DATOS/
+REVOLUT_DATOS/
+TRADEREPUBLIC_DATOS/
+Solvento_EXPORT/
+Homebrew_TTRPG/
+*EN-CLARO*.json
+solvento-datos-*.json
+reglas.tsv
+apuntes.tsv
+clasificacion.tsv
+migracion.tsv
+posiciones.tsv
+reclasificaciones.tsv
+_prueba-*.html
+_datos-prueba.json
