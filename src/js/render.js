@@ -1766,11 +1766,11 @@
     const b = document.getElementById("edit-btn");
     if (b) {
       b.setAttribute("aria-pressed", on ? "true" : "false");
-      b.title = on ? "Modo edición activado · pulsa para volver a solo mirar"
-                   : "Modo edición: enseña los botones de editar y borrar de cada fila";
+      b.title = on ? "Modo edición · pulsa para volver a solo mirar"
+                   : "Modo visualización · pulsa para editar y borrar";
     }
     const B = window.SolventoBoot;
-    if (B && B.toast) B.toast(on ? "Modo edición · cada fila enseña editar y borrar" : "Modo edición apagado", on ? "#3b82f6" : "#9ca3af");
+    if (B && B.toast) B.toast(on ? "Modo edición · cada fila enseña editar y borrar" : "Modo visualización · solo mirar", on ? "#3b82f6" : "#9ca3af");
   };
   window.v2RevRestaurar = () => F() && F().restaurarRevisiones();
   window.v2CentroRango = (r) => { CENTROS.rango = r; render(CURRENT_DOC, window.__PRICES); };

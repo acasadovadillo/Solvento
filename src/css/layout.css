@@ -18,6 +18,11 @@
 /* Encendido tiene que verse de un vistazo: mientras esté así, cada fila enseña
    su lápiz y su aspa, y eso conviene saberlo sin tener que mirar la tabla. */
 .nb-menu[aria-pressed="true"] { color: #fff; border-color: #3b82f6; background: #1d283f; }
+/* Un icono u otro, nunca los dos: el ojo mientras solo se mira, el lápiz
+   mientras se puede tocar. */
+#edit-btn .icono-lapiz { display: none; }
+#edit-btn[aria-pressed="true"] .icono-ojo { display: none; }
+#edit-btn[aria-pressed="true"] .icono-lapiz { display: block; }
 
 /* ── Hamburger (mobile only) ── */
 

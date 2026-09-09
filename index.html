@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p127" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p127" />
-  <link rel="stylesheet" href="src/css/components.css?v=p127" />
+  <link rel="stylesheet" href="src/css/base.css?v=p128" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p128" />
+  <link rel="stylesheet" href="src/css/components.css?v=p128" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -120,10 +120,15 @@
       </span>
     </div>
     <div style="display:flex;align-items:center;gap:0.85rem;">
+      <!-- El icono dice en qué modo estás, no qué va a pasar al pulsar: ojo
+           abierto mientras solo miras, lápiz mientras puedes editar. -->
       <button type="button" class="nb-menu solo-editor" id="edit-btn" onclick="v2ModoEdicion()"
-              title="Modo edición: enseña los botones de editar y borrar de cada fila"
+              title="Modo visualización · pulsa para editar y borrar"
               aria-label="Modo edición" aria-pressed="false">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+        <svg class="icono-ojo" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="icono-lapiz" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       </button>
@@ -287,15 +292,15 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p127"></script>
-<script src="src/js/config.js?v=p127"></script>
-<script src="src/js/model.js?v=p127"></script>
-<script src="src/js/charts.js?v=p127"></script>
-<script src="src/js/render.js?v=p127"></script>
-<script src="src/js/db.js?v=p127"></script>
-<script src="src/js/sync.js?v=p127"></script>
-<script src="src/js/forms.js?v=p127"></script>
-<script src="src/js/boot.js?v=p127"></script>
+<script src="src/js/crypto.js?v=p128"></script>
+<script src="src/js/config.js?v=p128"></script>
+<script src="src/js/model.js?v=p128"></script>
+<script src="src/js/charts.js?v=p128"></script>
+<script src="src/js/render.js?v=p128"></script>
+<script src="src/js/db.js?v=p128"></script>
+<script src="src/js/sync.js?v=p128"></script>
+<script src="src/js/forms.js?v=p128"></script>
+<script src="src/js/boot.js?v=p128"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.
