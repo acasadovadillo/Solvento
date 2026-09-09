@@ -849,6 +849,58 @@
       </div></div>`;
   }
 
+  // Lo que te deben es la otra cara de lo que debes, así que vive en la misma
+  // página: una deuda no cambia de naturaleza por mirarla desde el otro lado.
+  function panelPrestamos() {
+    const r = window.SolventoModel.resumenPrestamos((CURRENT_DOC || {}).movimientos);
+    if (!r.personas.length) return "";
+    const fila = (p) => {
+      const jsN = String(p.nombre).replace(/'/g, "\\'");
+      const abierta = PRESTAMOS[p.nombre];
+      const saldoTxt = p.saldo > 0.005
+        ? `<span style="color:${GREEN};font-weight:700;">${esc(fmtEur(p.saldo))}</span>`
+        : (p.huerfano ? `<span style="color:#f59e0b;font-weight:600;">sin registrar</span>`
+                      : `<span style="color:#6b7280;">saldado</span>`);
+      const detalle = abierta ? p.movimientos.map((m) => {
+        const presta = m.tipo_prestamo !== "Devolución";
+        return `<tr class="table-row" style="background:#14171f;">
+          <td style="text-align:left;padding-left:2.2rem;color:#9ca3af;font-size:0.82rem;">
+            ${esc(m.fecha)} · ${esc(String(m.detalle || "").slice(0, 60))}</td>
+          <td style="text-align:right;color:${presta ? RED : GREEN};white-space:nowrap;font-size:0.85rem;">
+            ${presta ? "prestado " : "devuelto "}${esc(fmtEur(Math.abs(Number(String(m.importe).replace(",", ".")) || 0)))}</td>
+          <td colspan="2"></td></tr>`;
+      }).join("") : "";
+      return `<tr class="table-row">
+        <td style="text-align:left;">
+          <button onclick="v2PrestamoToggle('${jsN}')" style="background:none;border:none;color:#e5e7eb;font-weight:600;
+            font-family:inherit;font-size:0.9rem;cursor:pointer;padding:0;text-align:left;">
+            <span style="color:#6b7280;font-size:0.7rem;">${abierta ? "▾" : "▸"}</span> ${esc(p.nombre)}</button>
+          ${p.huerfano ? `<div style="color:#6b7280;font-size:0.72rem;padding-left:0.9rem;">
+             te devolvió ${esc(fmtEur(p.devuelto))} de un adelanto que no está registrado como préstamo</div>` : ""}</td>
+        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${p.prestado ? esc(fmtEur(p.prestado)) : "—"}</td>
+        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${p.devuelto ? esc(fmtEur(p.devuelto)) : "—"}</td>
+        <td style="text-align:right;white-space:nowrap;">${saldoTxt}</td></tr>` + detalle;
+    };
+    const aviso = r.huerfanos
+      ? `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.6rem;">
+           ${r.huerfanos} persona${r.huerfanos === 1 ? "" : "s"} te ${r.huerfanos === 1 ? "ha" : "han"} devuelto dinero
+           sin que conste el adelanto: se pagó con la tarjeta y quedó como un gasto normal, así que Solvento no puede
+           decir cuánto queda pendiente. Para que lo sepa, el adelanto hay que registrarlo como
+           <b style="color:#9ca3af;">Préstamo · Dinero prestado</b>.</div>`
+      : "";
+    return `<div class="v2-wrap"><div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Préstamos entre personas</div>
+        <div style="font-size:0.8rem;color:#9ca3af;">Te deben <b style="color:${r.teDeben ? GREEN : "#6b7280"};">${esc(fmtEur(r.teDeben))}</b></div>
+      </div>
+      <table class="minimal-table">
+        <thead><tr><th style="text-align:left;">Persona</th><th style="text-align:right;">Prestado</th>
+          <th style="text-align:right;">Devuelto</th><th style="text-align:right;">Pendiente</th></tr></thead>
+        <tbody>${r.personas.map(fila).join("")}</tbody></table>
+      ${aviso}
+    </div></div>`;
+  }
+
   function pagePasivos(m) {
     const pas = (m && m.pas) || { items: [], n: 0, total: 0 };
     if (!pas.n) {
@@ -857,7 +909,7 @@
           <div style="color:#6b7280;font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Sin deudas registradas</div>
           <div style="color:#374151;font-size:0.85rem;max-width:420px;margin:0 auto 1.25rem;">Hipotecas, préstamos, tarjetas… Lo que registres aquí se descuenta de tu patrimonio neto.</div>
           ${addBtn("＋ Deuda", "v2AddPas()")}
-        </div></div>`;
+        </div></div>` + panelPrestamos();
     }
     const rows = pas.items.map((d) => `<tr class="table-row">
       <td style="text-align:left;"><span style="color:#fff;font-weight:600;">${esc(d.nombre)}</span>${d.entidad ? `<div style="color:#6b7280;font-size:0.78rem;">${esc(d.entidad)}</div>` : ""}</td>
@@ -873,7 +925,7 @@
         </div>
         <table class="minimal-table">
         <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th style="text-align:right;">Peso</th><th></th></tr></thead>
-        <tbody>${rows}</tbody></table></div></div>`;
+        <tbody>${rows}</tbody></table></div></div>` + panelPrestamos();
   }
 
   // ── Página Gastos (Fase 6) ──────────────────────────────────────────
@@ -992,6 +1044,7 @@
   // piso no se responde con un mes suelto, sino con el año. Por eso este panel
   // lleva su propio rango en vez de heredar el mes de arriba.
   const CENTROS = { rango: "12m", abiertas: {} };
+  const PRESTAMOS = {};
   function tablaCategorias(g, mes, presupuesto) {
     // El árbol entero, no dos niveles: «Vivienda > Suministros > Luz» se
     // despliega hasta donde llegue. Cada nodo lleva su total (con las hijas
@@ -1529,6 +1582,10 @@
   window.v2CentroToggle = (nombre) => {
     CENTROS.abiertas[nombre] = !CENTROS.abiertas[nombre];
     render(CURRENT_DOC, window.__PRICES);
+  };
+  window.v2PrestamoToggle = (nombre) => {
+    PRESTAMOS[nombre] = !PRESTAMOS[nombre];
+    document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(window.__MODEL);
   };
   window.v2CentroRango = (r) => { CENTROS.rango = r; render(CURRENT_DOC, window.__PRICES); };
   window.v2CatToggle = (nombre) => {

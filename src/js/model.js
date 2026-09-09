@@ -536,6 +536,42 @@
     return !cat || RE_PENDIENTE.test(cat);
   };
 
+  // ── Préstamos entre personas ─────────────────────────────────────────────
+  // «Dinero prestado» sale de una cuenta y crea una deuda a favor; «Devolución»
+  // la salda. El saldo por persona es la resta, pero solo significa algo si las
+  // dos patas están registradas: si el adelanto se apuntó como un gasto normal
+  // —pagar la gasolina con la tarjeta y ya— la devolución se queda sola y el
+  // saldo sale negativo, que leído literalmente diría que les debes tú. Por eso
+  // se cuentan aparte las devoluciones huérfanas en vez de disimularlas.
+  function resumenPrestamos(movimientos) {
+    const por = {};
+    for (const m of movimientos || []) {
+      if (m.tipo !== "Préstamo") continue;
+      const nombre = String(m.persona_prestamo || "").trim() || "Sin nombre";
+      const p = por[nombre] || (por[nombre] = { nombre, prestado: 0, devuelto: 0, movimientos: [] });
+      const imp = Math.abs(num(m.importe) || 0);
+      if (m.tipo_prestamo === "Devolución") p.devuelto += imp; else p.prestado += imp;
+      p.movimientos.push(m);
+    }
+    const personas = Object.values(por).map((p) => {
+      p.prestado = round2(p.prestado); p.devuelto = round2(p.devuelto);
+      p.saldo = round2(p.prestado - p.devuelto);
+      // Le devolvieron más de lo que consta prestado: falta el apunte del
+      // adelanto, no es que la persona haya pagado de más.
+      p.huerfano = p.saldo < -0.005;
+      p.movimientos.sort((a, b) => (parseFechaES(a.fecha) || 0) - (parseFechaES(b.fecha) || 0));
+      return p;
+    }).sort((a, b) => b.saldo - a.saldo || a.nombre.localeCompare(b.nombre, "es"));
+    const vivos = personas.filter((p) => p.saldo > 0.005);
+    return {
+      personas, vivos,
+      teDeben: round2(vivos.reduce((t, p) => t + p.saldo, 0)),
+      prestado: round2(personas.reduce((t, p) => t + p.prestado, 0)),
+      devuelto: round2(personas.reduce((t, p) => t + p.devuelto, 0)),
+      huerfanos: personas.filter((p) => p.huerfano).length,
+    };
+  }
+
   function buildGastos(db) {
     const porMes = {};
     const mesDe = (f) => {
@@ -842,5 +878,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();
