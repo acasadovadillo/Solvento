@@ -578,8 +578,10 @@
                      color(t), sub, null, "pasivos", "pasivos", "de tu deuda");
     }).join("");
 
-    return cabeceraBloque("Pasivos", "−" + esc(fmtEur(pas.total).replace("-", "")), RED,
-                          "pesa un " + m.ratioPas.toFixed(1).replace(".", ",") + " % de lo que tienes", false) +
+    // Sin coletilla: con una deuda pequeña salía «pesa un 0,0 % de lo que
+    // tienes», que no dice nada, y con una grande el porcentaje ya se ve en las
+    // tarjetas. El rótulo y el importe bastan, como arriba.
+    return cabeceraBloque("Pasivos", "−" + esc(fmtEur(pas.total).replace("-", "")), RED, "", false) +
       vistaPanel("pasivos", "Distribución de la deuda", items,
                  fmtEur(pas.total), "Deuda", null, { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-hub-grid" style="margin-top:1.5rem;">${tarjetas}</div>`;
