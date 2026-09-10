@@ -487,15 +487,23 @@
     const st = $("sync-token-status");
     if (st) { st.textContent = has ? "✅ Token guardado (cifrado) en este dispositivo" : "Sin token — necesario para guardar en GitHub"; st.style.color = has ? "#10b981" : "#6b7280"; }
   }
+  // Poner en el campo el token que ya está guardado en este dispositivo, para
+  // que se vea que no hace falta volver a pegarlo —y para poder copiarlo con el
+  // 👁 cuando haga falta en otra cuenta—. Va en un campo de contraseña, así que
+  // se enseña con puntos: seguro ante una captura de pantalla.
+  //
+  // Antes esto solo pasaba al llegar por el atajo de sincronizar. Entrando por
+  // Ajustes, el campo salía vacío mientras al lado ponía «token guardado», que
+  // es una contradicción en la cara del que mira.
+  function rellenarToken() {
+    const inp = $("sync-token");
+    if (inp && DB.state.token) { inp.value = DB.state.token; inp.type = "password"; }
+  }
   function openSync() {
     if (window.v2Tab) window.v2Tab("ajustes");
     if (window.v2AjSec) window.v2AjSec("sync");
     setError("sync-status", "");
-    // Precargar el token que ya está guardado en este dispositivo, para que se
-    // vea que no hace falta volver a pegarlo. Va en un campo de contraseña, así
-    // que se muestra con puntos (seguro ante capturas de pantalla).
-    const inp = $("sync-token");
-    if (inp && DB.state.token) { inp.value = DB.state.token; inp.type = "password"; }
+    rellenarToken();
     const cb = $("sync-token-viaja");
     if (cb) cb.checked = !!(DB.state.doc && DB.state.doc.config && DB.state.doc.config.token);
     updateSyncUi();
@@ -670,6 +678,6 @@
     startBoot();
   }
 
-  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura };
+  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken };
   document.addEventListener("DOMContentLoaded", init);
 })();
