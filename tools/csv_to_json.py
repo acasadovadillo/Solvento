@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Solvento v2 — Migración única: CSV (hojas actuales) → documento JSON.
+Solvento — Migración única: CSV (hojas actuales) → documento JSON.
 
 Transforma los CSV que hoy alimentan generate.py en el documento unificado de la
-v2. NO cifra nada: el cifrado lo hace SOLO el navegador (Web Crypto) una vez, en
+Solvento. NO cifra nada: el cifrado lo hace SOLO el navegador (Web Crypto) una vez, en
 la pantalla de importación inicial. El JSON que produce este script es en CLARO y
 debe quedar fuera de git (data.json está en .gitignore).
 

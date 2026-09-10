@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Módulo de cifrado zero-knowledge (Web Crypto API).
+ * Solvento — Módulo de cifrado zero-knowledge (Web Crypto API).
  *
  * Es el ÚNICO lugar donde se cifra o descifra. Nada de esto sale del navegador:
  * la contraseña nunca se guarda ni se transmite; solo se usa para derivar la

@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Arranque, login que descifra y sincronización con GitHub.
+ * Solvento — Arranque, login que descifra y sincronización con GitHub.
  *
  * Arranque:
  *   · Hay bloque cifrado local → login (contraseña → descifra → desbloquea).

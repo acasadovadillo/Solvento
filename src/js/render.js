@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Render (Fase 2): navegación por pestañas + páginas
+ * Solvento — Render (Fase 2): navegación por pestañas + páginas
  * (Patrimonio, Caja, Balance, Cartera, Propiedades, Pasivos) con donuts, treemap
  * de asignación, pintado desde el modelo (datos descifrados + prices.json).
  * Las gráficas de EVOLUCIÓN temporal llegan en el siguiente incremento (necesitan

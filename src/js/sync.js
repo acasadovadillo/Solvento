@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Sincronización con GitHub (Fase 3).
+ * Solvento — Sincronización con GitHub (Fase 3).
  *
  * El bloque cifrado (data.enc) vive en el repo. LEERLO es público (no requiere
  * token); ESCRIBIRLO usa un token fine-grained (Contents: Read/Write en este

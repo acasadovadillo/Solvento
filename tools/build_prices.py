@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Solvento v2 — Genera prices.json PÚBLICO (sin datos personales).
+Solvento — Genera prices.json PÚBLICO (sin datos personales).
 
 Descarga el precio actual (en EUR) de cada activo con ticker de Yahoo Finance y
 lo escribe en prices.json. Los precios NO son secretos: este fichero se versiona

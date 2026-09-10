@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Motor de cálculo (port de la analítica de generate.py).
+ * Solvento — Motor de cálculo (port de la analítica de generate.py).
  *
  * Entrada: documento descifrado (db) + precios públicos (prices.json).
  * Salida: modelo con saldos por cuenta, valoración de la cartera con

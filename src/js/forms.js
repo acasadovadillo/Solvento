@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Formularios para registrar/editar desde la web (Fase 4/4b).
+ * Solvento — Formularios para registrar/editar desde la web (Fase 4/4b).
  * Alta y EDICIÓN de movimientos, operaciones de inversión, inmuebles y valores
  * liquidativos (NAV). Al guardar, muta el documento en memoria y llama a
  * SolventoBoot.saveDoc() (cifra + guarda local + sube a GitHub si hay token).

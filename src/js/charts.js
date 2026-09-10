@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Gráfica de línea interactiva (evolución temporal).
+ * Solvento — Gráfica de línea interactiva (evolución temporal).
  * SolventoCharts.mount(container, series, {color, id}) donde series = [[t_ms, v]].
  *
  * Incluye:
@@ -232,7 +232,7 @@
 })();
 
 /*
- * Solvento v2 — Comparativa multi-línea de rentabilidad.
+ * Solvento — Comparativa multi-línea de rentabilidad.
  * SolventoCharts.mountMulti(container, series, {meses}) donde
  * series = [{key, label, puntos: [[t, pct|null]], destacada}].
  * Una línea por activo, con leyenda clicable para mostrar/ocultar cada uno.

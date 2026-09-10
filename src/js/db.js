@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Estado en memoria + persistencia local del bloque cifrado.
+ * Solvento — Estado en memoria + persistencia local del bloque cifrado.
  *
  * En la Fase 1 el bloque cifrado (data.enc) se guarda en localStorage, así que
  * el login funciona por dispositivo. La sincronización móvil↔Mac (leer/escribir

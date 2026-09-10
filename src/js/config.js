@@ -1,5 +1,5 @@
 /*
- * Solvento v2 — Configuración (NO es dato personal, vive en código).
+ * Solvento — Configuración (NO es dato personal, vive en código).
  * Portado 1:1 de las constantes de generate.py: cuentas, activos conocidos,
  * mapa ISIN→ticker Yahoo, colores y objetivo de asignación.
  */

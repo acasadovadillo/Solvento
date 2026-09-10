@@ -1,6 +1,6 @@
 name: Actualizar precios Solvento
 
-# v2: el sitio es una app cifrada estática (index.html + src/js). Este workflow
+# El sitio es una app cifrada estática (index.html + src/js). Este workflow
 # ya NO reconstruye HTML ni descarga Google Sheets; solo refresca prices.json
 # (precios públicos en EUR) para que la web valore la cartera. Los datos
 # personales viven cifrados en los *-data.enc y NUNCA los toca este workflow.
