@@ -106,7 +106,7 @@
   // Sincronización: dónde vive el bloque cifrado (data.enc) en GitHub.
   // El repo es público, así que LEER data.enc no necesita token; ESCRIBIR sí
   // (token fine-grained con permiso Contents: Read/Write solo en este repo).
-  const SYNC = { owner: "acasadovadillo", repo: "Solvento", branch: "main", path: "data.enc" };
+  const SYNC = { owner: "acasadovadillo", repo: "Solvento", branch: "main", path: "alberto-data.enc" };
 
 
   // ── Configuración editable ──────────────────────────────────────────

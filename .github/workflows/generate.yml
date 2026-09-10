@@ -3,15 +3,14 @@ name: Actualizar precios Solvento
 # v2: el sitio es una app cifrada estática (index.html + src/js). Este workflow
 # ya NO reconstruye HTML ni descarga Google Sheets; solo refresca prices.json
 # (precios públicos en EUR) para que la web valore la cartera. Los datos
-# personales viven cifrados en data.enc y NUNCA los toca este workflow.
+# personales viven cifrados en los *-data.enc y NUNCA los toca este workflow.
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths-ignore:
-      - "data.enc"           # tus guardados cifrados no cambian el código
-      - "cuentas/**"        # ni los de las demás cuentas
+      - "*-data.enc"         # los guardados cifrados no cambian el código
       - "prices.json"   # evita re-disparo por el propio commit de precios
       - "fundamentals.json"
   schedule:

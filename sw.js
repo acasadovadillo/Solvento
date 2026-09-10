@@ -15,7 +15,7 @@
  *   4. prices.json     → primero la red (los precios interesan frescos), con la
  *      última copia como respaldo.
  */
-const VERSION = "solvento-v2";
+const VERSION = "solvento-v3";
 // perfil.json dice DÓNDE guarda esta copia de Solvento. Sin conexión y sin
 // él, la aplicación volvería a la configuración del código, que apunta a otro
 // sitio: por eso se precarga como cualquier otro cimiento.

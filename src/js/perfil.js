@@ -8,9 +8,9 @@
  *
  *   { "cuentas": [
  *       { "usuario": "alberto", "nombre": "Alberto", "tipo": "persona",
- *         "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "data.enc" } },
+ *         "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "alberto-data.enc" } },
  *       { "usuario": "abies", "nombre": "ABIES", "tipo": "organizacion",
- *         "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "data.enc" } } ] }
+ *         "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "abies-data.enc" } } ] }
  *
  * El login solo pide usuario y contraseña, como cualquier login: el usuario dice
  * QUÉ cuenta abrir y la contraseña la abre. Dónde guarda cada una es

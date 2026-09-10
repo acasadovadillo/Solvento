@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Copia de seguridad del bloque cifrado (data.enc).
+"""Copia de seguridad del bloque cifrado (alberto-data.enc).
 
 Hasta ahora el historial del repositorio hacía de copia sin querer: cada
 guardado dejaba detrás su versión anterior. Al limpiar el historial esas
 versiones desaparecieron —y era lo correcto—, pero con ellas se fue la única
-red que había: hoy existe un solo data.enc y un guardado malo no tiene vuelta
+red que había: hoy existe un solo bloque por cuenta y un guardado malo no tiene vuelta
 atrás.
 
 Esto baja el bloque tal cual está publicado y lo guarda fechado FUERA del
@@ -13,7 +13,7 @@ copia, y por eso el script no pide la contraseña ni sabría qué hacer con ella
 
     python3 tools/copia.py                 # guarda una copia si ha cambiado
     python3 tools/copia.py --listar        # qué copias hay
-    python3 tools/copia.py --restaurar F   # deja F como data.enc del repositorio
+    python3 tools/copia.py --restaurar F   # deja F como bloque cifrado del repositorio
 
 Una vez al día, sin acordarte (crontab -e):
 
@@ -31,7 +31,7 @@ from datetime import datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-CRUDO = "https://raw.githubusercontent.com/acasadovadillo/Solvento/main/data.enc"
+CRUDO = "https://raw.githubusercontent.com/acasadovadillo/Solvento/main/alberto-data.enc"
 DESTINO_POR_DEFECTO = REPO.parent / "Solvento_COPIAS"
 CONSERVAR = 30
 
@@ -154,7 +154,7 @@ def restaurar(origen):
         print("✗ Esa copia no vale: %s" % mal, file=sys.stderr)
         return 1
 
-    actual = REPO / "data.enc"
+    actual = REPO / "alberto-data.enc"
     if actual.is_file():
         rescate = REPO.parent / ("data-antes-de-restaurar-%s.enc" % datetime.now().strftime("%Y%m%d-%H%M"))
         shutil.copy2(actual, rescate)
