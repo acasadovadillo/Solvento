@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p146" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p146" />
-  <link rel="stylesheet" href="src/css/components.css?v=p146" />
+  <link rel="stylesheet" href="src/css/base.css?v=p148" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p148" />
+  <link rel="stylesheet" href="src/css/components.css?v=p148" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -272,6 +272,12 @@
         <span style="color:#6b7280;display:block;margin-top:0.15rem;">Viajará cifrado con tu contraseña. Contrapartida: si esa contraseña fuese débil y alguien descifrara la copia del repositorio, tendría además permiso de escritura sobre él. Actívalo solo si tu contraseña es sólida.</span></span>
     </label>
     <button id="sync-save-token" class="primary" style="width:100%;margin-bottom:1.25rem;">Guardar token</button>
+    <!-- Con el token ya guardado, el campo se bloquea: cambiarlo o quitarlo es
+         algo que se pide a propósito, no algo que pase por escribir encima. -->
+    <div id="sync-token-puesto" style="display:none;gap:0.6rem;margin-bottom:1.25rem;">
+      <button id="sync-token-cambiar" type="button" style="flex:1;">Cambiar token</button>
+      <button id="sync-token-quitar" type="button" style="flex:1;">Quitar de este dispositivo</button>
+    </div>
 
     <div style="display:flex;gap:0.6rem;margin-bottom:0.75rem;">
       <button id="sync-push" style="flex:1;">⬆️ Guardar en GitHub</button>
@@ -318,17 +324,17 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p146"></script>
-<script src="src/js/config.js?v=p146"></script>
-<script src="src/js/model.js?v=p146"></script>
-<script src="src/js/charts.js?v=p146"></script>
-<script src="src/js/render.js?v=p146"></script>
-<script src="src/js/db.js?v=p146"></script>
-<script src="src/js/sync.js?v=p146"></script>
-<script src="src/js/forms.js?v=p146"></script>
-<script src="src/js/perfil.js?v=p146"></script>
-<script src="src/js/exportar.js?v=p146"></script>
-<script src="src/js/boot.js?v=p146"></script>
+<script src="src/js/crypto.js?v=p148"></script>
+<script src="src/js/config.js?v=p148"></script>
+<script src="src/js/model.js?v=p148"></script>
+<script src="src/js/charts.js?v=p148"></script>
+<script src="src/js/render.js?v=p148"></script>
+<script src="src/js/db.js?v=p148"></script>
+<script src="src/js/sync.js?v=p148"></script>
+<script src="src/js/forms.js?v=p148"></script>
+<script src="src/js/perfil.js?v=p148"></script>
+<script src="src/js/exportar.js?v=p148"></script>
+<script src="src/js/boot.js?v=p148"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

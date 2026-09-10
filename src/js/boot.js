@@ -257,6 +257,11 @@
   }
   function lock() {
     if (P()) P().entrar(false);
+    // El campo del token no se vacía solo al cambiar de cuenta: lo que escribió
+    // una seguiría ahí para la siguiente. Se limpia aquí, que es por donde se
+    // pasa siempre.
+    const tk = $("sync-token");
+    if (tk) { tk.value = ""; tk.type = "password"; tk.readOnly = false; }
     const menu = $("user-menu"); if (menu) menu.hidden = true;
     pintarEstado("");
     quitarBandaCopia();
@@ -497,7 +502,49 @@
   // es una contradicción en la cara del que mira.
   function rellenarToken() {
     const inp = $("sync-token");
-    if (inp && DB.state.token) { inp.value = DB.state.token; inp.type = "password"; }
+    if (!inp) return;
+    const hay = !!DB.state.token;
+    // Sin token, el campo está para escribirlo. Con token, el campo enseña el
+    // que hay —oculto, con su ojo— pero NO se puede escribir encima: cambiarlo
+    // es una decisión, no un descuido. Y si no hay ninguno, se vacía: si no, el
+    // que se escribió en otra cuenta seguiría ahí, escrito y sin guardar.
+    inp.value = hay ? DB.state.token : "";
+    inp.type = "password";
+    inp.readOnly = hay;
+    inp.style.opacity = hay ? "0.75" : "";
+    inp.title = hay ? "Guardado. Para poner otro, pulsa «Cambiar token»." : "";
+    const guardar = $("sync-save-token"), puesto = $("sync-token-puesto");
+    if (guardar) guardar.hidden = hay;
+    if (puesto) puesto.style.display = hay ? "flex" : "none";
+  }
+
+  // Cambiarlo se pide: el campo se vacía y se abre, y hasta que no se guarde el
+  // nuevo sigue valiendo el de antes.
+  function cambiarToken() {
+    const inp = $("sync-token");
+    if (!inp) return;
+    inp.readOnly = false;
+    inp.value = "";
+    inp.type = "text";
+    inp.style.opacity = "";
+    inp.focus();
+    const guardar = $("sync-save-token"), puesto = $("sync-token-puesto");
+    if (guardar) guardar.hidden = false;
+    if (puesto) puesto.style.display = "none";
+    setError("sync-status", "Pega el token nuevo y guárdalo. El de antes sigue valiendo hasta entonces.", "#9ca3af");
+  }
+
+  function quitarToken() {
+    if (!window.confirm("¿Quitar el token de este dispositivo?\n\nDejarás de poder guardar en GitHub desde aquí " +
+                        "hasta que pongas otro. Tus datos no se tocan.")) return;
+    SYNC.clearToken();
+    DB.state.token = null;
+    rellenarToken();
+    updateSyncUi();
+    pintarLectura();
+    render();
+    pintarEstado("sintoken", "Sin token: lo que guardes se queda en este dispositivo");
+    setError("sync-status", "Token quitado de este dispositivo", "#fbbf24");
   }
   function openSync() {
     if (window.v2Tab) window.v2Tab("ajustes");
@@ -523,7 +570,7 @@
     await SYNC.storeToken(t, DB.state.password);
     DB.state.token = t;
     aplicarTokenViajero(t);
-    $("sync-token").type = "password";   // se queda puesto, pero oculto
+    rellenarToken();                     // se queda puesto, oculto y bloqueado
     updateSyncUi();
     pintarLectura();                     // con token ya no es un invitado
     render();                            // y vuelven los botones de editar
@@ -646,6 +693,8 @@
     $("logout-btn").addEventListener("click", lock);
     $("sync-save-token").addEventListener("click", saveToken);
     $("sync-token-ver").addEventListener("click", alternarVerToken);
+    $("sync-token-cambiar").addEventListener("click", cambiarToken);
+    $("sync-token-quitar").addEventListener("click", quitarToken);
     $("sync-token-viaja").addEventListener("change", () => { aplicarTokenViajero(); saveDoc(); });
     $("sync-push").addEventListener("click", doPush);
     $("sync-pull").addEventListener("click", doPull);
