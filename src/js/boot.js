@@ -29,31 +29,10 @@
   function panel(name) {
     $("login-form").style.display = name === "login" ? "flex" : "none";
     $("import-form").style.display = name === "import" ? "flex" : "none";
-    $("cuenta-form").style.display = name === "cuenta" ? "flex" : "none";
     $("boot-checking").style.display = name === "checking" ? "flex" : "none";
   }
 
-  // ── Cuentas ──
-  // El selector solo tiene sentido cuando hay más de una: con una sola, un
-  // desplegable de un elemento es una pregunta sin respuesta posible.
   const P = () => window.SolventoPerfil;
-  function pintarSelectorCuentas() {
-    const sel = $("login-cuenta");
-    if (!sel || !P()) return;
-    const cuentas = P().cuentas(), actual = P().actual();
-    sel.innerHTML = cuentas.map((c) =>
-      `<option value="${c.id}" ${c.id === actual.id ? "selected" : ""}>${(c.nombre || "Mis finanzas")
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;")}</option>`).join("");
-    sel.hidden = cuentas.length < 2;
-  }
-  // Cambiar de cuenta en el desplegable cambia de almacén y de llaves, así que
-  // hay que volver a mirar si esa cuenta tiene datos aquí o hay que bajarlos.
-  async function cambiarCuenta(id) {
-    P().usar(id);
-    setError("login-error", "");
-    $("login-pass").value = "";
-    await startBoot();
-  }
   function alternarVerPass() {
     const inp = $("login-pass"), btn = $("login-ver");
     const ver = inp.type === "password";
@@ -63,24 +42,11 @@
     btn.title = btn.ariaLabel = ver ? "Ocultar la contraseña" : "Ver la contraseña";
     inp.focus();
   }
-  function altaCuenta(ev) {
-    ev.preventDefault();
-    try {
-      const c = P().alta({
-        nombre: $("cta-nombre").value.trim(),
-        tipo: $("cta-tipo").value,
-        almacen: { owner: $("cta-owner").value, repo: $("cta-repo").value, path: $("cta-path").value },
-      });
-      ["cta-nombre", "cta-owner", "cta-repo", "cta-path"].forEach((i) => ($(i).value = ""));
-      setError("cta-error", "");
-      cambiarCuenta(c.id);
-    } catch (e) {
-      setError("cta-error", e.message || "No se ha podido añadir");
-    }
-  }
+
 
   // ── Desbloqueo / bloqueo ──
   async function unlock(doc, password) {
+    if (P()) P().entrar(true);          // ya se puede decir de quién es esto
     DB.state.doc = doc;
     DB.state.password = password;
     $("boot-overlay").style.display = "none";
@@ -290,6 +256,7 @@
     if (await subir("Solvento: subir cambios pendientes")) toast("Cambios pendientes subidos ✓", "#10b981");
   }
   function lock() {
+    if (P()) P().entrar(false);
     const menu = $("user-menu"); if (menu) menu.hidden = true;
     pintarEstado("");
     quitarBandaCopia();
@@ -372,16 +339,39 @@
   // ── Login / importación ──
   async function handleLogin(ev) {
     ev.preventDefault();
+    const usuario = $("login-user").value.trim();
     const pw = $("login-pass").value;
-    const blob = DB.getStoredBlob();
-    if (!blob) { startBoot(); return; }
-    setError("login-error", "Descifrando…", "#9ca3af");
+    // Un usuario que no existe y una contraseña que no vale dan el mismo aviso:
+    // decir cuál de las dos ha fallado es decirle a un desconocido qué cuentas
+    // hay en esta instalación.
+    const malos = () => {
+      setError("login-error", "Usuario o contraseña incorrectos");
+      $("login-pass").value = "";
+    };
+    const cuenta = P() && P().porUsuario(usuario);
+    if (!cuenta) { malos(); return; }
+    P().usar(cuenta.id);
+
+    setError("login-error", "Entrando…", "#9ca3af");
+    let blob = DB.getStoredBlob();
+    if (!blob) {
+      // Primera vez con esta cuenta en este dispositivo: su bloque se lee de su
+      // sitio. Es lectura pública y no descifra nada: sin la contraseña, ruido.
+      try { const r = await SYNC.fetchRemoteBlob(null); if (r) { blob = r.blob; DB.storeBlob(r.blob); } }
+      catch (e) { blob = null; }
+    }
+    if (!blob) {
+      const a = window.SolventoConfig.SYNC;
+      setError("login-error", "Esa cuenta todavía no tiene datos guardados (" +
+               a.owner + "/" + a.repo + "/" + a.path + ")");
+      return;
+    }
     try {
       const doc = await C.decryptDoc(blob, pw);
       unlock(doc, pw);
     } catch (e) {
-      setError("login-error", e.code === "BAD_PASSWORD" ? "Contraseña incorrecta" : ("Error: " + e.message));
-      $("login-pass").value = "";
+      if (e.code === "BAD_PASSWORD") malos();
+      else setError("login-error", "Error: " + e.message);
     }
   }
   async function handleImport(ev) {
@@ -436,9 +426,10 @@
     document.documentElement.style.overflow = "hidden";
     $("boot-overlay").style.display = "flex";
     setError("login-error", ""); setError("imp-error", "");
-    pintarSelectorCuentas();
+    $("login-pass").value = "";
     if (DB.hasData()) {
-      panel("login"); $("login-pass").value = ""; $("login-pass").focus();
+      panel("login");
+      ($("login-user").value ? $("login-pass") : $("login-user")).focus();
       refrescarBlobRemoto();          // en segundo plano, mientras escribes
       return;
     }
@@ -448,15 +439,7 @@
     try { remote = await SYNC.fetchRemoteBlob(null); } catch (e) { remote = null; }
     if (remote) {
       DB.storeBlob(remote.blob);
-      panel("login"); $("login-pass").value = ""; $("login-pass").focus();
-    } else if (P() && P().actual().id !== P().PRINCIPAL) {
-      // Una cuenta añadida a mano cuyo repositorio todavía no tiene bloque: lo
-      // que falta es que alguien lo cree desde ESA cuenta, no cifrar aquí unos
-      // datos que no son tuyos.
-      panel("login");
-      const a = window.SolventoConfig.SYNC;
-      setError("login-error", "En ese repositorio todavía no hay ningún bloque cifrado (" +
-               a.owner + "/" + a.repo + "/" + a.path + ").");
+      panel("login"); $("login-user").focus();
     } else {
       panel("import"); $("imp-pass").value = ""; $("imp-pass2").value = ""; $("imp-pass").focus();
     }
@@ -624,11 +607,7 @@
     if (window.SolventoPerfil) { try { await window.SolventoPerfil.cargar(); } catch (e) {} }
     $("login-form").addEventListener("submit", handleLogin);
     $("login-ver").addEventListener("click", alternarVerPass);
-    $("login-cuenta").addEventListener("change", (e) => cambiarCuenta(e.target.value));
-    $("login-nueva").addEventListener("click", () => { panel("cuenta"); $("cta-nombre").focus(); });
-    $("cuenta-form").addEventListener("submit", altaCuenta);
-    $("cta-cancelar").addEventListener("click", () => { setError("cta-error", ""); startBoot(); });
-    $("cuenta-btn").addEventListener("click", () => { lock(); });
+    $("cuenta-btn").addEventListener("click", () => { $("login-user").value = ""; lock(); });
     $("import-form").addEventListener("submit", handleImport);
     $("logout-btn").addEventListener("click", lock);
     $("sync-save-token").addEventListener("click", saveToken);

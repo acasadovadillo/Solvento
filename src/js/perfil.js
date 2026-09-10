@@ -1,55 +1,72 @@
 /*
  * Solvento — Cuentas: de quién son estos datos y dónde viven.
  *
- * Una cuenta es tres cosas: un nombre, un tipo (persona u organización) y un
- * almacén, que es el sitio del que se lee y al que se escribe su bloque cifrado.
+ * Una cuenta es un usuario, un nombre, un tipo (persona u organización) y un
+ * almacén: el sitio del que se lee y al que se escribe su bloque cifrado.
  *
- *   { "nombre": "ABIES", "tipo": "organizacion",
- *     "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "data.enc" } }
+ * El catálogo vive en `perfil.json`, junto a los datos, NO en el código:
  *
- * La cuenta POR DEFECTO de un despliegue viene en `perfil.json`, junto a los
- * datos. Sin ese archivo, todo se comporta como siempre: una persona y la
- * configuración del código.
+ *   { "cuentas": [
+ *       { "usuario": "alberto", "nombre": "Alberto", "tipo": "persona",
+ *         "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "data.enc" } },
+ *       { "usuario": "abies", "nombre": "ABIES", "tipo": "organizacion",
+ *         "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "data.enc" } } ] }
  *
- * Las demás cuentas —las que abres tú porque eres el tesorero de una— viven en
- * ESTE dispositivo, no publicadas. Si la lista viajara en perfil.json,
- * cualquiera que abriese la web vería qué organizaciones usan Solvento y dónde
- * guardan. No hay razón para regalar eso.
+ * El login solo pide usuario y contraseña, como cualquier login: el usuario dice
+ * QUÉ cuenta abrir y la contraseña la abre. Dónde guarda cada una es
+ * configuración, y la configuración no se le pregunta a nadie al entrar.
  *
- * Cada cuenta tiene sus propias llaves en el navegador: su bloque cifrado, su
- * token y su sha. La cuenta por defecto conserva las de siempre, sin sufijo,
- * para que nada de lo que ya había se mueva de sitio.
+ * Esto es a propósito la misma forma que tendrá con un servidor detrás: hoy la
+ * tabla de cuentas es un archivo y mañana la contesta el backend. Cambia de
+ * dónde sale la tabla; no cambia el login ni el resto de la aplicación.
+ *
+ * Cada cuenta tiene sus propias llaves en el navegador —su bloque, su token y su
+ * sha—. La primera del catálogo conserva las de siempre, sin sufijo, para que
+ * nada de lo que ya había se mueva de sitio.
  */
 (function () {
   "use strict";
 
   const CFG = window.SolventoConfig;
-  const K_CUENTAS = "solvento_cuentas";      // las añadidas en este dispositivo
-  const K_ACTUAL = "solvento_cuenta";        // en cuál estabas
+  const K_ACTUAL = "solvento_cuenta";
   const PRINCIPAL = "principal";
 
-  let principal = { id: PRINCIPAL, nombre: "", tipo: "persona", almacen: Object.assign({}, CFG.SYNC) };
+  // Sin perfil.json: una cuenta, la de siempre, con la configuración del código.
+  let catalogo = [{ id: PRINCIPAL, usuario: "", nombre: "", tipo: "persona",
+                    almacen: Object.assign({}, CFG.SYNC) }];
   let actualId = PRINCIPAL;
   let cargado = false;
 
-  const leerJSON = (k, porDefecto) => {
-    try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? porDefecto : v; }
-    catch (e) { return porDefecto; }
-  };
-  const guardarExtras = (arr) => localStorage.setItem(K_CUENTAS, JSON.stringify(arr));
-  const extras = () => (Array.isArray(leerJSON(K_CUENTAS, [])) ? leerJSON(K_CUENTAS, []) : []);
+  const normal = (s) => String(s == null ? "" : s).trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  const cuentas = () => [principal].concat(extras());
-  const buscar = (id) => cuentas().find((c) => c.id === id) || principal;
+  const cuentas = () => catalogo;
+  const buscar = (id) => catalogo.find((c) => c.id === id) || catalogo[0];
   const actual = () => buscar(actualId);
   const esOrganizacion = () => actual().tipo === "organizacion";
+  // Sin catálogo declarado, cualquier usuario abre la única cuenta que hay: es
+  // un despliegue de una sola persona y no tiene a quién confundir.
+  const porUsuario = (u) => (catalogo.length === 1 && !catalogo[0].usuario)
+    ? catalogo[0]
+    : catalogo.find((c) => normal(c.usuario) === normal(u));
 
-  // Las llaves del navegador. La cuenta por defecto usa las de toda la vida: si
+  // Las llaves del navegador. La primera cuenta usa las de toda la vida: si
   // cambiaran, el bloque cifrado que ya está guardado dejaría de encontrarse.
   const sufijo = () => (actualId === PRINCIPAL ? "" : ":" + actualId);
   const claveBlob = () => "solvento_data_enc" + sufijo();
   const claveToken = () => "solvento_gh_token" + sufijo();
   const claveSha = () => "solvento_data_sha" + sufijo();
+
+  function normalizarCuenta(c, i) {
+    const id = i === 0 ? PRINCIPAL : (normal(c.usuario || c.nombre || "").replace(/[^a-z0-9]+/g, "-") || "cuenta" + i);
+    return {
+      id,
+      usuario: c.usuario || "",
+      nombre: c.nombre || c.usuario || "",
+      tipo: c.tipo === "organizacion" ? "organizacion" : "persona",
+      almacen: Object.assign({}, CFG.SYNC, c.almacen || {}),
+    };
+  }
 
   async function cargar() {
     if (cargado) return actual();
@@ -59,17 +76,15 @@
       if (r.ok) {
         const p = await r.json();
         if (p && typeof p === "object") {
-          principal = {
-            id: PRINCIPAL,
-            nombre: p.nombre || "",
-            tipo: p.tipo === "organizacion" ? "organizacion" : "persona",
-            almacen: Object.assign({}, CFG.SYNC, p.almacen || {}),
-          };
+          const lista = Array.isArray(p.cuentas) && p.cuentas.length
+            ? p.cuentas
+            : [{ usuario: p.usuario, nombre: p.nombre, tipo: p.tipo, almacen: p.almacen }];
+          catalogo = lista.map(normalizarCuenta);
         }
       }
-    } catch (e) { /* sin perfil.json: una persona, y a trabajar */ }
+    } catch (e) { /* sin perfil.json: la cuenta de siempre, y a trabajar */ }
     const guardada = localStorage.getItem(K_ACTUAL);
-    usar(guardada && buscar(guardada).id === guardada ? guardada : PRINCIPAL);
+    usar(guardada && buscar(guardada).id === guardada ? guardada : catalogo[0].id);
     return actual();
   }
 
@@ -85,52 +100,24 @@
     return actual();
   }
 
-  function alta(c) {
-    const id = String(c.id || c.nombre || "").toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    if (!id || id === PRINCIPAL) throw new Error("Ese nombre de cuenta no vale");
-    if (extras().some((x) => x.id === id)) throw new Error("Ya hay una cuenta con ese nombre en este dispositivo");
-    const cuenta = {
-      id, nombre: c.nombre || id,
-      tipo: c.tipo === "organizacion" ? "organizacion" : "persona",
-      almacen: {
-        owner: String(c.almacen.owner || "").trim(),
-        repo: String(c.almacen.repo || "").trim(),
-        branch: String(c.almacen.branch || "main").trim() || "main",
-        path: String(c.almacen.path || "data.enc").trim() || "data.enc",
-      },
-    };
-    if (!cuenta.almacen.owner || !cuenta.almacen.repo) throw new Error("Faltan el usuario y el repositorio de GitHub");
-    guardarExtras(extras().concat([cuenta]));
-    return cuenta;
-  }
-
-  // Quitar una cuenta de este dispositivo NO borra sus datos: siguen en su
-  // repositorio, cifrados. Lo que se va es la copia local y el token.
-  function borrar(id) {
-    if (id === PRINCIPAL) return false;
-    guardarExtras(extras().filter((x) => x.id !== id));
-    [":" + id].forEach((s) => {
-      localStorage.removeItem("solvento_data_enc" + s);
-      localStorage.removeItem("solvento_gh_token" + s);
-      localStorage.removeItem("solvento_data_sha" + s);
-    });
-    if (actualId === id) usar(PRINCIPAL);
-    return true;
-  }
-
   // El tipo se marca en el <body>: a partir de ahí el CSS enseña u oculta lo que
   // solo tiene sentido en una organización, sin que cada vista pregunte.
+  // El nombre de la cuenta no se enseña hasta que se ha entrado: en la pantalla
+  // de login, un «Alberto» en la pestaña le dice a cualquiera que pase por
+  // delante de quién es este Solvento.
+  let dentro = false;
   function aplicar() {
     const c = actual();
     document.body.classList.toggle("es-organizacion", c.tipo === "organizacion");
     const el = document.getElementById("perfil-nombre");
-    if (el) { el.textContent = c.nombre || ""; el.hidden = !c.nombre; }
-    document.title = c.nombre ? c.nombre + " · Solvento" : "Solvento";
+    const nombre = dentro ? (c.nombre || "") : "";
+    if (el) { el.textContent = nombre; el.hidden = !nombre; }
+    document.title = nombre ? nombre + " · Solvento" : "Solvento";
   }
+  function entrar(si) { dentro = si !== false; aplicar(); }
 
   window.SolventoPerfil = {
-    cargar, aplicar, usar, alta, borrar, cuentas, actual, esOrganizacion,
+    cargar, aplicar, entrar, usar, cuentas, actual, porUsuario, esOrganizacion,
     claveBlob, claveToken, claveSha,
     datos: () => actual(),
     PRINCIPAL,
