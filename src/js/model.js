@@ -348,9 +348,13 @@
           importe: calculado != null && r.importe == null ? calculado : num(r.importe ?? r.pendiente ?? r.saldo),
         };
       })
-      .filter((x) => isFinite(x.importe) && x.importe > 0)
+      // Una deuda a cero sigue existiendo: una tarjeta saldada este mes vuelve a
+      // tener saldo el que viene. Antes desaparecía de la lista y con ella la
+      // única forma de mirar por qué su saldo es el que es.
+      .filter((x) => isFinite(x.importe) && x.importe >= 0)
       .sort((a, b) => b.importe - a.importe);
-    return { items, n: items.length, total: round2(items.reduce((s, x) => s + x.importe, 0)) };
+    const vivas = items.filter((x) => x.importe > 0.005);
+    return { items, vivas, n: vivas.length, total: round2(vivas.reduce((s, x) => s + x.importe, 0)) };
   }
 
   // ── Cobros pendientes ────────────────────────────────────────────────────
