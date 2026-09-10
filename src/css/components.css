@@ -130,8 +130,8 @@ body.modo-lectura .fila-acc { display: none !important; }
    columna se encogía y la tabla entera se recolocaba al encender el modo: los
    importes bailaban de sitio a cada pulsación. Así el hueco es siempre el mismo
    y lo único que cambia es si se ven o no. */
-body:not(.modo-edicion) .fila-acc { visibility: hidden; }
-body:not(.modo-edicion) .solo-edicion { display: none; }
+body:not(.modo-edicion) .fila-acc,
+body:not(.modo-edicion) .solo-edicion { visibility: hidden; }
 body.modo-lectura { padding-bottom: 7rem; }
 
 /* ── Gastos layout ── */
