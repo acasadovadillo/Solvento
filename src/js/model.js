@@ -351,6 +351,28 @@
     return { items, n: items.length, total: round2(items.reduce((s, x) => s + x.importe, 0)) };
   }
 
+  // ── Cobros pendientes ────────────────────────────────────────────────────
+  // Un derecho de cobro no es un movimiento: el dinero todavía no se ha movido.
+  // Una cuota de alquiler que alguien te debe no puede registrarse como préstamo
+  // —eso sacaría de tu caja un dinero que nunca salió— ni como ingreso —eso
+  // metería uno que nunca entró—. Así que vive aparte, no toca ningún saldo y no
+  // suma al patrimonio: es una lista de lo que esperas cobrar, y cuando cobras
+  // se convierte en el ingreso de verdad y desaparece de aquí.
+  function cobrosPendientes(db) {
+    const items = ((db && db.cobros) || [])
+      .map((c) => ({
+        id: c.id, persona: c.persona || "", concepto: c.concepto || "",
+        fecha: c.fecha || "", importe: num(c.importe),
+        centro: c.centro || "", categoria: c.categoria || "",
+      }))
+      .filter((c) => isFinite(c.importe) && c.importe > 0)
+      .sort((a, b) => parseFechaES(a.fecha) - parseFechaES(b.fecha));
+    const porPersona = {};
+    items.forEach((c) => { porPersona[c.persona || "—"] = (porPersona[c.persona || "—"] || 0) + c.importe; });
+    return { items, n: items.length, porPersona,
+             total: round2(items.reduce((s, c) => s + c.importe, 0)) };
+  }
+
   // ── Categorías con jerarquía ─────────────────────────────────────────
   // Las categorías se guardan en el movimiento como texto: "Educación" o
   // "Educación > Formaciones". Mantener ese formato tiene una ventaja grande:
@@ -1145,5 +1167,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

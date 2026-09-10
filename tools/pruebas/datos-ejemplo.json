@@ -3577,5 +3577,16 @@
    "cuenta": "Banco Uno"
   }
  ],
- "nav": {}
+ "nav": {},
+ "cobros": [
+  {
+   "id": "c0001",
+   "persona": "Una Amiga",
+   "concepto": "Parte de la cuota de julio",
+   "importe": "150.00",
+   "fecha": "05/07/2026",
+   "categoria": "Alquiler",
+   "centro": "Inmuebles > El Piso"
+  }
+ ]
 }

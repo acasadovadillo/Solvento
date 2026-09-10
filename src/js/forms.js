@@ -165,8 +165,10 @@
     return false;
   }
 
+  // Devuelve true si el formulario llegó a abrirse: quien tenga que cablear algo
+  // después (los selectores de árbol) necesita saber que hay a qué agarrarse.
   function shell(titulo, bodyHtml, onSubmit, despues) {
-    if (soloLectura()) return;
+    if (soloLectura()) return false;
     const m = ensureModal();
     m.querySelector(".modal-card").innerHTML =
       `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
@@ -187,12 +189,13 @@
       if (window.SolventoBoot && window.SolventoBoot.saveDoc) await window.SolventoBoot.saveDoc();
       if (despues) despues();
     });
+    return true;
   }
   const G = (id) => document.getElementById(id).value.trim();
   const upsert = (arr, rec) => { const i = arr.findIndex((x) => x.id === rec.id); if (i >= 0) arr[i] = rec; else arr.push(rec); };
 
   // ── Movimiento ──
-  function openMovimiento(existing) {
+  function openMovimiento(existing, antesDeGuardar) {
     if (soloLectura()) return;
     const doc = DB.state.doc, e = existing || {};
     // Una tarjeta de crédito no es una cuenta, pero sus compras salen de ella y
@@ -271,6 +274,10 @@
         registrarRuta(doc.config.centros, rec.centro);
       }
       upsert(doc.movimientos, rec);
+      // Un gancho para quien abrió el formulario por algo: cobrar un pendiente
+      // crea el ingreso y cierra la línea, y las dos cosas tienen que viajar en
+      // el mismo guardado o una podría subir sin la otra.
+      if (antesDeGuardar) antesDeGuardar(rec);
       return null;
     });
     wireArbol("m-catg", catGasto, "— Elige categoría —");
@@ -392,6 +399,62 @@
       return null;
     });
   }
+  // ── Cobro pendiente ──
+  // Lo que te deben y todavía no ha entrado: una cuota de alquiler a medias, un
+  // trabajo facturado sin cobrar. No se apunta como movimiento porque el dinero
+  // no se ha movido; se apunta aquí y, cuando llegue, se convierte en ingreso.
+  function openCobro(existing) {
+    if (soloLectura()) return;
+    const doc = DB.state.doc, e = existing || {};
+    if (!Array.isArray(doc.cobros)) doc.cobros = [];
+    const personas = uniq((doc.cobros || []).map((c) => c.persona)
+      .concat((doc.movimientos || []).map((m) => m.persona_prestamo)).filter(Boolean));
+    const catIngreso = uniq(categoriasIngresoCfg().concat((doc.movimientos || []).map((m) => m.tipo_ingreso)));
+    const centros = uniq(((doc.config || {}).centros || []).concat((doc.movimientos || []).map((m) => m.centro)));
+    const body =
+      field("c-persona", "Quién te lo debe", datalist("c-persona", personas, e.persona)) +
+      field("c-concepto", "Concepto", input("c-concepto", "text", e.concepto, 'placeholder="Parte de la cuota de julio"')) +
+      field("c-importe", "Importe pendiente (€)", input("c-importe", "number", e.importe, 'step="0.01" min="0"')) +
+      field("c-fecha", "Desde cuándo", input("c-fecha", "date", toISO(e.fecha || hoyES()))) +
+      field("c-cat", "Categoría de ingreso", selectorArbol("c-cat", e.categoria)) +
+      field("c-centro", "Centro de coste", selectorArbol("c-centro", e.centro)) +
+      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">
+         Esto <b>no toca tu caja ni tu patrimonio</b>: el dinero no ha entrado todavía. La categoría y el
+         centro son los que llevará el ingreso el día que lo cobres.</div>`;
+    if (!shell(existing ? "Editar cobro pendiente" : "Nuevo cobro pendiente", body, () => {
+      const importe = parseFloat(G("c-importe"));
+      if (!isFinite(importe) || importe <= 0) return "Introduce el importe que te deben";
+      const persona = G("c-persona");
+      if (!persona) return "Indica quién te lo debe";
+      upsert(doc.cobros, {
+        id: e.id || newId("c"), persona, concepto: G("c-concepto"),
+        importe: String(importe), fecha: fromISO(G("c-fecha")) || hoyES(),
+        categoria: G("c-cat"), centro: G("c-centro"),
+      });
+      return null;
+    })) return;
+    wireArbol("c-cat", catIngreso, "— Elige categoría —");
+    wireArbol("c-centro", centros, "— Sin imputar —",
+              (k) => (k === 0 ? "+ Nuevo centro…" : "+ Nuevo centro dentro…"));
+  }
+
+  // Cobrarlo es crear el ingreso de verdad —con su fecha, su cuenta, su
+  // categoría y su centro— y cerrar la línea. Se abre el formulario de siempre
+  // con todo puesto: lo único que hay que decir es en qué cuenta entró.
+  function cobrarCobro(id) {
+    if (soloLectura()) return;
+    const doc = DB.state.doc;
+    const c = (doc.cobros || []).find((x) => x.id === id);
+    if (!c) return;
+    openMovimiento({
+      tipo: "Ingreso", importe: c.importe, fecha: hoyES(),
+      detalle: c.concepto ? `${c.concepto} · ${c.persona}` : `Cobro de ${c.persona}`,
+      tipo_ingreso: c.categoria || "", centro: c.centro || "",
+    }, () => {
+      doc.cobros = (doc.cobros || []).filter((x) => x.id !== id);
+    });
+  }
+
   // ── Ajustes: cuentas, activos y objetivo de asignación ──────────────
   // Todo esto vivía en el código. Ahora se guarda en tu documento cifrado, así
   // que puedes abrir una cuenta o dar de alta un ETF sin que yo toque nada.
@@ -1101,7 +1164,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
@@ -1109,6 +1172,8 @@
     editPropiedad: (id) => openPropiedad(findById("propiedades", id) || findById("inmuebles", id)),
     editPasivo: (id) => openPasivo(findById("pasivos", id)),
     deleteMovimiento: (id) => del("movimientos", id),
+    editCobro: (id) => openCobro(((DB.state.doc || {}).cobros || []).find((x) => x.id === id)),
+    deleteCobro: (id) => del("cobros", id),
     deleteInversion: (id) => del("inversiones", id),
     deletePropiedad: (id) => del("propiedades", id),
     deletePasivo: (id) => del("pasivos", id),

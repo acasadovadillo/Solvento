@@ -85,6 +85,14 @@ var rev = M.revision(doc, precios);
 comprobar("la revisión no encuentra errores en los datos de ejemplo",
   rev.errores === 0, rev.avisos.filter(function (a) { return a.nivel === "error"; }).map(function (a) { return a.titulo; }).join(", "));
 
+// Un cobro pendiente es una promesa, no un hecho: no puede mover ni un céntimo
+// del patrimonio hasta que el dinero exista de verdad.
+var cobros = M.cobrosPendientes(doc);
+var sinCobros = JSON.parse(JSON.stringify(doc)); sinCobros.cobros = [];
+comprobar("un cobro pendiente no cambia el patrimonio",
+  cobros.total > 0 && cerca(M.build(sinCobros, precios).patrimonioNeto, m.patrimonioNeto),
+  "cobros=" + cobros.total);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

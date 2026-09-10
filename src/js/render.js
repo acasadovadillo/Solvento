@@ -1013,6 +1013,47 @@
     </div></div>`;
   }
 
+  // Lo que te deben y todavía no ha entrado. No suma en ningún saldo —el dinero
+  // no se ha movido— y por eso vive aquí y no en la caja: es una lista de
+  // promesas, no de hechos.
+  function panelCobros() {
+    const c = window.SolventoModel.cobrosPendientes(CURRENT_DOC || {});
+    const filas = c.items.map((x) => {
+      const jsId = String(x.id).replace(/'/g, "\\'");
+      return `<tr class="table-row">
+        <td style="text-align:left;"><div style="color:#fff;font-weight:600;">${esc(x.persona)}</div>
+          ${x.concepto ? `<div style="color:#6b7280;font-size:0.78rem;">${esc(x.concepto)}</div>` : ""}</td>
+        <td style="text-align:left;color:#9ca3af;white-space:nowrap;">${esc(x.fecha)}</td>
+        <td style="text-align:right;color:${GREEN};font-weight:700;white-space:nowrap;">${esc(fmtEur(x.importe))}</td>
+        <td style="text-align:right;width:1%;white-space:nowrap;">
+          <button class="solo-editor" onclick="v2Cobrar('${jsId}')" title="Ya te lo ha pagado: crea el ingreso y cierra la línea"
+            style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.75rem;
+            font-weight:600;padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;white-space:nowrap;">Cobrado</button></td>
+        ${rowActions(`v2EditCobro('${jsId}')`, `v2DelCobro('${jsId}')`)}</tr>`;
+    }).join("");
+
+    return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cobros pendientes</div>
+        <div style="display:flex;align-items:baseline;gap:0.9rem;flex-wrap:wrap;">
+          <div style="font-size:0.8rem;color:#9ca3af;">Te deben <b style="color:${c.total ? GREEN : "#6b7280"};">${esc(fmtEur(c.total))}</b></div>
+          ${addBtn("＋ Cobro pendiente", "v2AddCobro()")}
+        </div>
+      </div>
+      ${c.n
+        ? `<table class="minimal-table">
+             <thead><tr><th style="text-align:left;">Quién</th><th style="text-align:left;">Desde</th>
+               <th style="text-align:right;">Importe</th><th></th><th></th></tr></thead>
+             <tbody>${filas}</tbody></table>
+           <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">
+             No entra en tu caja ni en tu patrimonio: el dinero todavía no se ha movido. Al pulsar
+             <b style="color:#6b7280;">Cobrado</b> se crea el ingreso de verdad, con su categoría y su centro.</div>`
+        : `<div style="color:#4b5563;font-size:0.85rem;padding:0.75rem 0;">
+             Nada pendiente de cobrar. Aquí se apunta lo que te deben y aún no ha entrado —media cuota de
+             alquiler, un trabajo facturado—, sin tocar la caja hasta que llegue.</div>`}
+    </div></div>`;
+  }
+
   // Lo descartado no desaparece del todo: se dice cuántos son y se puede volver
   // a mirarlos, porque un «está bien» de hace seis meses puede haber dejado de
   // serlo y esconder cosas para siempre es como no revisar.
@@ -1073,7 +1114,7 @@
           <div style="color:#6b7280;font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Sin deudas registradas</div>
           <div style="color:#374151;font-size:0.85rem;max-width:420px;margin:0 auto 1.25rem;">Hipotecas, préstamos, tarjetas… Lo que registres aquí se descuenta de tu patrimonio neto.</div>
           ${addBtn("＋ Deuda", "v2AddPas()")}
-        </div></div>` + panelPrestamos();
+        </div></div>` + panelPrestamos() + panelCobros();
     }
     const rows = pas.items.map((d) => `<tr class="table-row">
       <td style="text-align:left;"><span style="color:#fff;font-weight:600;">${esc(d.nombre)}</span>${d.entidad ? `<div style="color:#6b7280;font-size:0.78rem;">${esc(d.entidad)}</div>` : ""}</td>
@@ -1089,7 +1130,7 @@
         </div>
         <table class="minimal-table">
         <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead>
-        <tbody>${rows}</tbody></table></div></div>` + panelPrestamos();
+        <tbody>${rows}</tbody></table></div></div>` + panelPrestamos() + panelCobros();
   }
 
   // ── Página Gastos (Fase 6) ──────────────────────────────────────────
@@ -1755,6 +1796,10 @@
   };
   window.v2RevOk = (clave) => F() && F().marcarRevisado(clave);
   window.v2ArreglarTextos = () => F() && F().arreglarTextos();
+  window.v2AddCobro = () => F() && F().openCobro();
+  window.v2EditCobro = (id) => F() && F().editCobro(id);
+  window.v2DelCobro = (id) => F() && F().deleteCobro(id);
+  window.v2Cobrar = (id) => F() && F().cobrarCobro(id);
 
   // Modo edición: no toca los datos, solo decide si cada fila enseña su lápiz y
   // su aspa. Empieza apagado en cada arranque a propósito —lo peligroso no es
