@@ -5,7 +5,23 @@
       "usuario": "alberto",
       "nombre": "Alberto",
       "tipo": "persona",
-      "almacen": { "owner": "acasadovadillo", "repo": "Solvento", "branch": "main", "path": "data.enc" }
+      "almacen": {
+        "owner": "acasadovadillo",
+        "repo": "Solvento",
+        "branch": "main",
+        "path": "data.enc"
+      }
+    },
+    {
+      "usuario": "abies",
+      "nombre": "ABIES",
+      "tipo": "organizacion",
+      "almacen": {
+        "owner": "acasadovadillo",
+        "repo": "ABIES-Solvento",
+        "branch": "main",
+        "path": "data.enc"
+      }
     }
   ]
 }

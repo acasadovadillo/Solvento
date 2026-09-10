@@ -379,11 +379,17 @@
     const p1 = $("imp-pass").value, p2 = $("imp-pass2").value;
     if (p1.length < 6) { setError("imp-error", "La contraseña debe tener al menos 6 caracteres"); return; }
     if (p1 !== p2) { setError("imp-error", "Las contraseñas no coinciden"); return; }
-    setError("imp-error", "Cargando y cifrando…", "#9ca3af");
+    setError("imp-error", "Cifrando…", "#9ca3af");
     try {
-      const res = await fetch("data.json?" + Date.now());
-      if (!res.ok) throw new Error("no hay datos en este sitio. Configúralo desde tu equipo (localhost) con tu contraseña y pulsa 🔄 → Guardar en GitHub.");
-      const doc = await res.json();
+      // Si hay un data.json que adoptar, se adopta —así nació esta aplicación—.
+      // Y si no hay nada, no es un error: es una cuenta que empieza de cero, que
+      // es exactamente lo que le pasa a la primera persona de una asociación.
+      let doc = null;
+      try {
+        const res = await fetch("data.json?" + Date.now());
+        if (res.ok) doc = await res.json();
+      } catch (e) { doc = null; }
+      if (!doc) doc = { movimientos: [], inversiones: [], propiedades: [], pasivos: [], cobros: [], config: {} };
       const blob = await C.encryptDoc(doc, p1);
       DB.storeBlob(blob);
       unlock(doc, p1);

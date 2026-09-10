@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p140" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p140" />
-  <link rel="stylesheet" href="src/css/components.css?v=p140" />
+  <link rel="stylesheet" href="src/css/base.css?v=p141" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p141" />
+  <link rel="stylesheet" href="src/css/components.css?v=p141" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -102,10 +102,10 @@
   </form>
   <form id="import-form" class="boot-panel" style="display:none;">
     <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
-    <div class="boot-title">Configura tu cifrado</div>
+    <div class="boot-title">Empezar aquí</div>
     <div class="boot-sub">
-      Primera vez en este dispositivo. Elige una contraseña: cifrará todos tus datos en este
-      navegador. <b style="color:#e5e7eb;">Si la pierdes, no hay forma de recuperar los datos.</b>
+      Esta cuenta todavía no tiene datos. Elige una contraseña: será la que cifre todo lo que
+      registres, y sin ella nadie puede leerlo — <b style="color:#e5e7eb;">tú tampoco</b>.
     </div>
     <input id="imp-pass" type="password" placeholder="Nueva contraseña (mín. 6)" autocomplete="new-password" />
     <input id="imp-pass2" type="password" placeholder="Repite la contraseña" autocomplete="new-password" />
@@ -317,17 +317,17 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p140"></script>
-<script src="src/js/config.js?v=p140"></script>
-<script src="src/js/model.js?v=p140"></script>
-<script src="src/js/charts.js?v=p140"></script>
-<script src="src/js/render.js?v=p140"></script>
-<script src="src/js/db.js?v=p140"></script>
-<script src="src/js/sync.js?v=p140"></script>
-<script src="src/js/forms.js?v=p140"></script>
-<script src="src/js/perfil.js?v=p140"></script>
-<script src="src/js/exportar.js?v=p140"></script>
-<script src="src/js/boot.js?v=p140"></script>
+<script src="src/js/crypto.js?v=p141"></script>
+<script src="src/js/config.js?v=p141"></script>
+<script src="src/js/model.js?v=p141"></script>
+<script src="src/js/charts.js?v=p141"></script>
+<script src="src/js/render.js?v=p141"></script>
+<script src="src/js/db.js?v=p141"></script>
+<script src="src/js/sync.js?v=p141"></script>
+<script src="src/js/forms.js?v=p141"></script>
+<script src="src/js/perfil.js?v=p141"></script>
+<script src="src/js/exportar.js?v=p141"></script>
+<script src="src/js/boot.js?v=p141"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.
