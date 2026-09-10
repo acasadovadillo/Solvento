@@ -18,6 +18,10 @@
   const SYNC = window.SolventoSync;
 
   const $ = (id) => document.getElementById(id);
+  // Los motivos de un error llevan dentro lo que dijo GitHub: van a un
+  // innerHTML, así que se escapan antes de pintarlos.
+  const esc = (x) => String(x == null ? "" : x)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   let PRICES = null;
 
   function setError(elId, msg, color) {
@@ -152,7 +156,10 @@
     if (v) localStorage.setItem(PENDIENTE_KEY, "1");
     else localStorage.removeItem(PENDIENTE_KEY);
   };
+  let _estado = { estado: "", detalle: "" };
   function pintarEstado(estado, detalle) {
+    _estado = { estado, detalle: detalle || "" };
+    pintarComprobacion();
     const el = $("sync-estado");
     if (!el) return;
     const mapa = {
@@ -173,6 +180,93 @@
                                 estado === "dudoso" || estado === "roto");
     const btn = $("user-btn");
     if (btn) btn.title = txt ? "Tu cuenta · " + txt : "Tu cuenta";
+  }
+
+  /* ── «Sin comprobar», explicado ────────────────────────────────────────────
+   *
+   * En la navbar el estado cabe en dos palabras, y dos palabras no bastan para
+   * esto: «Sin comprobar» no dice que algo esté mal, dice que no se ha podido
+   * probar que esté bien, y son cosas muy distintas. Casi siempre es que la
+   * copia pública de GitHub tardó unos segundos de más en refrescarse.
+   *
+   * Antes había que esperar al siguiente guardado para salir de la duda. Aquí
+   * se puede resolver en el momento: se descarga lo publicado, se descifra y se
+   * compara con lo que hay en pantalla.
+   */
+  const COMPROBACION = {
+    ok: ["#10b981", "Comprobado",
+         "Lo publicado en GitHub se descarga, se descifra con tu contraseña y coincide con lo que tienes aquí."],
+    dudoso: ["#fbbf24", "Sin comprobar",
+             "Se subió y GitHub lo aceptó. Lo que no se ha podido confirmar es el paso siguiente: volver a " +
+             "descargarlo y descifrarlo. Casi siempre es que la copia pública de GitHub todavía servía la " +
+             "versión anterior cuando se miró — tarda unos segundos en refrescarse. <b>No significa que tus " +
+             "datos estén mal ni que falte nada</b>: significa que todavía no está probado que se puedan releer."],
+    roto: ["#ef4444", "Guardado ilegible",
+           "Se subió, pero al volver a leerlo falla. No borres nada y comprueba una copia antes de seguir guardando."],
+    pendiente: ["#fbbf24", "Sin subir",
+                "Hay cambios guardados en este dispositivo que no han llegado a GitHub. Se reintenta solo, " +
+                "y también puedes forzarlo con «⬆️ Guardar en GitHub»."],
+    sintoken: ["#fbbf24", "Sin sincronizar",
+               "Sin token no se sube nada: lo que cambies vive solo en este navegador. Pega el token aquí abajo."],
+    guardando: ["#9ca3af", "Guardando…", "Subiendo el bloque cifrado a GitHub."],
+    "": ["#6b7280", "Sin guardar todavía",
+         "En esta sesión aún no se ha guardado nada. Puedes comprobar igualmente qué hay publicado en GitHub."],
+  };
+  function pintarComprobacion(extra) {
+    const caja = $("sync-comprobacion");
+    if (!caja) return;
+    const [color, titulo, texto] = COMPROBACION[_estado.estado] || COMPROBACION[""];
+    caja.innerHTML =
+      `<div style="border:1px solid ${color}55;background:${color}12;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;">
+         <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+           <div style="color:${color};font-weight:700;font-size:0.88rem;">${titulo}</div>
+           <button type="button" id="sync-comprobar"
+             style="border:1px solid ${color};background:none;color:${color};border-radius:8px;
+             font-size:0.78rem;font-weight:600;padding:0.35rem 0.7rem;cursor:pointer;font-family:inherit;
+             white-space:nowrap;">Comprobar ahora</button>
+         </div>
+         <div style="color:#9ca3af;font-size:0.8rem;line-height:1.45;margin-top:0.5rem;">${texto}</div>
+         ${_estado.detalle ? `<div style="color:#4b5563;font-size:0.74rem;margin-top:0.45rem;">${esc(_estado.detalle)}</div>` : ""}
+         ${/* El aviso de que la comprobación no se pudo hacer va SIEMPRE en ámbar,
+              no en el color del estado: en verde se leería «comprobado… no se ha
+              podido comprobar», que es justo lo contrario de lo que dice. */ ""}
+         ${extra ? `<div style="color:#fbbf24;font-size:0.78rem;font-weight:600;margin-top:0.55rem;">${esc(extra)}</div>` : ""}
+       </div>`;
+    const b = $("sync-comprobar");
+    if (b) b.addEventListener("click", comprobarAhora);
+  }
+
+  // Comprobar sin guardar: lo que hay publicado, contra lo que hay en pantalla.
+  let _comprobando = false;
+  async function comprobarAhora() {
+    if (_comprobando) return;
+    _comprobando = true;
+    const b = $("sync-comprobar");
+    if (b) { b.disabled = true; b.textContent = "Comprobando…"; }
+    try {
+      const v = await SYNC.comprobarPublicado(DB.state.doc, DB.state.password);
+      if (v.ok) {
+        pintarEstado("ok", "Comprobado ahora mismo: lo publicado se relee y coincide" +
+                     (v.movimientos ? " (" + v.movimientos + " movimientos)" : ""));
+        toast("Comprobado: lo publicado se puede releer", "#10b981");
+      } else if (v.grave) {
+        pintarEstado("roto", v.motivo);
+        toast("Lo publicado no se puede releer · " + v.motivo, "#ef4444");
+      } else if (v.desfase) {
+        // Descifra bien, pero no es lo mismo: falta subir, o subió otro sitio.
+        pintarEstado("pendiente", v.motivo + ". Guarda otra vez para publicar lo de aquí, " +
+                     "o trae de GitHub si lo bueno es lo de allí.");
+        toast("Lo publicado no coincide con lo de aquí · " + v.motivo, "#fbbf24");
+      } else {
+        pintarComprobacion("No se ha podido comprobar: " + v.motivo);
+      }
+    } catch (e) {
+      pintarComprobacion("No se ha podido comprobar: " + (e.message || e));
+    } finally {
+      _comprobando = false;
+      const b2 = $("sync-comprobar");
+      if (b2) { b2.disabled = false; b2.textContent = "Comprobar ahora"; }
+    }
   }
 
   // ── Modo lectura ─────────────────────────────────────────────────────────
@@ -793,6 +887,6 @@
     startBoot();
   }
 
-  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, abrirCambioPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken };
+  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, abrirCambioPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken, pintarComprobacion, comprobarAhora };
   document.addEventListener("DOMContentLoaded", init);
 })();

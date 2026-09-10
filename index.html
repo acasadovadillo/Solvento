@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p166" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p166" />
-  <link rel="stylesheet" href="src/css/components.css?v=p166" />
+  <link rel="stylesheet" href="src/css/base.css?v=p167" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p167" />
+  <link rel="stylesheet" href="src/css/components.css?v=p167" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -285,6 +285,10 @@
             <h3>Sincronización</h3>
 <p style="font-size:0.82rem;color:#9ca3af;margin:0 0 1.25rem;">Guarda tu bloque cifrado en tu repo de GitHub para tenerlo en el móvil y el Mac. Los datos viajan siempre cifrados con tu contraseña.</p>
 
+    <!-- El estado del guardado, contado entero: en la navbar cabe en dos
+         palabras y dos palabras no bastan para explicar «Sin comprobar». -->
+    <div id="sync-comprobacion"></div>
+
     <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;font-weight:700;margin-bottom:0.5rem;">Token de GitHub</div>
     <div style="display:flex;gap:0.4rem;align-items:stretch;">
       <input id="sync-token" type="password" placeholder="github_pat_..." autocomplete="off" style="flex:1;" />
@@ -347,17 +351,17 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p166"></script>
-<script src="src/js/config.js?v=p166"></script>
-<script src="src/js/model.js?v=p166"></script>
-<script src="src/js/charts.js?v=p166"></script>
-<script src="src/js/render.js?v=p166"></script>
-<script src="src/js/db.js?v=p166"></script>
-<script src="src/js/sync.js?v=p166"></script>
-<script src="src/js/forms.js?v=p166"></script>
-<script src="src/js/perfil.js?v=p166"></script>
-<script src="src/js/exportar.js?v=p166"></script>
-<script src="src/js/boot.js?v=p166"></script>
+<script src="src/js/crypto.js?v=p167"></script>
+<script src="src/js/config.js?v=p167"></script>
+<script src="src/js/model.js?v=p167"></script>
+<script src="src/js/charts.js?v=p167"></script>
+<script src="src/js/render.js?v=p167"></script>
+<script src="src/js/db.js?v=p167"></script>
+<script src="src/js/sync.js?v=p167"></script>
+<script src="src/js/forms.js?v=p167"></script>
+<script src="src/js/perfil.js?v=p167"></script>
+<script src="src/js/exportar.js?v=p167"></script>
+<script src="src/js/boot.js?v=p167"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

@@ -129,6 +129,50 @@
     return { ok: false, grave: false, motivo: "GitHub aún servía la versión anterior" };
   }
 
+  /*
+   * Comprobar lo que hay publicado AHORA, sin guardar nada.
+   *
+   * No sirve volver a cifrar el documento y comparar los bytes, que es lo que
+   * hace la comprobación de después de guardar: cada cifrado lleva su propia
+   * sal y su propio IV, así que el mismo documento produce un texto distinto
+   * cada vez. Comparar eso daría siempre «no coincide».
+   *
+   * Lo que se comprueba es lo que de verdad importa: que lo publicado se
+   * descargue, se descifre con tu contraseña y tenga dentro lo mismo que tienes
+   * aquí. Es la única prueba de que tus datos están a salvo fuera de este
+   * dispositivo.
+   */
+  const CONTENIDOS = ["movimientos", "inversiones", "propiedades", "pasivos", "cobros"];
+  async function comprobarPublicado(doc, password) {
+    let texto;
+    try {
+      const r = await fetch(rawUrl() + "?_=" + Date.now(), { cache: "no-store" });
+      if (r.status === 404) return { ok: false, grave: false, motivo: "en GitHub todavía no hay nada guardado" };
+      if (!r.ok) return { ok: false, grave: false, motivo: "GitHub respondió " + r.status };
+      texto = await r.text();
+    } catch (e) {
+      return { ok: false, grave: false, motivo: "no se pudo hablar con GitHub" };
+    }
+    let vuelta;
+    try {
+      vuelta = await C.decryptDoc(JSON.parse(texto), password);
+    } catch (e) {
+      // Descifrar con TU contraseña y fallar es lo único de verdad grave: o el
+      // fichero está corrupto o lo escribió otra cuenta encima.
+      return { ok: false, grave: true, motivo: "lo publicado no se puede descifrar con tu contraseña" };
+    }
+    const n = (d, k) => ((d && d[k]) || []).length;
+    const desfases = CONTENIDOS
+      .map((k) => ({ que: k, aqui: n(doc, k), alla: n(vuelta, k) }))
+      .filter((x) => x.aqui !== x.alla);
+    if (desfases.length) {
+      const d = desfases[0];
+      return { ok: false, grave: false, desfase: true, desfases,
+               motivo: "aquí tienes " + d.aqui + " " + d.que + " y lo publicado tiene " + d.alla };
+    }
+    return { ok: true, movimientos: n(vuelta, "movimientos") };
+  }
+
   // Cifra el doc y lo sube al repo. Devuelve { sha, verificacion }.
   //
   // El sha identifica la versión del fichero en GitHub y se cachea en este
@@ -197,6 +241,6 @@
 
   window.SolventoSync = {
     ghGet, ghPut, storeToken, loadToken, hasToken, clearToken,
-    fetchRemoteBlob, fetchBlobRaw, push, pushTickers, getSha, setSha, verificarGuardado,
+    fetchRemoteBlob, fetchBlobRaw, push, pushTickers, getSha, setSha, verificarGuardado, comprobarPublicado,
   };
 })();

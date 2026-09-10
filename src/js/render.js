@@ -2046,6 +2046,7 @@
     poner("aj-revision", panelRevision());
     const B = window.SolventoBoot;
     if (B && B.rellenarToken) B.rellenarToken();
+    if (B && B.pintarComprobacion) B.pintarComprobacion();
   };
   window.v2AjSec = (sec) => {
     document.querySelectorAll(".aj-sec").forEach((e) => e.classList.toggle("active", e.id === "aj-sec-" + sec));
@@ -2053,7 +2054,12 @@
     // El token vive cifrado y solo boot.js lo tiene en la mano: se le pide que
     // lo ponga en su campo cuando esta sección se abre, venga uno por donde venga.
     const B = window.SolventoBoot;
-    if (sec === "sync" && B && B.rellenarToken) B.rellenarToken();
+    if (sec === "sync" && B) {
+      if (B.rellenarToken) B.rellenarToken();
+      // Y el estado del guardado al día: si se abre esta pestaña media hora
+      // después de guardar, lo que cuenta es lo que pasó, no un panel en blanco.
+      if (B.pintarComprobacion) B.pintarComprobacion();
+    }
   };
   window.v2GastoMes = (ym) => {
     GASTO_MES = ym;
