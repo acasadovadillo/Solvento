@@ -1303,48 +1303,97 @@
           style="color:#6b7280;font-size:0.8rem;padding-left:2.2rem;">
           Ningún movimiento menciona esta deuda: su importe es el que escribiste a mano.</td></tr>`;
       }
-      // El acumulado se calcula desde el principio, pero solo se enseñan los
-      // últimos: una tarjeta con tres años de historia son cientos de líneas y
-      // lo que se busca casi siempre es el mes pasado.
-      const TOPE = 40;
-      const desde = Math.max(0, lista.length - TOPE);
-      const cabecera = desde
-        ? `<tr class="table-row" style="background:#14171f;"><td colspan="5"
-             style="color:#4b5563;font-size:0.78rem;padding-left:2.2rem;">
-             …y ${desde} movimientos anteriores, ya incluidos en el acumulado</td></tr>`
-        : "";
+      /*
+       * Se enseña UN MES, y se pasa de mes con las flechas.
+       *
+       * Antes salían los últimos cuarenta apuntes de golpe. En una tarjeta eso
+       * es media pantalla de scroll donde no se distingue un ciclo del
+       * siguiente, que es justo lo que se viene a mirar: qué se cargó este mes
+       * y con qué recibo se saldó.
+       *
+       * El acumulado sigue calculándose DESDE EL PRINCIPIO —si empezara en el
+       * mes, no sería el saldo de la tarjeta— y el mes abre con el saldo que
+       * traía, para que las cuentas del trozo que se ve cuadren solas.
+       */
       let acumulado = 0;
-      return cabecera + lista.map((m, idx) => {
+      const filas = lista.map((m) => {
         const imp = Math.abs(Number(String(m.importe).replace(",", ".")) || 0);
         const o = String(m.cuenta_origen || "").trim();
         // Suma lo que se compra con ella; resta lo que se le paga.
         const suma = (m.tipo === "Gasto" && o === d.nombre) || (m.tipo === "Traspaso" && o === d.nombre);
         acumulado = Math.round((acumulado + (suma ? imp : -imp)) * 100) / 100;
-        const contra = suma ? (String(m.cuenta_destino || "").trim() || m.tipo_gasto || "") : o;
-        // Un recibo es una liquidación: decir «Traspaso» aquí es lo que hacía
-        // que pareciese dinero entrando en la tarjeta en vez de deuda saldada.
-        const liq = m.tipo === "Traspaso" && String(m.cuenta_destino || "").trim() === d.nombre;
-        if (idx < desde) return "";
+        const f = parseFechaES(m.fecha);
+        return {
+          m, imp, suma, acumulado,
+          contra: suma ? (String(m.cuenta_destino || "").trim() || m.tipo_gasto || "") : o,
+          // Un recibo es una liquidación: decir «Traspaso» aquí es lo que hacía
+          // que pareciese dinero entrando en la tarjeta en vez de deuda saldada.
+          liq: m.tipo === "Traspaso" && String(m.cuenta_destino || "").trim() === d.nombre,
+          ym: f ? f.getFullYear() + "-" + String(f.getMonth() + 1).padStart(2, "0") : "",
+        };
+      });
+
+      const meses = [];
+      filas.forEach((f) => { if (f.ym && meses.indexOf(f.ym) < 0) meses.push(f.ym); });
+      const hoy = new Date();
+      const ymHoy = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+      // El mes en curso es el que se quiere ver. Si la tarjeta no se ha usado
+      // todavía este mes, se abre en el último que tenga algo: un panel vacío
+      // no cuenta nada y obliga a buscar a ciegas con las flechas.
+      const guardado = PASIVOS_MES[d.nombre];
+      const elegido = (guardado && meses.indexOf(guardado) >= 0) ? guardado
+        : (meses.indexOf(ymHoy) >= 0 ? ymHoy : meses[meses.length - 1]);
+      const i = meses.indexOf(elegido);
+      const delMes = filas.filter((f) => f.ym === elegido);
+      const previas = filas.filter((f) => f.ym < elegido);
+      const saldoAntes = previas.length ? previas[previas.length - 1].acumulado : 0;
+
+      const nombreMes = (ym) => {
+        const [a, mm] = ym.split("-");
+        return new Date(+a, +mm - 1, 1)
+          .toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+      };
+      const flecha = (destino, signo) => destino
+        ? `<button onclick="v2PasivoMes('${jsNombre(d.nombre)}','${destino}')" title="${esc(nombreMes(destino))}"
+             style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#9ca3af;
+             font-family:inherit;font-size:0.8rem;line-height:1;padding:0.2rem 0.45rem;cursor:pointer;">${signo}</button>`
+        : `<span style="border:1px solid transparent;color:#232733;font-size:0.8rem;
+             padding:0.2rem 0.45rem;">${signo}</span>`;
+
+      const cabecera = `<tr class="table-row" style="background:#14171f;">
+        <td colspan="2" style="text-align:left;padding-left:2.2rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;white-space:nowrap;">
+            ${flecha(i > 0 ? meses[i - 1] : null, "‹")}
+            <span style="color:#e5e7eb;font-size:0.8rem;font-weight:700;text-transform:uppercase;
+              letter-spacing:0.04em;min-width:9.5rem;text-align:center;">${esc(nombreMes(elegido))}</span>
+            ${flecha(i < meses.length - 1 ? meses[i + 1] : null, "›")}
+            <span class="col-secundaria" style="color:#4b5563;font-size:0.72rem;">${i + 1} de ${meses.length}</span>
+          </div></td>
+        <td style="text-align:right;color:#4b5563;font-size:0.72rem;white-space:nowrap;">venía de</td>
+        <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:#6b7280;">${esc(fmtEur(saldoAntes))}</td>
+        <td></td></tr>`;
+
+      return cabecera + delMes.map((f) => {
         // Un acumulado negativo significa que a la tarjeta se le ha pagado más
         // de lo que debía: casi siempre, un recibo con el importe equivocado.
         // Es la pista que hay que ver, no una cifra más en gris.
-        const rojoAbajo = acumulado < -0.005;
+        const rojoAbajo = f.acumulado < -0.005;
         return `<tr class="table-row" style="background:#14171f;">
           <td style="text-align:left;padding-left:2.2rem;color:#9ca3af;font-size:0.82rem;">
-            ${esc(m.fecha)} · ${esc(String(m.detalle || m.tipo_gasto || m.tipo).slice(0, 46))}</td>
-          <td style="text-align:left;color:${liq ? AZUL : "#4b5563"};font-size:0.78rem;">
-            ${liq ? "Liquidación" : esc(m.tipo)}${contra ? " · " + esc(contra) : ""}</td>
-          <td style="text-align:right;white-space:nowrap;font-size:0.85rem;color:${suma ? RED : GREEN};">
-            ${suma ? "+" : "−"}${esc(fmtEur(imp))}</td>
+            ${esc(f.m.fecha)} · ${esc(String(f.m.detalle || f.m.tipo_gasto || f.m.tipo).slice(0, 46))}</td>
+          <td style="text-align:left;color:${f.liq ? AZUL : "#4b5563"};font-size:0.78rem;">
+            ${f.liq ? "Liquidación" : esc(f.m.tipo)}${f.contra ? " · " + esc(f.contra) : ""}</td>
+          <td style="text-align:right;white-space:nowrap;font-size:0.85rem;color:${f.suma ? RED : GREEN};">
+            ${f.suma ? "+" : "−"}${esc(fmtEur(f.imp))}</td>
           <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:${rojoAbajo ? AMBAR : "#6b7280"};"
               ${rojoAbajo ? 'title="Se ha pagado más de lo que debía: revisa el importe del recibo"' : ""}>
-            ${esc(fmtEur(acumulado))}${rojoAbajo ? " ⚠" : ""}</td>
+            ${esc(fmtEur(f.acumulado))}${rojoAbajo ? " ⚠" : ""}</td>
           <td></td></tr>`;
       }).join("");
     };
 
     const rows = pas.items.map((d) => {
-      const jsN = String(d.nombre).replace(/'/g, "\\'");
+      const jsN = jsNombre(d.nombre);
       const abierta = PASIVOS_ABIERTO[d.nombre];
       const calculada = d.importe != null;
       return `<tr class="table-row">
@@ -1502,6 +1551,10 @@
   const CENTROS = { rango: "12m", abiertas: {} };
   const PRESTAMOS = {};
   const PASIVOS_ABIERTO = {};
+  // Qué mes se está mirando en cada deuda desplegada. Se recuerda mientras dure
+  // la sesión: al volver de editar un apunte se sigue donde se estaba.
+  const PASIVOS_MES = {};
+  const jsNombre = (n) => String(n).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   function tablaCategorias(g, mes, presupuesto) {
     // El árbol entero, no dos niveles: «Vivienda > Suministros > Luz» se
     // despliega hasta donde llegue. Cada nodo lleva su total (con las hijas
@@ -2109,6 +2162,10 @@
   window.v2CobroVuelve = (id) => F() && F().marcarIncobrable(id, true);
   window.v2PasivoToggle = (nombre) => {
     PASIVOS_ABIERTO[nombre] = !PASIVOS_ABIERTO[nombre];
+    document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(window.__MODEL);
+  };
+  window.v2PasivoMes = (nombre, ym) => {
+    PASIVOS_MES[nombre] = ym;
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(window.__MODEL);
   };
   window.v2PrestamoIncobrable = (persona, saldo) => F() && F().darPrestamoPorIncobrable(persona, saldo);
