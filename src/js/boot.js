@@ -29,7 +29,54 @@
   function panel(name) {
     $("login-form").style.display = name === "login" ? "flex" : "none";
     $("import-form").style.display = name === "import" ? "flex" : "none";
+    $("pass-form").style.display = name === "pass" ? "flex" : "none";
     $("boot-checking").style.display = name === "checking" ? "flex" : "none";
+  }
+
+  // ── Cambiar la contraseña ──
+  // Ocupa la pantalla entera, como la de estrenarla: cambiar la llave de todo lo
+  // que tienes cifrado no es un detalle que quepa en una ventanita encima de la
+  // aplicación. Pide también la de ahora, aunque la sesión ya esté abierta: sin
+  // eso, quien pasara por delante de un portátil desbloqueado podría dejarte
+  // fuera de tus propios datos con tres teclas.
+  function abrirCambioPassword() {
+    const c = P() && P().actual();
+    const quien = $("pw-cuenta");
+    if (quien) {
+      quien.textContent = (c && c.nombre) || "";
+      quien.hidden = !quien.textContent;
+    }
+    ["pw-actual", "pw-nueva", "pw-nueva2"].forEach((i) => ($(i).value = ""));
+    setError("pw-error", "");
+    document.documentElement.style.overflow = "hidden";
+    $("boot-overlay").style.display = "flex";
+    panel("pass");
+    $("pw-actual").focus();
+  }
+  function cerrarCambioPassword() {
+    $("boot-overlay").style.display = "none";
+    document.documentElement.style.overflow = "";
+    panel("login");
+  }
+  async function handlePassword(ev) {
+    ev.preventDefault();
+    const actual = $("pw-actual").value;
+    const n1 = $("pw-nueva").value, n2 = $("pw-nueva2").value;
+    if (!actual) { setError("pw-error", "Escribe tu contraseña actual"); return; }
+    if (n1.length < 6) { setError("pw-error", "La nueva debe tener al menos 6 caracteres"); return; }
+    if (n1 !== n2) { setError("pw-error", "Las dos nuevas no coinciden"); return; }
+    if (n1 === actual) { setError("pw-error", "La nueva es igual que la actual"); return; }
+    setError("pw-error", "Cambiando…", "#9ca3af");
+    try {
+      const r = await cambiarPassword(actual, n1);
+      cerrarCambioPassword();
+      toast(r.subido
+        ? "Contraseña cambiada y subida ✓ · úsala ya en todos tus dispositivos"
+        : "Contraseña cambiada en este dispositivo · pendiente de subir: los demás seguirán pidiendo la anterior",
+        r.subido ? "#10b981" : "#fbbf24");
+    } catch (e) {
+      setError("pw-error", e.code === "ACTUAL" ? "La contraseña actual no es correcta" : ("No se pudo cambiar: " + e.message));
+    }
   }
 
   const P = () => window.SolventoPerfil;
@@ -687,6 +734,8 @@
     // hasta la primera lectura, así que no puede llegar tarde.
     if (window.SolventoPerfil) { try { await window.SolventoPerfil.cargar(); } catch (e) {} }
     $("login-form").addEventListener("submit", handleLogin);
+    $("pass-form").addEventListener("submit", handlePassword);
+    $("pw-cancelar").addEventListener("click", cerrarCambioPassword);
     $("login-ver").addEventListener("click", alternarVerPass);
     $("cuenta-btn").addEventListener("click", () => { $("login-user").value = ""; lock(); });
     $("import-form").addEventListener("submit", handleImport);
@@ -727,6 +776,6 @@
     startBoot();
   }
 
-  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken };
+  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, abrirCambioPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken };
   document.addEventListener("DOMContentLoaded", init);
 })();

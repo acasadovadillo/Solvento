@@ -1954,7 +1954,7 @@
     ABIERTAS[nombre] = !ABIERTAS[nombre];
     document.getElementById("v2-page-balance").innerHTML = pageBalance(window.__MODEL);
   };
-  window.v2Password = () => F() && F().openPassword();
+  window.v2Password = () => window.SolventoBoot && window.SolventoBoot.abrirCambioPassword();
   window.v2CompModo = (modo) => {
     COMP_MODO = modo;
     // Solo cambia esta gráfica, así que se repinta solo su panel. Antes se
