@@ -562,7 +562,10 @@
     }
   }
 
-  function init() {
+  async function init() {
+    // Antes que nada: de quién es este Solvento y dónde guarda. De eso depende
+    // hasta la primera lectura, así que no puede llegar tarde.
+    if (window.SolventoPerfil) { try { await window.SolventoPerfil.cargar(); } catch (e) {} }
     $("login-form").addEventListener("submit", handleLogin);
     $("import-form").addEventListener("submit", handleImport);
     $("logout-btn").addEventListener("click", lock);

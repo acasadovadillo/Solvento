@@ -818,6 +818,66 @@
     return { avisos, errores, total: avisos.length, descartados: descartadosN };
   }
 
+  // ── Presupuesto anual (organizaciones) ───────────────────────────────────
+  // Una asociación no presupuesta por meses, presupuesta el año: en la asamblea
+  // se aprueba lo que se espera ingresar y lo que se piensa gastar, y durante
+  // doce meses la pregunta es siempre la misma —cuánto llevamos ejecutado—.
+  // Esto la responde: lo aprobado contra lo que dicen los movimientos.
+  function presupuestoAnual(db, anio) {
+    const aprobado = (((db.config || {}).presupuesto_anual || {})[String(anio)]) || {};
+    const gasto = {}, ingreso = {};
+    for (const m of db.movimientos || []) {
+      const f = parseFechaES(m.fecha);
+      if (!f || f.getFullYear() !== Number(anio)) continue;
+      const imp = Math.abs(num(m.importe) || 0);
+      if (m.tipo === "Gasto" && m.tipo_gasto) gasto[m.tipo_gasto] = (gasto[m.tipo_gasto] || 0) + imp;
+      else if (m.tipo === "Ingreso" && m.tipo_ingreso) ingreso[m.tipo_ingreso] = (ingreso[m.tipo_ingreso] || 0) + imp;
+    }
+    // Lo ejecutado se acumula en la raíz de la categoría, que es el nivel al que
+    // se aprueban las partidas: «Actividades», no «Actividades > Charlas > Sala».
+    const raiz = (c) => String(c).split(SEP)[0].trim();
+    const porRaiz = (obj) => {
+      const out = {};
+      for (const k in obj) out[raiz(k)] = round2((out[raiz(k)] || 0) + obj[k]);
+      return out;
+    };
+    const eG = porRaiz(gasto), eI = porRaiz(ingreso);
+    const linea = (nombre, tipo) => {
+      const ejecutado = tipo === "ingreso" ? (eI[nombre] || 0) : (eG[nombre] || 0);
+      const previsto = num((aprobado[tipo === "ingreso" ? "+" + nombre : nombre]) || 0) || 0;
+      return { nombre, tipo, previsto: round2(previsto), ejecutado: round2(ejecutado),
+               resto: round2(previsto - ejecutado),
+               pct: previsto > 0 ? ejecutado / previsto * 100 : (ejecutado > 0 ? Infinity : 0) };
+    };
+    const nombresG = Array.from(new Set(Object.keys(eG).concat(
+      Object.keys(aprobado).filter((k) => k[0] !== "+")))).sort((a, b) => a.localeCompare(b, "es"));
+    const nombresI = Array.from(new Set(Object.keys(eI).concat(
+      Object.keys(aprobado).filter((k) => k[0] === "+").map((k) => k.slice(1))))).sort((a, b) => a.localeCompare(b, "es"));
+    const gastos = nombresG.map((n) => linea(n, "gasto"));
+    const ingresos = nombresI.map((n) => linea(n, "ingreso"));
+    const suma = (arr, campo) => round2(arr.reduce((t, x) => t + x[campo], 0));
+    return {
+      anio: Number(anio), gastos, ingresos,
+      totales: {
+        previstoGasto: suma(gastos, "previsto"), ejecutadoGasto: suma(gastos, "ejecutado"),
+        previstoIngreso: suma(ingresos, "previsto"), ejecutadoIngreso: suma(ingresos, "ejecutado"),
+      },
+    };
+  }
+
+  // Los años que tienen algo escrito, para el selector de la página.
+  function aniosConDatos(db) {
+    const set = new Set();
+    for (const m of db.movimientos || []) {
+      const f = parseFechaES(m.fecha);
+      if (f) set.add(f.getFullYear());
+    }
+    Object.keys((db.config || {}).presupuesto_anual || {}).forEach((a) => set.add(Number(a)));
+    const hoy = new Date().getFullYear();
+    set.add(hoy);
+    return Array.from(set).filter((a) => a > 1990 && a < 2200).sort((a, b) => b - a);
+  }
+
   // ── Flujo de caja mensual ────────────────────────────────────────────────
   // No es lo mismo que ingresos y gastos: aquí entra TODO lo que mueve el dinero
   // de las cuentas —incluidas las compras de inversión, que sacan dinero de la
@@ -1228,5 +1288,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

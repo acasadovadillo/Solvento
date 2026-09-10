@@ -307,7 +307,9 @@
       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:${color};margin-bottom:0.6rem;">${esc(titulo)}</div>
       <div style="font-size:1.7rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">${valor}</div>
       <div style="font-size:0.82rem;color:${subColor || "#9ca3af"};font-weight:600;margin-top:0.3rem;">${sub}</div>
-      <div style="font-size:0.78rem;color:#6b7280;margin-top:0.15rem;">${pct.toFixed(2)}% ${sufijo || "del patrimonio"}${flecha}</div>
+      ${pct == null
+        ? (flecha ? `<div style="margin-top:0.15rem;">${flecha}</div>` : "")
+        : `<div style="font-size:0.78rem;color:#6b7280;margin-top:0.15rem;">${pct.toFixed(2)}% ${sufijo || "del patrimonio"}${flecha}</div>`}
     </div>`;
   }
 
@@ -1149,6 +1151,75 @@
     return resumen + r.avisos.sort((a, b) => (a.nivel === "error" ? 0 : 1) - (b.nivel === "error" ? 0 : 1)).map(bloque).join("") + pieRevisados(r);
   }
 
+  // ── Presupuesto anual · solo organizaciones ──────────────────────────────
+  // Lo que se aprobó en la asamblea contra lo que va saliendo. Es la página que
+  // una asociación mira cada mes y una persona no necesita nunca: por eso vive
+  // detrás del tipo de perfil y no se le enseña a nadie más.
+  let PRES_ANIO = null;
+  function pagePresupuesto() {
+    const doc = CURRENT_DOC || {};
+    const MM = window.SolventoModel;
+    const anios = MM.aniosConDatos(doc);
+    const anio = PRES_ANIO || anios[0] || new Date().getFullYear();
+    const p = MM.presupuestoAnual(doc, anio);
+    const t = p.totales;
+
+    const barra = (pct, color) => {
+      const ancho = Math.max(0, Math.min(100, isFinite(pct) ? pct : 100));
+      return `<div style="height:5px;border-radius:3px;background:#232733;overflow:hidden;margin-top:0.3rem;">
+        <div style="height:100%;width:${ancho}%;background:${color};"></div></div>`;
+    };
+    const fila = (x) => {
+      const jsN = String(x.nombre).replace(/'/g, "\\'");
+      // Pasarse de lo previsto es rojo en un gasto y verde en un ingreso: la
+      // misma cifra significa lo contrario según de qué lado esté.
+      const bien = x.tipo === "ingreso" ? x.ejecutado >= x.previsto : x.ejecutado <= x.previsto;
+      const color = x.previsto ? (bien ? GREEN : RED) : "#6b7280";
+      return `<tr class="table-row">
+        <td style="text-align:left;"><div style="color:#fff;font-weight:600;">${esc(x.nombre)}</div>
+          ${x.previsto ? barra(x.pct, color) : `<div style="font-size:0.72rem;color:#4b5563;margin-top:0.2rem;">sin partida aprobada</div>`}</td>
+        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${x.previsto ? esc(fmtEur(x.previsto)) : "—"}</td>
+        <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${esc(fmtEur(x.ejecutado))}</td>
+        <td style="text-align:right;white-space:nowrap;color:${color};font-weight:600;">
+          ${x.previsto ? (x.resto >= 0 ? "quedan " : "de más ") + esc(fmtEur(Math.abs(x.resto))) : "—"}</td>
+        <td class="celda-acc" style="text-align:right;width:1%;white-space:nowrap;">
+          <button class="fila-acc" onclick="v2Partida(${p.anio},'${x.tipo}','${jsN}')" title="Poner o cambiar lo aprobado"
+            style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button></td></tr>`;
+    };
+    const tabla = (titulo, filas, tipo) => `<div class="v2-wrap"><div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
+        ${addBtn("＋ Partida", `v2Partida(${p.anio},'${tipo}','')`)}
+      </div>
+      ${filas.length
+        ? `<table class="minimal-table"><thead><tr><th style="text-align:left;">Partida</th>
+             <th style="text-align:right;">Aprobado</th><th style="text-align:right;">Ejecutado</th>
+             <th style="text-align:right;">Diferencia</th><th></th></tr></thead>
+           <tbody>${filas.map(fila).join("")}</tbody></table>`
+        : `<div style="color:#4b5563;font-size:0.85rem;padding:0.5rem 0;">Nada todavía en ${p.anio}.</div>`}
+    </div></div>`;
+
+    const resultadoPrevisto = t.previstoIngreso - t.previstoGasto;
+    const resultadoReal = t.ejecutadoIngreso - t.ejecutadoGasto;
+    const selector = anios.map((a) =>
+      `<button onclick="v2PresAnio(${a})" style="background:${a === p.anio ? "#232733" : "none"};border:1px solid #2a2d3a;
+        border-radius:8px;color:${a === p.anio ? "#fff" : "#9ca3af"};font-size:0.75rem;font-family:inherit;
+        padding:0.2rem 0.6rem;cursor:pointer;">${a}</button>`).join("");
+
+    return header("Presupuesto", String(p.anio)) +
+      `<div class="v2-wrap" style="margin-top:1rem;display:flex;gap:0.4rem;flex-wrap:wrap;">${selector}</div>` +
+      `<div class="v2-hub-grid" style="margin-top:1.5rem;">
+        ${hubCard("Ingresos", fmtEur(t.ejecutadoIngreso), t.previstoIngreso ? t.ejecutadoIngreso / t.previstoIngreso * 100 : 0,
+                  GREEN, t.previstoIngreso ? "de " + fmtEur(t.previstoIngreso) + " aprobados" : "sin presupuesto aprobado", null, null, null, "de lo aprobado")}
+        ${hubCard("Gastos", fmtEur(t.ejecutadoGasto), t.previstoGasto ? t.ejecutadoGasto / t.previstoGasto * 100 : 0,
+                  "#f59e0b", t.previstoGasto ? "de " + fmtEur(t.previstoGasto) + " aprobados" : "sin presupuesto aprobado", null, null, null, "de lo aprobado")}
+        ${hubCard("Resultado", (resultadoReal >= 0 ? "+" : "−") + fmtEur(Math.abs(resultadoReal)), null, rc(resultadoReal),
+                  "previsto " + (resultadoPrevisto >= 0 ? "+" : "−") + fmtEur(Math.abs(resultadoPrevisto)), null, null, null)}
+      </div>` +
+      tabla("Ingresos", p.ingresos, "ingreso") +
+      tabla("Gastos", p.gastos, "gasto");
+  }
+
   function pagePasivos(m) {
     const pas = (m && m.pas) || { items: [], n: 0, total: 0 };
     if (!pas.n) {
@@ -1697,6 +1768,9 @@
     document.getElementById("v2-page-cartera").innerHTML = pageCartera(m, prices);
     document.getElementById("v2-page-propiedades").innerHTML = pagePropiedades(m);
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
+    // Solo las organizaciones tienen presupuesto; el resto ni pinta la página.
+    const pres = document.getElementById("v2-page-presupuesto");
+    if (pres) pres.innerHTML = (window.SolventoPerfil && window.SolventoPerfil.esOrganizacion()) ? pagePresupuesto() : "";
     document.getElementById("v2-page-operaciones").innerHTML = pageOperaciones(m);
     document.getElementById("v2-page-reporte").innerHTML = pageReporte(m);
     if (window.v2AjPintar) window.v2AjPintar();
@@ -1846,6 +1920,11 @@
   window.v2Incobrable = (id) => F() && F().marcarIncobrable(id);
   window.v2CobroVuelve = (id) => F() && F().marcarIncobrable(id, true);
   window.v2PrestamoIncobrable = (persona, saldo) => F() && F().darPrestamoPorIncobrable(persona, saldo);
+  window.v2Partida = (anio, tipo, nombre) => F() && F().openPartida(anio, tipo, nombre);
+  window.v2PresAnio = (a) => {
+    PRES_ANIO = a;
+    document.getElementById("v2-page-presupuesto").innerHTML = pagePresupuesto();
+  };
 
   // Modo edición: no toca los datos, solo decide si cada fila enseña su lápiz y
   // su aspa. Empieza apagado en cada arranque a propósito —lo peligroso no es

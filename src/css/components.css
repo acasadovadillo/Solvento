@@ -122,6 +122,12 @@
 body.modo-lectura .solo-editor,
 body.modo-lectura .fila-acc { display: none !important; }
 
+/* ── Tipo de perfil ──
+   La misma aplicación sirve a una persona y a una asociación. Lo que solo tiene
+   sentido en una organización —el presupuesto aprobado, las cuotas— se marca
+   con .solo-org y no existe para nadie más. */
+body:not(.es-organizacion) .solo-org { display: none !important; }
+
 /* ── Modo edición ──
    Editar y borrar viven en cada fila, y verlos siempre es incómodo —mil aspas
    en una lista de movimientos— y peligroso: la de borrar está a un dedo de la

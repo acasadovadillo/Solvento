@@ -36,6 +36,13 @@ window.addEventListener("load", function () {
                fetch("prices.json").then(function (r) { return r.json(); }).catch(function () { return {}; })])
     .then(function (res) {
       var doc = res[0], precios = res[1];
+      // El perfil decide qué páginas existen, así que se espera igual que en la
+      // aplicación de verdad: si no, el banco de pruebas pinta una cosa distinta.
+      return (window.SolventoPerfil ? window.SolventoPerfil.cargar() : Promise.resolve())
+        .catch(function () {}).then(function () { return [doc, precios]; });
+    })
+    .then(function (res) {
+      var doc = res[0], precios = res[1];
       document.getElementById("boot-overlay").style.display = "none";
       document.documentElement.style.overflow = "";
       document.getElementById("app").style.display = "block";

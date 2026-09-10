@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p135" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p135" />
-  <link rel="stylesheet" href="src/css/components.css?v=p135" />
+  <link rel="stylesheet" href="src/css/base.css?v=p137" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p137" />
+  <link rel="stylesheet" href="src/css/components.css?v=p137" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -116,7 +116,7 @@
           <path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
       <span role="heading" aria-level="1" style="display:flex;">
-        <img src="img/logo-solvento.png" alt="Solvento" style="width:26px;height:26px;object-fit:contain;" />
+        <img src="img/logo-solvento.png" alt="Solvento" style="width:26px;height:26px;object-fit:contain;" /><span id="perfil-nombre" hidden style="margin-left:0.55rem;color:#9ca3af;font-size:0.85rem;font-weight:700;letter-spacing:0.02em;"></span>
       </span>
     </div>
     <div style="display:flex;align-items:center;gap:0.85rem;">
@@ -168,6 +168,7 @@
         <button class="sn-item" data-page="cartera" onclick="v2Tab('cartera')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17.5 9 11l4 4 8-8.5"/><path d="M15.5 6.5H21V12"/></svg><span>Cartera</span></button>
         <button class="sn-item" data-page="propiedades" onclick="v2Tab('propiedades')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5 12 4l8.5 6.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19v-8.5Z"/><path d="M9.5 20.5v-6h5v6"/></svg><span>Propiedades</span></button>
         <button class="sn-item" data-page="pasivos" onclick="v2Tab('pasivos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19"/><path d="M6 14.5h4"/></svg><span>Pasivos</span></button>
+        <button class="sn-item solo-org" data-page="presupuesto" onclick="v2Tab('presupuesto')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V9"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M2.5 20h19"/></svg><span>Presupuesto</span></button>
     </nav>
   </aside>
 
@@ -186,6 +187,7 @@
   <div class="page" id="v2-page-cartera"></div>
   <div class="page" id="v2-page-propiedades"></div>
   <div class="page" id="v2-page-pasivos"></div>
+  <div class="page" id="v2-page-presupuesto"></div>
   <div class="page" id="v2-page-ajustes">
     <div class="v2-wrap">
       <div class="section-title" style="font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:0.35rem;">Ajustes</div>
@@ -299,16 +301,17 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p135"></script>
-<script src="src/js/config.js?v=p135"></script>
-<script src="src/js/model.js?v=p135"></script>
-<script src="src/js/charts.js?v=p135"></script>
-<script src="src/js/render.js?v=p135"></script>
-<script src="src/js/db.js?v=p135"></script>
-<script src="src/js/sync.js?v=p135"></script>
-<script src="src/js/forms.js?v=p135"></script>
-<script src="src/js/exportar.js?v=p135"></script>
-<script src="src/js/boot.js?v=p135"></script>
+<script src="src/js/crypto.js?v=p137"></script>
+<script src="src/js/config.js?v=p137"></script>
+<script src="src/js/model.js?v=p137"></script>
+<script src="src/js/charts.js?v=p137"></script>
+<script src="src/js/render.js?v=p137"></script>
+<script src="src/js/db.js?v=p137"></script>
+<script src="src/js/sync.js?v=p137"></script>
+<script src="src/js/forms.js?v=p137"></script>
+<script src="src/js/perfil.js?v=p137"></script>
+<script src="src/js/exportar.js?v=p137"></script>
+<script src="src/js/boot.js?v=p137"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

@@ -500,6 +500,50 @@
     if (window.SolventoBoot) window.SolventoBoot.saveDoc();
   }
 
+  // Una partida del presupuesto anual. Se guarda en la configuración del
+  // documento, no en un movimiento: lo aprobado en asamblea no es dinero que se
+  // haya movido, es una intención con la que se compara lo que se mueve.
+  function openPartida(anio, tipo, nombre) {
+    if (soloLectura()) return;
+    const doc = DB.state.doc;
+    if (!doc.config) doc.config = {};
+    if (!doc.config.presupuesto_anual) doc.config.presupuesto_anual = {};
+    const anual = doc.config.presupuesto_anual[String(anio)] || (doc.config.presupuesto_anual[String(anio)] = {});
+    const clave = (n) => (tipo === "ingreso" ? "+" + n : n);
+    const esIngreso = tipo === "ingreso";
+    // Las partidas son categorías de primer nivel: así es como se aprueban.
+    const raices = (lista) => uniq(lista.map((c) => String(c).split(SEP_RUTA)[0].trim()));
+    const sugerencias = esIngreso
+      ? raices(categoriasIngresoCfg().concat((doc.movimientos || []).map((m) => m.tipo_ingreso)))
+      : raices(categoriasCfg().concat((doc.movimientos || []).map((m) => m.tipo_gasto)));
+    const actual = nombre ? anual[clave(nombre)] : "";
+    const body =
+      field("pa-nombre", esIngreso ? "Partida de ingreso" : "Partida de gasto",
+            datalist("pa-nombre", sugerencias, nombre || "")) +
+      field("pa-importe", "Aprobado para " + anio + " (€)",
+            input("pa-importe", "number", actual, 'step="0.01" min="0" placeholder="0"')) +
+      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">
+         Es lo que se aprobó, no lo que se ha gastado: eso lo cuentan los movimientos del año.
+         Déjalo vacío para quitar la partida.</div>`;
+    shell(nombre ? "Partida · " + nombre : "Nueva partida", body, () => {
+      const n = G("pa-nombre");
+      if (!n) return "Indica la partida";
+      // Si se renombra, la vieja no se queda por ahí sumando en paralelo.
+      if (nombre && nombre !== n) delete anual[clave(nombre)];
+      const v = G("pa-importe");
+      if (v === "") delete anual[clave(n)];
+      else {
+        const num = parseFloat(v);
+        if (!isFinite(num) || num < 0) return "Introduce un importe válido";
+        anual[clave(n)] = num;
+      }
+      return null;
+    }, () => {
+      const pg = document.getElementById("v2-page-presupuesto");
+      if (pg && window.SolventoRender) window.SolventoRender.render(DB.state.doc, window.__PRICES || {});
+    });
+  }
+
   // ── Ajustes: cuentas, activos y objetivo de asignación ──────────────
   // Todo esto vivía en el código. Ahora se guarda en tu documento cifrado, así
   // que puedes abrir una cuenta o dar de alta un ETF sin que yo toque nada.
@@ -1209,7 +1253,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),

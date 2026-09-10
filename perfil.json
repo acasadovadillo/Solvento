@@ -1,0 +1,6 @@
+{
+  "_": "De quién es este Solvento y dónde guarda. Cada despliegue lleva el suyo: el de una persona y el de una asociación son la misma aplicación con este archivo distinto.",
+  "nombre": "",
+  "tipo": "persona",
+  "almacen": { "owner": "acasadovadillo", "repo": "Solvento", "branch": "main", "path": "data.enc" }
+}

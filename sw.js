@@ -16,7 +16,10 @@
  *      última copia como respaldo.
  */
 const VERSION = "solvento-v2";
-const BASE = ["./", "./index.html", "./img/logo-solvento.png",
+// perfil.json dice DÓNDE guarda esta copia de Solvento. Sin conexión y sin
+// él, la aplicación volvería a la configuración del código, que apunta a otro
+// sitio: por eso se precarga como cualquier otro cimiento.
+const BASE = ["./", "./index.html", "./perfil.json", "./img/logo-solvento.png",
               "./img/app/icon-192.png", "./img/app/icon-512.png"];
 
 // Los CSS y JS llevan ?v=NN en la URL, que cambia en cada despliegue. En vez de
