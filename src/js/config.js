@@ -242,8 +242,40 @@
   // "cero" si es figurativa como la Cuenta Broker de Bankinter).
   const brokers  = () => cuentas().filter((c) => c.cartera);
 
+  // ── Las páginas del menú lateral ─────────────────────────────────────────
+  // Qué secciones existen y cuáles se pueden esconder. Una asociación que no
+  // invierte no tiene por qué cargar con «Cartera», y quien no tiene un piso no
+  // necesita «Propiedades»: el menú es de cada cual, y una pestaña que nunca se
+  // abre solo sirve para alargar la lista.
+  //
+  // Ocultar no borra nada. La página sigue existiendo con sus datos dentro y
+  // vuelve entera en cuanto se marque otra vez: esto es qué se enseña, no qué
+  // se guarda.
+  //
+  // Se guarda lo OCULTO, no lo visible, y es a propósito: el día que haya una
+  // página nueva aparecerá para todos, en vez de nacer invisible en las
+  // configuraciones que ya existían.
+  const PAGINAS = [
+    { id: "patrimonio",  nombre: "Patrimonio",  fijo: true, nota: "la portada" },
+    { id: "caja",        nombre: "Caja",        nota: "cuentas y movimientos" },
+    { id: "balance",     nombre: "Balance",     nota: "ingresos y gastos por categoría" },
+    { id: "cartera",     nombre: "Cartera",     nota: "inversiones y posiciones" },
+    { id: "propiedades", nombre: "Propiedades", nota: "inmuebles" },
+    { id: "pasivos",     nombre: "Pasivos",     nota: "deudas, hipotecas y tarjetas" },
+    { id: "presupuesto", nombre: "Presupuesto", org: true, nota: "lo aprobado contra lo ejecutado" },
+  ];
+  // Lo guardado se filtra contra el catálogo: una página fija no se puede
+  // ocultar aunque alguien escriba su nombre a mano en el documento, y un id
+  // que ya no existe no deja escondida una página que sí.
+  const menuOculto = () => {
+    const l = cfgDoc().menu_oculto;
+    return Array.isArray(l) ? l.filter((id) => PAGINAS.some((p) => p.id === id && !p.fijo)) : [];
+  };
+  const paginaVisible = (id) => menuOculto().indexOf(id) < 0;
+
   window.SolventoConfig = {
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
+    PAGINAS, menuOculto, paginaVisible,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT, BANCOS, logoBanco,

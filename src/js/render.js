@@ -1780,6 +1780,26 @@
     window.scrollTo({ top: 0, behavior: "auto" });
     if (id === "cartera") layoutTreemaps();
   }
+  // Deja el menú como lo haya querido cada uno. Las entradas viven en el HTML
+  // —son estáticas, y así sus manejadores no se pierden al repintar—, de modo
+  // que esconderlas es ponerles una clase, no rehacer la lista.
+  //
+  // Si la página que estabas viendo es la que acabas de ocultar, no te puedes
+  // quedar mirándola sin forma de volver: se vuelve a la portada.
+  function aplicarMenu() {
+    if (!CFG.PAGINAS) return;
+    let huerfana = false;
+    CFG.PAGINAS.forEach((p) => {
+      const visible = p.fijo || CFG.paginaVisible(p.id);
+      document.querySelectorAll(`.sn-item[data-page="${p.id}"], .bottom-nav-item[data-page="${p.id}"]`)
+        .forEach((b) => {
+          b.classList.toggle("menu-oculto", !visible);
+          if (!visible && b.classList.contains("active")) huerfana = true;
+        });
+    });
+    if (huerfana) showPage("patrimonio");
+  }
+
   // Resalta un tramo de la barra de distribución y saca sus cifras en un globo.
   // Se dispara igual desde el tramo que desde su entrada de la leyenda.
   // Resalta un tramo del reparto (segmento de la barra o sector del dónut) y saca
@@ -1930,6 +1950,7 @@
     // ajustar treemap si la pestaña Cartera está activa; y en cualquier resize
     if (document.getElementById("v2-page-cartera").classList.contains("active")) layoutTreemaps();
     if (!render._resizeBound) { render._resizeBound = true; window.addEventListener("resize", layoutTreemaps); }
+    aplicarMenu();
   }
 
   // Filtros: se repinta solo la lista para no perder el foco del buscador
@@ -1993,6 +2014,7 @@
   window.v2AddNav = () => F() && F().openNav();
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
   window.v2AddPas = () => F() && F().openPasivo();
+  window.v2MenuVer = (id, visible) => F() && F().verPagina(id, visible);
   // El recibo del mes, ya escrito: la tarjeta sabe cuánto debe y por qué cuenta
   // se cobra, así que lo único que queda por confirmar es la fecha.
   window.v2Liquidar = (nombre) => {
@@ -2020,6 +2042,7 @@
     poner("aj-categorias", fr.categorias);
     poner("aj-categorias-ingreso", fr.categoriasIngreso);
     poner("aj-centros", fr.centros);
+    poner("aj-menu", fr.menu);
     poner("aj-revision", panelRevision());
     const B = window.SolventoBoot;
     if (B && B.rellenarToken) B.rellenarToken();
@@ -2206,5 +2229,5 @@
   window.v2DelInv = (id) => { if (F() && confirm("¿Borrar esta operación?")) F().deleteInversion(id); };
   window.v2DelProp = (id) => { if (F() && confirm("¿Borrar esta propiedad?")) F().deletePropiedad(id); };
 
-  window.SolventoRender = { render, showPage };
+  window.SolventoRender = { render, showPage, aplicarMenu };
 })();

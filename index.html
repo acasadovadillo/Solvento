@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p165" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p165" />
-  <link rel="stylesheet" href="src/css/components.css?v=p165" />
+  <link rel="stylesheet" href="src/css/base.css?v=p166" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p166" />
+  <link rel="stylesheet" href="src/css/components.css?v=p166" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -55,6 +55,9 @@
     .aj-tab:hover { background: #1e2130; color: #e5e7eb; }
     .aj-tab.active { background: #1e2130; color: #fff; font-weight: 700; }
     .aj-body { min-width: 0; background: #171a24; border: 1px solid #232733; border-radius: 14px; padding: 1.75rem; }
+    /* Una sección que el usuario ha quitado del menú: la página sigue ahí,
+       solo deja de tener puerta. !important porque .sn-item es display:flex. */
+    .menu-oculto { display: none !important; }
     .aj-sec { display: none; }
     .aj-sec.active { display: block; }
     .aj-sec h3 { font-size: 1.05rem; font-weight: 700; color: #fff; margin: 0 0 0.35rem; }
@@ -230,6 +233,7 @@
           <button class="aj-tab active" data-sec="cuentas" onclick="v2AjSec('cuentas')">Cuentas</button>
           <button class="aj-tab" data-sec="cartera" onclick="v2AjSec('cartera')">Cartera y activos</button>
           <button class="aj-tab" data-sec="categorias" onclick="v2AjSec('categorias')">Categorías</button>
+          <button class="aj-tab" data-sec="menu" onclick="v2AjSec('menu')">Menú lateral</button>
           <button class="aj-tab" data-sec="sync" onclick="v2AjSec('sync')">Sincronización</button>
           <button class="aj-tab" data-sec="revision" onclick="v2AjSec('revision')">Revisión</button>
           <button class="aj-tab" data-sec="seguridad" onclick="v2AjSec('seguridad')">Seguridad</button>
@@ -262,6 +266,13 @@
             <h3 style="margin-top:2rem;">Centros de coste</h3>
             <p>El otro eje: a qué inmueble, proyecto o persona se imputa cada apunte. La categoría dice qué se compró; el centro, para qué o para quién.</p>
             <div id="aj-centros"></div>
+          </section>
+
+          <section class="aj-sec" id="aj-sec-menu">
+            <h3>Menú lateral</h3>
+            <p>Qué secciones aparecen en el menú. Lo que quites sigue existiendo con sus datos dentro
+               y vuelve entero al marcarlo otra vez: esto decide qué se enseña, no qué se guarda.</p>
+            <div id="aj-menu"></div>
           </section>
 
           <section class="aj-sec" id="aj-sec-revision">
@@ -336,17 +347,17 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p165"></script>
-<script src="src/js/config.js?v=p165"></script>
-<script src="src/js/model.js?v=p165"></script>
-<script src="src/js/charts.js?v=p165"></script>
-<script src="src/js/render.js?v=p165"></script>
-<script src="src/js/db.js?v=p165"></script>
-<script src="src/js/sync.js?v=p165"></script>
-<script src="src/js/forms.js?v=p165"></script>
-<script src="src/js/perfil.js?v=p165"></script>
-<script src="src/js/exportar.js?v=p165"></script>
-<script src="src/js/boot.js?v=p165"></script>
+<script src="src/js/crypto.js?v=p166"></script>
+<script src="src/js/config.js?v=p166"></script>
+<script src="src/js/model.js?v=p166"></script>
+<script src="src/js/charts.js?v=p166"></script>
+<script src="src/js/render.js?v=p166"></script>
+<script src="src/js/db.js?v=p166"></script>
+<script src="src/js/sync.js?v=p166"></script>
+<script src="src/js/forms.js?v=p166"></script>
+<script src="src/js/perfil.js?v=p166"></script>
+<script src="src/js/exportar.js?v=p166"></script>
+<script src="src/js/boot.js?v=p166"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

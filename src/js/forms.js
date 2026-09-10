@@ -714,7 +714,38 @@
       nueva: "v2CenNueva", renombrar: "v2CenRenombrar", borrar: "v2CenBorrar",
     }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir centro", "v2CenNueva('')", "#3b82f6")}</div>`;
 
-    return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros };
+    // Las páginas del menú. «Presupuesto» solo se ofrece a quien la tiene: en
+    // una cuenta personal no existe, y una casilla para esconder algo que no
+    // está sería una forma rara de contar una mentira.
+    const esOrg = !!(window.SolventoPerfil && window.SolventoPerfil.esOrganizacion());
+    const menu = CFG.PAGINAS.filter((p) => !p.org || esOrg).map((p) => {
+      const visible = p.fijo || CFG.paginaVisible(p.id);
+      const control = p.fijo
+        ? `<span style="color:#4b5563;font-size:0.74rem;white-space:nowrap;">siempre visible</span>`
+        : `<label style="display:inline-flex;align-items:center;gap:0.4rem;cursor:pointer;
+             color:${visible ? "#e5e7eb" : "#6b7280"};font-size:0.78rem;font-weight:600;white-space:nowrap;">
+             <input type="checkbox" ${visible ? "checked" : ""}
+                    onchange="v2MenuVer('${p.id}', this.checked)"
+                    style="width:15px;height:15px;accent-color:#3b82f6;cursor:pointer;margin:0;">
+             ${visible ? "En el menú" : "Oculta"}</label>`;
+      return filaAjuste(esc(p.nombre), esc(p.nota || ""), control);
+    }).join("");
+
+    return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros, menu };
+  }
+
+  // Mostrar u ocultar una sección del menú. Se aplica en el acto —el menú es lo
+  // que se está mirando— y luego se guarda, porque es configuración y tiene que
+  // seguir puesta en el próximo dispositivo.
+  async function verPagina(id, visible) {
+    if (soloLectura()) return;
+    const c = cfgEditable();
+    const fuera = new Set(CFG.menuOculto());
+    if (visible) fuera.delete(id); else fuera.add(id);
+    c.menu_oculto = Array.from(fuera);
+    if (window.SolventoRender && window.SolventoRender.aplicarMenu) window.SolventoRender.aplicarMenu();
+    refrescarAjustes();
+    if (window.SolventoBoot && window.SolventoBoot.saveDoc) await window.SolventoBoot.saveDoc();
   }
 
   // Cuando el logo todavía no está en img/, en vez de una imagen rota se pinta
@@ -1384,7 +1415,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, verPagina, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, elegirBanco, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),

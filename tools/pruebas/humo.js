@@ -199,6 +199,30 @@ var cx = M.cicloTarjeta(TJ, conExceso.movimientos, null, null);
 comprobar("pagar de más deja la tarjeta a favor y se arrastra al ciclo siguiente",
   cerca(cx.pendiente, -35) && cerca(cx.arrastre, -35), "pendiente " + cx.pendiente);
 
+// ── El menú lateral ─────────────────────────────────────────────────────────
+// El catálogo de páginas y el HTML tienen que hablar del mismo sitio: si un id
+// se renombra en un lado y no en el otro, la entrada del menú deja de llevar a
+// ninguna parte —o la casilla de Ajustes esconde algo que no existe— y no se
+// nota hasta que alguien la pulsa.
+var html = leer(base + "index.html");
+var rotas = [];
+window.SolventoConfig.PAGINAS.forEach(function (p) {
+  if (html.indexOf('id="v2-page-' + p.id + '"') < 0) rotas.push(p.id + " no tiene página");
+  if (html.indexOf('data-page="' + p.id + '"') < 0) rotas.push(p.id + " no tiene entrada en el menú");
+});
+comprobar("cada página del menú existe y cada entrada lleva a una página",
+  rotas.length === 0, rotas.join(" · "));
+// Lo guardado se filtra contra el catálogo. Sin esto, un documento editado a
+// mano —o traído de una versión con otras páginas— podría dejarte sin portada
+// y sin forma de volver a ella.
+var C = window.SolventoConfig;
+C.usarDoc({ config: { menu_oculto: ["patrimonio", "cartera", "inventada"] } });
+var oculto = C.menuOculto();
+comprobar("del menú guardado solo sobrevive lo que se puede ocultar de verdad",
+  oculto.length === 1 && oculto[0] === "cartera" && C.paginaVisible("patrimonio"),
+  oculto.join(", "));
+C.usarDoc(doc);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");
