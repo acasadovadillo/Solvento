@@ -606,10 +606,49 @@
     return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros };
   }
 
+  // Cuando el logo todavía no está en img/, en vez de una imagen rota se pinta
+  // la inicial sobre el color de la marca. Así el catálogo funciona desde el
+  // primer día y cada PNG que llega mejora lo que ya había.
+  function marcaBanco(b, tam) {
+    const px = tam || 22;
+    if (b.emoji) return `<span style="width:${px}px;height:${px}px;display:flex;align-items:center;
+      justify-content:center;font-size:${px * 0.8}px;flex-shrink:0;">${b.emoji}</span>`;
+    const src = CFG.logoBanco(b);
+    if (src) return `<img src="${esc(src)}" alt="" style="width:${px}px;height:${px}px;object-fit:contain;
+      border-radius:6px;flex-shrink:0;">`;
+    // Todavía sin PNG: la inicial sobre el color de la marca, que se reconoce
+    // igual y no deja el catálogo lleno de imágenes rotas.
+    const inicial = esc(String(b.nombre).trim().charAt(0).toUpperCase());
+    return `<span style="width:${px}px;height:${px}px;border-radius:6px;flex-shrink:0;display:inline-flex;
+      align-items:center;justify-content:center;background:${esc(b.accent)};color:#fff;
+      font-weight:800;font-size:${px * 0.5}px;">${inicial}</span>`;
+  }
+
+  // El catálogo de bancos. Elegir uno rellena el nombre y el color; lo que no
+  // esté en la lista se escribe a mano, que para eso el nombre sigue siendo un
+  // campo de texto.
+  function selectorBancos() {
+    const fichas = CFG.BANCOS.map((b) => {
+      const js = JSON.stringify(b).replace(/"/g, "&quot;");
+      return `<button type="button" onclick="v2ElegirBanco(${js})" title="${esc(b.nombre)}"
+        style="display:flex;align-items:center;gap:0.5rem;background:#12141d;border:1px solid #2a2d3a;border-radius:9px;
+        padding:0.4rem 0.55rem;cursor:pointer;font-family:inherit;font-size:0.8rem;color:#e5e7eb;text-align:left;">
+        ${marcaBanco(b)}<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.nombre)}</span></button>`;
+    }).join("");
+    return `<div class="ff">
+      <label style="${styleLabel}">Elige dónde tienes el dinero</label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.4rem;
+        max-height:230px;overflow-y:auto;padding:0.15rem;">${fichas}</div>
+      <div style="font-size:0.75rem;color:#6b7280;margin-top:0.4rem;">
+        ¿No está el tuyo? Escríbelo abajo y listo.</div>
+    </div>`;
+  }
+
   function openCuentaCfg(i) {
     const c = cfgEditable();
     const e = i >= 0 ? c.cuentas[i] : {};
     const body =
+      (i >= 0 ? "" : selectorBancos()) +
       field("c-nombre", "Nombre", input("c-nombre", "text", e.cuenta, 'placeholder="Revolut"')) +
       field("c-color", "Color", input("c-color", "color", e.accent || "#3b82f6")) +
       field("c-donde", "¿Dónde cuenta su efectivo?",
@@ -625,8 +664,13 @@
       const repetida = c.cuentas.some((x, k) => k !== i && x.cuenta === nombre);
       if (repetida) return "Ya tienes una cuenta con ese nombre";
       const cartera = G("c-cartera");
+      const elegido = CFG.BANCOS.find((b) => b.nombre === nombre);
       const rec = Object.assign({}, e, {
         cuenta: nombre, accent: G("c-color"),
+        // Si el nombre coincide con uno del catálogo, se queda con su marca; si
+        // se escribió a mano, ni logo ni emoji: un círculo de color y su nombre.
+        logo: elegido ? CFG.logoBanco(elegido) : (e.logo || null),
+        emoji: elegido ? (elegido.emoji || undefined) : e.emoji,
         broker: G("c-donde") === "cartera",
         cartera: cartera === "no" ? null : cartera,
         etiquetaEfectivo: G("c-etiqueta") || undefined,
@@ -639,6 +683,13 @@
       } else c.cuentas.push(rec);
       return null;
     }, refrescarAjustes);
+  }
+
+  function elegirBanco(b) {
+    const n = document.getElementById("c-nombre"), col = document.getElementById("c-color");
+    if (n) n.value = b.nombre;
+    if (col && b.accent) col.value = b.accent;
+    if (n) n.focus();
   }
 
   // Renombrar una cuenta sin romper el histórico que la menciona
@@ -1224,7 +1275,7 @@
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
     fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
-    openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
+    openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, elegirBanco, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editPropiedad: (id) => openPropiedad(findById("propiedades", id) || findById("inmuebles", id)),

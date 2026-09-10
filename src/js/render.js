@@ -26,6 +26,24 @@
   const editBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Editar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button>`;
   const rowActions = (edit, del) => `<td style="text-align:right;width:1%;white-space:nowrap;">${editBtn(edit)}${delBtn(del)}</td>`;
 
+  // El icono de una cuenta: su logo si está, y si el archivo todavía no existe,
+  // la inicial sobre el color de la marca. Un logo que falta no puede dejar una
+  // imagen rota en mitad de la tabla de saldos.
+  function iconoCuenta(cta, px) {
+    const t = px || 20;
+    // Sin logo: el emoji si lo tiene y, si no, su inicial sobre el color de la
+    // marca. Nunca un hueco vacío ni una imagen rota.
+    if (!cta.logo) {
+      if (cta.emoji) return `<span style="font-size:${t * 0.9}px;">${cta.emoji}</span>`;
+      const inicial = esc(String(cta.cuenta || "?").trim().charAt(0).toUpperCase());
+      return `<span style="width:${t}px;height:${t}px;border-radius:4px;flex-shrink:0;display:inline-flex;
+        align-items:center;justify-content:center;background:${esc(cta.accent || "#2a2d3a")};
+        color:#fff;font-weight:800;font-size:${t * 0.55}px;">${inicial}</span>`;
+    }
+    return `<img src="${esc(cta.logo)}" alt="" style="width:${t}px;height:${t}px;object-fit:contain;
+      border-radius:4px;flex-shrink:0;">`;
+  }
+
   function logoImg(nombre, isin, size) {
     const src = CFG.assetLogo(nombre, isin);
     const s = size || 22;
@@ -742,7 +760,7 @@
   function tarjetaEfectivo(m, cuenta) {
     const cta = CFG.cuentas().find((c) => c.cuenta === cuenta) || {};
     const ef = efectivoBroker(m, cuenta);
-    const icon = cta.logo ? `<img src="${cta.logo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:4px;">` : `<span style="font-size:1.05rem;">${cta.emoji || ""}</span>`;
+    const icon = iconoCuenta(cta);
     return `<div class="dashboard-panel" style="border-left:3px solid ${cta.accent || "#6b7280"};">
       <div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.6rem;">${icon}
         <span style="font-size:0.72rem;color:${cta.accent || "#9ca3af"};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">${esc(cuenta)}</span></div>
@@ -863,7 +881,7 @@
     const cuentas = m.saldosCaja || m.saldos;
     const items = cuentas.filter((s) => s.saldo !== 0).map((s) => ({ label: s.cuenta, value: s.saldo, accent: s.accent }));
     const rows = cuentas.map((s) => {
-      const icon = s.logo ? `<img src="${s.logo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:4px;">` : `<span style="font-size:1.1rem;">${s.emoji || ""}</span>`;
+      const icon = iconoCuenta(s);
       const cuentaJs = String(s.cuenta).replace(/'/g, "\\'");
       // Las deudas vinculadas a esta cuenta cuelgan de ella: una tarjeta de
       // crédito no es una cuenta, pero se paga desde una y conviene verla ahí.
@@ -1939,6 +1957,7 @@
   window.v2CobroVuelve = (id) => F() && F().marcarIncobrable(id, true);
   window.v2PrestamoIncobrable = (persona, saldo) => F() && F().darPrestamoPorIncobrable(persona, saldo);
   window.v2Partida = (anio, tipo, nombre) => F() && F().openPartida(anio, tipo, nombre);
+  window.v2ElegirBanco = (b) => F() && F().elegirBanco(b);
   window.v2PresAnio = (a) => {
     PRES_ANIO = a;
     document.getElementById("v2-page-presupuesto").innerHTML = pagePresupuesto();

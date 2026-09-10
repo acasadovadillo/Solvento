@@ -68,6 +68,65 @@
   };
   const PASIVO_ACCENT_DEFAULT = "#9f1239";
 
+  // ── Bancos donde se puede tener el dinero ────────────────────────────────
+  // Es un catálogo para elegir al dar de alta una cuenta, no una lista cerrada:
+  // lo que no esté se escribe a mano. El logo se busca en img/account-logo-<id>
+  // y, si todavía no está, se pinta la inicial sobre el color de la marca, así
+  // que añadir un banco es añadir una línea aquí y (cuando haya) su PNG.
+  //
+  // El efectivo va en la misma lista a propósito: para quien lleva las cuentas,
+  // el dinero del bolsillo es una cuenta más, y separarlo en otro sitio obliga a
+  // aprender dos maneras de hacer lo mismo.
+  const BANCOS = [
+    { id: "efectivo",        nombre: "Efectivo",          accent: "#2d9e5f", emoji: "💵" },
+    { id: "santander",       nombre: "Santander",         accent: "#ec0000", conLogo: true },
+    { id: "bbva",            nombre: "BBVA",              accent: "#004481" },
+    { id: "caixabank",       nombre: "CaixaBank",         accent: "#0075be" },
+    { id: "imagin",          nombre: "imagin",            accent: "#00c3b4" },
+    { id: "openbank",        nombre: "Openbank",          accent: "#ff0000" },
+    { id: "sabadell",        nombre: "Banco Sabadell",    accent: "#00a3e0" },
+    { id: "bankinter",       nombre: "Bankinter",         accent: "#FF6200", conLogo: true },
+    { id: "unicaja",         nombre: "Unicaja",           accent: "#00a94f" },
+    { id: "ibercaja",        nombre: "Ibercaja",          accent: "#c1002b" },
+    { id: "kutxabank",       nombre: "Kutxabank",         accent: "#e30613" },
+    { id: "abanca",          nombre: "Abanca",            accent: "#00a0df" },
+    { id: "cajamar",         nombre: "Cajamar",           accent: "#f18a00" },
+    { id: "caja-rural",      nombre: "Caja Rural",        accent: "#009a44" },
+    { id: "laboral-kutxa",   nombre: "Laboral Kutxa",     accent: "#e2001a" },
+    { id: "eurocaja-rural",  nombre: "Eurocaja Rural",    accent: "#00833e" },
+    { id: "caja-ingenieros", nombre: "Caja de Ingenieros", accent: "#004b87" },
+    { id: "arquia",          nombre: "Arquia Banca",      accent: "#e4002b" },
+    { id: "banca-march",     nombre: "Banca March",       accent: "#003f6b" },
+    { id: "mediolanum",      nombre: "Banco Mediolanum",  accent: "#003b71" },
+    { id: "evo",             nombre: "EVO Banco",         accent: "#00b1e1" },
+    { id: "pibank",          nombre: "Pibank",            accent: "#00b3a4" },
+    { id: "wizink",          nombre: "WiZink",            accent: "#ff5000" },
+    { id: "deutsche-bank",   nombre: "Deutsche Bank",     accent: "#0018a8" },
+    { id: "targobank",       nombre: "Targobank",         accent: "#00539f" },
+    { id: "n26",             nombre: "N26",               accent: "#36a18b" },
+    { id: "revolut",         nombre: "Revolut",           accent: "#191c1f", conLogo: true },
+    { id: "wise",            nombre: "Wise",              accent: "#9fe870" },
+    { id: "bnext",           nombre: "Bnext",             accent: "#00e3a3" },
+    { id: "myinvestor",      nombre: "MyInvestor",        accent: "#e12363", conLogo: true },
+    { id: "trade-republic",  nombre: "Trade Republic",    accent: "#ffffff", conLogo: true },
+    { id: "scalable",        nombre: "Scalable Capital",  accent: "#0e1e46" },
+    { id: "degiro",          nombre: "DEGIRO",            accent: "#1c3f94" },
+    { id: "interactive-brokers", nombre: "Interactive Brokers", accent: "#d81222" },
+    { id: "indexa",          nombre: "Indexa Capital",    accent: "#00a4a6" },
+    { id: "finizens",        nombre: "Finizens",          accent: "#00c389" },
+    { id: "inbestme",        nombre: "inbestMe",          accent: "#1f3b73" },
+    { id: "renta4",          nombre: "Renta 4",           accent: "#003da5" },
+    { id: "andbank",         nombre: "Andbank",           accent: "#003057" },
+    { id: "singular",        nombre: "Singular Bank",     accent: "#111111" },
+    { id: "tressis",         nombre: "Tressis",           accent: "#00519e" },
+    { id: "paypal",          nombre: "PayPal",            accent: "#003087" },
+  ];
+  // Solo se pide el logo de los bancos cuyo PNG está de verdad en img/. Un
+  // <img> que falla no desaparece: se queda ocupando su hueco con el icono de
+  // imagen rota, así que es mejor no pedirlo y pintar la inicial sobre el color
+  // de la marca. Cuando llegue el archivo, se marca conLogo y ya está.
+  const logoBanco = (b) => (b && b.conLogo ? "img/account-logo-" + b.id + ".png" : null);
+
   // Los que se valoran por peso piden gramos y metal en vez de tasación
   const TIPOS_POR_PESO = ["Metal precioso"];
   const INMUEBLE_ACCENT_DEFAULT = "#a16207";
@@ -129,7 +188,17 @@
     return propias.map((c) => {
       if (c.logo) return c;
       const d = CUENTAS_DEFECTO.find((x) => x.cuenta === c.cuenta);
-      return d && d.logo ? Object.assign({}, c, { logo: d.logo }) : c;
+      if (d && d.logo) return Object.assign({}, c, { logo: d.logo });
+      // Y si su nombre está en el catálogo de bancos, su marca: así, el día que
+      // llegue el PNG de un banco, lo estrenan también las cuentas que ya
+      // existían, sin que nadie tenga que volver a darlas de alta.
+      const b = BANCOS.find((x) => x.nombre.toLowerCase() === String(c.cuenta).toLowerCase());
+      if (!b) return c;
+      const extra = {};
+      const logo = logoBanco(b);
+      if (logo) extra.logo = logo;
+      if (!c.emoji && b.emoji) extra.emoji = b.emoji;
+      return Object.keys(extra).length ? Object.assign({}, c, extra) : c;
     });
   };
   // El ticker se completa igual que el logo de una cuenta: si tu activo no trae
@@ -157,7 +226,7 @@
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
-    TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT,
+    TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT, BANCOS, logoBanco,
     assetLogo, SYNC,
   };
 })();
