@@ -20,6 +20,9 @@
   const toISO = (es) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(es || "")); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : ""; };
   const fromISO = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; };
   const newId = (p) => p + Math.random().toString(16).slice(2, 12);
+  // Para los avisos de confirmación: aquí no hace falta la maquinaria de render.
+  const eur = (x) => (Number(String(x).replace(",", ".")) || 0)
+    .toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
   const uniq = (arr) => Array.from(new Set(arr.filter((x) => x && String(x).trim())));
   const absStr = (v) => { const n = Math.abs(parseFloat(v)); return isFinite(n) ? String(n) : ""; };
 
@@ -226,7 +229,7 @@
       // Sal» solo se puede responder metiendo el destino dentro de la categoría,
       // que es justo lo que rompe la otra pregunta.
       field("m-centro", "Centro de coste", selectorArbol("m-centro", e.centro)) +
-      field("m-tpres", "Tipo de préstamo", select("m-tpres", ["Dinero prestado", "Devolución"], e.tipo_prestamo || "Dinero prestado")) +
+      field("m-tpres", "Tipo de préstamo", select("m-tpres", ["Dinero prestado", "Devolución", "Incobrable"], e.tipo_prestamo || "Dinero prestado")) +
       field("m-persona", "Persona", input("m-persona", "text", e.persona_prestamo)) +
       field("m-detalle", "Detalle", input("m-detalle", "text", e.detalle)) +
       // Lo que dijo el banco, tal cual, y dónde estaba. Tu redacción explica QUÉ
@@ -261,7 +264,10 @@
         if (rec.cuenta_origen === rec.cuenta_destino) return "Origen y destino no pueden ser la misma cuenta";
       } else if (tipo === "Préstamo") {
         rec.tipo_prestamo = G("m-tpres"); rec.persona_prestamo = G("m-persona");
-        if (rec.tipo_prestamo === "Dinero prestado") rec.cuenta_origen = G("m-origen"); else rec.cuenta_destino = G("m-destino");
+        // Un incobrable no mueve dinero: cierra el saldo y ya. Por eso no lleva
+        // cuenta, y por eso ni los saldos ni la serie lo tienen en cuenta.
+        if (rec.tipo_prestamo === "Dinero prestado") rec.cuenta_origen = G("m-origen");
+        else if (rec.tipo_prestamo === "Devolución") rec.cuenta_destino = G("m-destino");
       }
       // Lo que se crea desde aquí queda dado de alta: si no, la categoría nueva
       // solo existiría mientras exista el movimiento que la estrenó, y al
@@ -453,6 +459,45 @@
     }, () => {
       doc.cobros = (doc.cobros || []).filter((x) => x.id !== id);
     });
+  }
+
+  // Dar algo por incobrable no lo borra: lo aparta. Deja de contar en tu
+  // patrimonio —que es el efecto real de no ir a cobrarlo— pero queda escrito,
+  // porque perder dinero también es un dato, y siempre se puede deshacer.
+  function marcarIncobrable(id, deshacer) {
+    if (soloLectura()) return;
+    const doc = DB.state.doc;
+    const c = (doc.cobros || []).find((x) => x.id === id);
+    if (!c) return;
+    if (deshacer) {
+      delete c.incobrable; delete c.fecha_incobrable;
+    } else {
+      const cuanto = eur(c.importe);
+      if (!confirm(`¿Dar por perdidos ${cuanto} de ${c.persona}?\n\nDejarán de contar en tu patrimonio. ` +
+                   "Queda apuntado y se puede deshacer.")) return;
+      c.incobrable = true; c.fecha_incobrable = hoyES();
+    }
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc();
+  }
+
+  // Lo mismo para un préstamo, que no es una línea sino un saldo: se cierra con
+  // un apunte de «Incobrable» que no mueve ninguna cuenta.
+  function darPrestamoPorIncobrable(persona, saldo) {
+    if (soloLectura()) return;
+    const doc = DB.state.doc;
+    const imp = Math.abs(Number(saldo) || 0);
+    if (!(imp > 0)) return;
+    if (!confirm(`¿Dar por perdidos ${eur(imp)} que te debe ${persona}?\n\n` +
+                 "No mueve ninguna cuenta: solo deja de contar en tu patrimonio. Se puede borrar luego.")) return;
+    if (!Array.isArray(doc.movimientos)) doc.movimientos = [];
+    doc.movimientos.push({
+      id: newId("m"), marca_temporal: new Date().toLocaleString("es-ES"),
+      fecha: hoyES(), tipo: "Préstamo", importe: String(imp),
+      tipo_prestamo: "Incobrable", persona_prestamo: persona,
+      cuenta_origen: "", cuenta_destino: "", tipo_gasto: "", tipo_ingreso: "",
+      detalle: `Dado por incobrable · ${persona}`,
+    });
+    if (window.SolventoBoot) window.SolventoBoot.saveDoc();
   }
 
   // ── Ajustes: cuentas, activos y objetivo de asignación ──────────────
@@ -1164,7 +1209,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPresupuesto, openRegla, openPassword, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),

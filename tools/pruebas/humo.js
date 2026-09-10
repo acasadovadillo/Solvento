@@ -47,7 +47,7 @@ print("Prueba de humo · documento de ejemplo\n");
 var m = M.build(doc, precios);
 comprobar("el modelo se construye", m && isFinite(m.patrimonioNeto), "patrimonio=" + (m && m.patrimonioNeto));
 comprobar("el patrimonio es la suma de sus partes",
-  cerca(m.patrimonioNeto, m.patrimonioLiquido + m.carteraTotal + m.inm.total - m.pas.total));
+  cerca(m.patrimonioNeto, m.patrimonioLiquido + m.carteraTotal + m.inm.total + m.cobrar.total - m.pas.total));
 comprobar("ninguna cuenta sale con saldo no numérico",
   m.saldos.every(function (c) { return isFinite(c.saldo); }));
 
@@ -85,13 +85,40 @@ var rev = M.revision(doc, precios);
 comprobar("la revisión no encuentra errores en los datos de ejemplo",
   rev.errores === 0, rev.avisos.filter(function (a) { return a.nivel === "error"; }).map(function (a) { return a.titulo; }).join(", "));
 
-// Un cobro pendiente es una promesa, no un hecho: no puede mover ni un céntimo
-// del patrimonio hasta que el dinero exista de verdad.
+// Un derecho de cobro es un activo, pero no es caja: sube el patrimonio
+// exactamente su importe y no toca ni un céntimo de las cuentas.
 var cobros = M.cobrosPendientes(doc);
 var sinCobros = JSON.parse(JSON.stringify(doc)); sinCobros.cobros = [];
-comprobar("un cobro pendiente no cambia el patrimonio",
-  cobros.total > 0 && cerca(M.build(sinCobros, precios).patrimonioNeto, m.patrimonioNeto),
+var msc = M.build(sinCobros, precios);
+comprobar("un cobro pendiente suma al patrimonio y no a la caja",
+  cobros.total > 0 && cerca(msc.patrimonioNeto + cobros.total, m.patrimonioNeto) &&
+  cerca(msc.patrimonioLiquido, m.patrimonioLiquido),
   "cobros=" + cobros.total);
+
+// La promesa grande del balance: prestar dinero no te empobrece, lo cambia de
+// sitio. Si esto deja de cumplirse, es que lo que te deben ha dejado de contar.
+var conPrestamo = JSON.parse(JSON.stringify(doc));
+conPrestamo.movimientos.push({
+  id: "m-prueba-prestamo", fecha: "01/09/2026", tipo: "Préstamo", importe: "500",
+  tipo_prestamo: "Dinero prestado", persona_prestamo: "Alguien Nuevo",
+  cuenta_origen: "Banco Uno", cuenta_destino: ""
+});
+var mp = M.build(conPrestamo, precios);
+comprobar("prestar dinero no cambia el patrimonio, lo cambia de sitio",
+  cerca(mp.patrimonioNeto, m.patrimonioNeto) && cerca(mp.patrimonioLiquido, m.patrimonioLiquido - 500),
+  "neto " + mp.patrimonioNeto + " vs " + m.patrimonioNeto);
+
+// Y su contrario: dar algo por incobrable sí es una pérdida, y tiene que verse.
+var conPerdida = JSON.parse(JSON.stringify(conPrestamo));
+conPerdida.movimientos.push({
+  id: "m-prueba-perdida", fecha: "02/09/2026", tipo: "Préstamo", importe: "500",
+  tipo_prestamo: "Incobrable", persona_prestamo: "Alguien Nuevo",
+  cuenta_origen: "", cuenta_destino: ""
+});
+var mi = M.build(conPerdida, precios);
+comprobar("dar un préstamo por incobrable resta del patrimonio y no toca la caja",
+  cerca(mi.patrimonioNeto, m.patrimonioNeto - 500) && cerca(mi.patrimonioLiquido, mp.patrimonioLiquido),
+  "neto " + mi.patrimonioNeto);
 
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }

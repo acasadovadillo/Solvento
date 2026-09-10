@@ -287,21 +287,23 @@
     const carteraTotal = inv.total;
     const pas = valuatePasivos(db.pasivos, db.movimientos);
     // Patrimonio NETO = lo que tienes menos lo que debes.
-    const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total - pas.total);
+    const cobrar = porCobrar(db);
+    const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total + cobrar.total - pas.total);
     // El BRUTO es lo que tienes, sin descontar lo que debes. Los pesos de caja,
     // cartera y propiedades se miden sobre él y no sobre el neto: son la leyenda
     // del reparto de los activos, y unas partes que no suman 100 % en un reparto
     // no son un matiz, son un error de lectura.
-    const patrimonioBruto = round2(patrimonioLiquido + carteraTotal + inm.total);
+    const patrimonioBruto = round2(patrimonioLiquido + carteraTotal + inm.total + cobrar.total);
     const ratioInv = patrimonioBruto ? carteraTotal / patrimonioBruto * 100 : 0;
     const ratioInm = patrimonioBruto ? inm.total / patrimonioBruto * 100 : 0;
+    const ratioCobrar = patrimonioBruto ? cobrar.total / patrimonioBruto * 100 : 0;
     // Este no es una parte del reparto: dice cuánto pesa la deuda sobre lo que
     // tienes, que es la cifra que importa de una deuda.
     const ratioPas = patrimonioBruto ? pas.total / patrimonioBruto * 100 : 0;
-    const pctLiquidez = 100 - ratioInv - ratioInm;
+    const pctLiquidez = 100 - ratioInv - ratioInm - ratioCobrar;
     return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker,
-             inv, inm, pas, carteraTotal, patrimonioNeto, patrimonioBruto,
-             ratioInv, ratioInm, ratioPas, pctLiquidez };
+             inv, inm, pas, cobrar, carteraTotal, patrimonioNeto, patrimonioBruto,
+             ratioInv, ratioInm, ratioPas, ratioCobrar, pctLiquidez };
   }
 
 
@@ -363,14 +365,34 @@
       .map((c) => ({
         id: c.id, persona: c.persona || "", concepto: c.concepto || "",
         fecha: c.fecha || "", importe: num(c.importe),
-        centro: c.centro || "", categoria: c.categoria || "",
+        centro: c.centro || "", categoria: c.categoria || "", incobrable: !!c.incobrable,
       }))
       .filter((c) => isFinite(c.importe) && c.importe > 0)
       .sort((a, b) => parseFechaES(a.fecha) - parseFechaES(b.fecha));
+    // Lo dado por incobrable deja de sumar, pero no se borra: perder dinero
+    // también es información, y borrarlo sería fingir que nunca lo esperaste.
+    const vivos = items.filter((c) => !c.incobrable);
+    const perdidos = items.filter((c) => c.incobrable);
     const porPersona = {};
-    items.forEach((c) => { porPersona[c.persona || "—"] = (porPersona[c.persona || "—"] || 0) + c.importe; });
-    return { items, n: items.length, porPersona,
-             total: round2(items.reduce((s, c) => s + c.importe, 0)) };
+    vivos.forEach((c) => { porPersona[c.persona || "—"] = (porPersona[c.persona || "—"] || 0) + c.importe; });
+    return { items: vivos, perdidos, n: vivos.length, porPersona,
+             totalPerdido: round2(perdidos.reduce((s, c) => s + c.importe, 0)),
+             total: round2(vivos.reduce((s, c) => s + c.importe, 0)) };
+  }
+
+  // Lo que te deben, junto: los cobros pendientes y el saldo vivo de lo que has
+  // prestado. Es una clase de activo como la tesorería o la cartera —un derecho
+  // de cobro—, y contarlo arregla de paso un disparate: hasta ahora, prestar
+  // 500 € te empobrecía 500 €, como si los hubieras quemado. No: cambian de
+  // sitio, de la cuenta a lo que te deben, y tu patrimonio no se mueve.
+  function porCobrar(db) {
+    const c = cobrosPendientes(db);
+    const p = resumenPrestamos((db || {}).movimientos);
+    return {
+      cobros: c.total, prestamos: p.teDeben,
+      total: round2(c.total + p.teDeben),
+      n: c.n + p.vivos.length,
+    };
   }
 
   // ── Categorías con jerarquía ─────────────────────────────────────────
@@ -577,14 +599,18 @@
     for (const m of movimientos || []) {
       if (m.tipo !== "Préstamo") continue;
       const nombre = String(m.persona_prestamo || "").trim() || "Sin nombre";
-      const p = por[nombre] || (por[nombre] = { nombre, prestado: 0, devuelto: 0, movimientos: [] });
+      const p = por[nombre] || (por[nombre] = { nombre, prestado: 0, devuelto: 0, perdido: 0, movimientos: [] });
       const imp = Math.abs(num(m.importe) || 0);
-      if (m.tipo_prestamo === "Devolución") p.devuelto += imp; else p.prestado += imp;
+      // Dar algo por incobrable cierra el saldo, pero no es dinero devuelto: si
+      // se contara como devolución, la persona parecería haber pagado.
+      if (m.tipo_prestamo === "Devolución") p.devuelto += imp;
+      else if (m.tipo_prestamo === "Incobrable") p.perdido += imp;
+      else p.prestado += imp;
       p.movimientos.push(m);
     }
     const personas = Object.values(por).map((p) => {
-      p.prestado = round2(p.prestado); p.devuelto = round2(p.devuelto);
-      p.saldo = round2(p.prestado - p.devuelto);
+      p.prestado = round2(p.prestado); p.devuelto = round2(p.devuelto); p.perdido = round2(p.perdido);
+      p.saldo = round2(p.prestado - p.devuelto - p.perdido);
       // Le devolvieron más de lo que consta prestado: falta el apunte del
       // adelanto, no es que la persona haya pagado de más.
       p.huerfano = p.saldo < -0.005;
@@ -597,6 +623,7 @@
       teDeben: round2(vivos.reduce((t, p) => t + p.saldo, 0)),
       prestado: round2(personas.reduce((t, p) => t + p.prestado, 0)),
       devuelto: round2(personas.reduce((t, p) => t + p.devuelto, 0)),
+      perdido: round2(personas.reduce((t, p) => t + p.perdido, 0)),
       huerfanos: personas.filter((p) => p.huerfano).length,
     };
   }
@@ -1145,6 +1172,40 @@
         deltaByDate[t] = (deltaByDate[t] || 0) - coste;
       }
     }
+    // Lo que te deben, a lo largo del tiempo. Se lleva por persona y se suman
+    // solo los saldos positivos, igual que en la tabla: a quien te ha devuelto
+    // más de lo que consta prestado no se le debe un negativo, es que falta el
+    // apunte del adelanto. Un cobro pendiente cuenta desde su fecha.
+    const eventos = [];
+    for (const m of db.movimientos || []) {
+      if (m.tipo !== "Préstamo") continue;
+      const f = parseFechaES(m.fecha); if (!f) continue;
+      const imp = Math.abs(num(m.importe) || 0);
+      const quien = String(m.persona_prestamo || "").trim() || "Sin nombre";
+      const signo = m.tipo_prestamo === "Devolución" || m.tipo_prestamo === "Incobrable" ? -1 : 1;
+      eventos.push({ t: f.getTime(), quien, delta: signo * imp });
+      deltaByDate[f.getTime()] = deltaByDate[f.getTime()] || 0;   // que la fecha exista en la serie
+    }
+    const cobrosVivos = ((db.cobros || []).filter((c) => !c.incobrable))
+      .map((c) => { const f = parseFechaES(c.fecha); return f ? { t: f.getTime(), v: num(c.importe) } : null; })
+      .filter((x) => x && isFinite(x.v) && x.v > 0);
+    cobrosVivos.forEach((c) => { deltaByDate[c.t] = deltaByDate[c.t] || 0; });
+    eventos.sort((a, b) => a.t - b.t);
+    const saldoQuien = {};
+    let iEv = 0;
+    function cobrarEn(t) {
+      while (iEv < eventos.length && eventos[iEv].t <= t) {
+        const e = eventos[iEv++];
+        saldoQuien[e.quien] = (saldoQuien[e.quien] || 0) + e.delta;
+      }
+      let vivo = 0;
+      for (const q in saldoQuien) if (saldoQuien[q] > 0.005) vivo += saldoQuien[q];
+      return vivo + cobrosVivos.reduce((s, c) => s + (c.t <= t ? c.v : 0), 0);
+    }
+
+    // Las fechas se cierran aquí, cuando ya están todas: los préstamos y los
+    // cobros añaden las suyas, y una serie a la que le falta una fecha dibuja un
+    // escalón donde no lo hay.
     const dates = Object.keys(deltaByDate).map(Number).sort((a, b) => a - b);
 
     const inmCompra = (db.inmuebles || [])
@@ -1162,10 +1223,10 @@
       const cv = round2(invEn(t));
       caja.push([t, round2(liq)]);
       cartera.push([t, cv]);
-      patrimonio.push([t, round2(liq + cv + inmEn(t))]);
+      patrimonio.push([t, round2(liq + cv + inmEn(t) + cobrarEn(t))]);
     }
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

@@ -530,17 +530,30 @@
     // Arriba, lo que tienes: el reparto va pegado a su cifra y las tarjetas son
     // su leyenda, así que reparten el BRUTO y suman 100 %. Mezclar ahí la deuda
     // era pedirle a una misma gráfica que contara dos cosas de signo contrario.
+    // Lo que te deben es una clase de activo más, pero solo aparece cuando la
+    // hay: una tarjeta a cero es ruido en un panel que se lee de un vistazo.
+    const cob = m.cobrar || { total: 0, n: 0, cobros: 0, prestamos: 0 };
+    const hayCobrar = cob.total > 0.005;
+    const COBRAR_COLOR = "#a78bfa";
+    // Si el dinero viene de los dos sitios, se dice de cuánto es cada uno; si
+    // viene de uno solo, repetir la cifra que ya está arriba no informa de nada.
+    const detalleCobrar = (cob.cobros > 0.005 && cob.prestamos > 0.005)
+      ? `${fmtEur(cob.cobros)} pendientes · ${fmtEur(cob.prestamos)} prestado`
+      : (cob.prestamos > 0.005 ? "prestado y sin devolver"
+                               : cob.n + (cob.n === 1 ? " cobro pendiente" : " cobros pendientes"));
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
       cabeceraBloque("Activos", fmtEur(m.patrimonioBruto), GREEN, "", true) +
       vistaPanel("patrimonio", "Distribución de los activos",
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
          { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
-         { label: "Propiedades", value: m.inm.total, accent: "#a16207" }],
+         { label: "Propiedades", value: m.inm.total, accent: "#a16207" }]
+          .concat(hayCobrar ? [{ label: "Por cobrar", value: cob.total, accent: COBRAR_COLOR }] : []),
         fmtEur(m.patrimonioBruto), "Activos", null, { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-hub-grid" style="margin-top:1.5rem;">
         ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja", "patrimonio", "de tus activos")}
         ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera", "patrimonio", "de tus activos")}
         ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades", "patrimonio", "de tus activos")}
+        ${hayCobrar ? hubCard("Por cobrar", fmtEur(cob.total), m.ratioCobrar, COBRAR_COLOR, detalleCobrar, null, "pasivos", "patrimonio", "de tus activos") : ""}
       </div>` +
       panelDeuda(m) +
       chartPanel("Evolución del patrimonio neto", "v2-chart-patrimonio");
@@ -980,7 +993,7 @@
             ${esc(m.fecha)} · ${esc(String(m.detalle || "").slice(0, 60))}</td>
           <td style="text-align:right;color:${presta ? RED : GREEN};white-space:nowrap;font-size:0.85rem;">
             ${presta ? "prestado " : "devuelto "}${esc(fmtEur(Math.abs(Number(String(m.importe).replace(",", ".")) || 0)))}</td>
-          <td colspan="2"></td></tr>`;
+          <td colspan="3"></td></tr>`;
       }).join("") : "";
       return `<tr class="table-row">
         <td style="text-align:left;">
@@ -988,10 +1001,17 @@
             font-family:inherit;font-size:0.9rem;cursor:pointer;padding:0;text-align:left;">
             <span style="color:#6b7280;font-size:0.7rem;">${abierta ? "▾" : "▸"}</span> ${esc(p.nombre)}</button>
           ${p.huerfano ? `<div style="color:#6b7280;font-size:0.72rem;padding-left:0.9rem;">
-             te devolvió ${esc(fmtEur(p.devuelto))} de un adelanto que no está registrado como préstamo</div>` : ""}</td>
+             te devolvió ${esc(fmtEur(p.devuelto))} de un adelanto que no está registrado como préstamo</div>` : ""}
+          ${p.perdido > 0.005 ? `<div style="color:#6b7280;font-size:0.72rem;padding-left:0.9rem;">
+             ${esc(fmtEur(p.perdido))} dados por incobrables</div>` : ""}</td>
         <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${p.prestado ? esc(fmtEur(p.prestado)) : "—"}</td>
         <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${p.devuelto ? esc(fmtEur(p.devuelto)) : "—"}</td>
-        <td style="text-align:right;white-space:nowrap;">${saldoTxt}</td></tr>` + detalle;
+        <td style="text-align:right;white-space:nowrap;">${saldoTxt}</td>
+        <td style="text-align:right;width:1%;white-space:nowrap;">${p.saldo > 0.005
+          ? `<button class="fila-acc" onclick="v2PrestamoIncobrable('${jsN}',${p.saldo})"
+               title="No te lo va a devolver: deja de contar como tuyo"
+               style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">⊘</button>`
+          : ""}</td></tr>` + detalle;
     };
     const aviso = r.huerfanos
       ? `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.6rem;">
@@ -1007,7 +1027,7 @@
       </div>
       <table class="minimal-table">
         <thead><tr><th style="text-align:left;">Persona</th><th style="text-align:right;">Prestado</th>
-          <th style="text-align:right;">Devuelto</th><th style="text-align:right;">Pendiente</th></tr></thead>
+          <th style="text-align:right;">Devuelto</th><th style="text-align:right;">Pendiente</th><th></th></tr></thead>
         <tbody>${r.personas.map(fila).join("")}</tbody></table>
       ${aviso}
     </div></div>`;
@@ -1028,9 +1048,29 @@
         <td style="text-align:right;width:1%;white-space:nowrap;">
           <button class="solo-editor" onclick="v2Cobrar('${jsId}')" title="Ya te lo ha pagado: crea el ingreso y cierra la línea"
             style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.75rem;
-            font-weight:600;padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;white-space:nowrap;">Cobrado</button></td>
+            font-weight:600;padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;white-space:nowrap;">Cobrado</button>
+          <button class="fila-acc" onclick="v2Incobrable('${jsId}')" title="No lo vas a cobrar: deja de contar como tuyo"
+            style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">⊘</button></td>
         ${rowActions(`v2EditCobro('${jsId}')`, `v2DelCobro('${jsId}')`)}</tr>`;
     }).join("");
+
+    // Lo que se dio por perdido no se borra: se aparta, se dice cuánto fue y se
+    // puede deshacer. Un patrimonio que suma derechos de cobro necesita esta
+    // salida; sin ella, lo que nunca va a entrar seguiría contando para siempre.
+    const perdidos = c.perdidos && c.perdidos.length
+      ? `<div style="margin-top:1rem;border-top:1px solid #23262f;padding-top:0.75rem;">
+          <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.4rem;">
+            Dados por incobrables · <b style="color:#6b7280;">${esc(fmtEur(c.totalPerdido))}</b> que ya no cuentan en tu patrimonio</div>
+          ${c.perdidos.map((x) => {
+            const jsId = String(x.id).replace(/'/g, "\\'");
+            return `<div style="font-size:0.78rem;color:#4b5563;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin:0.15rem 0;">
+              <span style="text-decoration:line-through;">${esc(x.persona)}${x.concepto ? " · " + esc(x.concepto) : ""} · ${esc(fmtEur(x.importe))}</span>
+              <button class="fila-acc" onclick="v2CobroVuelve('${jsId}')" title="Volver a contarlo como pendiente"
+                style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#6b7280;font-family:inherit;
+                font-size:0.68rem;padding:0 0.35rem;cursor:pointer;">deshacer</button></div>`;
+          }).join("")}
+        </div>`
+      : "";
 
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
@@ -1046,11 +1086,14 @@
                <th style="text-align:right;">Importe</th><th></th><th></th></tr></thead>
              <tbody>${filas}</tbody></table>
            <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">
-             No entra en tu caja ni en tu patrimonio: el dinero todavía no se ha movido. Al pulsar
-             <b style="color:#6b7280;">Cobrado</b> se crea el ingreso de verdad, con su categoría y su centro.</div>`
+             Cuenta en tu patrimonio como un activo —te lo deben—, pero no en tu caja: el dinero todavía
+             no se ha movido. Al pulsar <b style="color:#6b7280;">Cobrado</b> se crea el ingreso de verdad, con su
+             categoría y su centro. Con <b style="color:#6b7280;">⊘</b> lo das por perdido y deja de contar.</div>`
         : `<div style="color:#4b5563;font-size:0.85rem;padding:0.75rem 0;">
              Nada pendiente de cobrar. Aquí se apunta lo que te deben y aún no ha entrado —media cuota de
-             alquiler, un trabajo facturado—, sin tocar la caja hasta que llegue.</div>`}
+             alquiler, un trabajo facturado—: cuenta como activo en tu patrimonio, pero no en tu caja hasta
+             que el dinero llegue de verdad.</div>`}
+      ${perdidos}
     </div></div>`;
   }
 
@@ -1800,6 +1843,9 @@
   window.v2EditCobro = (id) => F() && F().editCobro(id);
   window.v2DelCobro = (id) => F() && F().deleteCobro(id);
   window.v2Cobrar = (id) => F() && F().cobrarCobro(id);
+  window.v2Incobrable = (id) => F() && F().marcarIncobrable(id);
+  window.v2CobroVuelve = (id) => F() && F().marcarIncobrable(id, true);
+  window.v2PrestamoIncobrable = (persona, saldo) => F() && F().darPrestamoPorIncobrable(persona, saldo);
 
   // Modo edición: no toca los datos, solo decide si cada fila enseña su lápiz y
   // su aspa. Empieza apagado en cada arranque a propósito —lo peligroso no es
