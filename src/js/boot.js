@@ -574,6 +574,19 @@
     $("sync-export").addEventListener("click", doExport);
     $("sync-import").addEventListener("change", doImport);
     $("sync-export-claro").addEventListener("click", doExportClaro);
+    // La hoja de cálculo la arma otro archivo; aquí solo se enchufan los botones
+    // y se cuenta cómo ha ido, que es lo que hace el resto de esta sección.
+    const aHoja = (fn, ok) => () => {
+      const E = window.SolventoExportar;
+      if (!E) { setError("sync-status", "No se ha podido preparar la descarga"); return; }
+      const r = fn();
+      if (r === null) setError("sync-status", "No hay datos que exportar");
+      else if (r) setError("sync-status", ok, "#fbbf24");
+    };
+    $("export-xlsx").addEventListener("click", aHoja(() => window.SolventoExportar.aExcel(),
+      "Excel descargado · sin cifrar, bórralo al acabar"));
+    $("export-csv").addEventListener("click", aHoja(() => window.SolventoExportar.aCsv(),
+      "CSV descargado · sin cifrar, bórralo al acabar"));
     $("sync-reemplazar").addEventListener("change", doReemplazarClaro);
     // Reintentar lo pendiente al recuperar conexión o al volver a la pestaña
     window.addEventListener("online", reintentarPendiente);
