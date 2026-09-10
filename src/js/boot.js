@@ -5,7 +5,7 @@
  *   · Hay bloque cifrado local → login (contraseña → descifra → desbloquea).
  *   · No hay local pero SÍ en el repo (data.enc, lectura pública) → se adopta y
  *     se pide la contraseña. Esto hace que funcione en cualquier dispositivo.
- *   · Nada en local ni en el repo → importación inicial desde data.json.
+ *   · Nada en local ni en el repo → cuenta nueva: elige contraseña y empieza vacía.
  *
  * La contraseña y el token se guardan SOLO en memoria (DB.state) durante la
  * sesión; se borran al bloquear. El token, además, se guarda cifrado con la
@@ -361,9 +361,9 @@
       catch (e) { blob = null; }
     }
     if (!blob) {
-      const a = window.SolventoConfig.SYNC;
-      setError("login-error", "Esa cuenta todavía no tiene datos guardados (" +
-               a.owner + "/" + a.repo + "/" + a.path + ")");
+      // Cuenta dada de alta que todavía no tiene bloque: es su primera vez, no
+      // un error. Se le ofrece elegir contraseña y empezar.
+      empezarCuenta(cuenta, pw);
       return;
     }
     try {
@@ -374,6 +374,21 @@
       else setError("login-error", "Error: " + e.message);
     }
   }
+  // Primera vez de una cuenta: se pasa al panel de empezar con su nombre puesto
+  // y, si ya venía escrita una contraseña en el login, se aprovecha.
+  function empezarCuenta(cuenta, pw) {
+    const quien = $("imp-cuenta");
+    if (quien) {
+      quien.textContent = cuenta.nombre || cuenta.usuario || "";
+      quien.hidden = !quien.textContent;
+    }
+    panel("import");
+    $("imp-pass").value = pw || "";
+    $("imp-pass2").value = "";
+    ($("imp-pass").value ? $("imp-pass2") : $("imp-pass")).focus();
+    setError("imp-error", "");
+  }
+
   async function handleImport(ev) {
     ev.preventDefault();
     const p1 = $("imp-pass").value, p2 = $("imp-pass2").value;
@@ -381,18 +396,23 @@
     if (p1 !== p2) { setError("imp-error", "Las contraseñas no coinciden"); return; }
     setError("imp-error", "Cifrando…", "#9ca3af");
     try {
-      // Si hay un data.json que adoptar, se adopta —así nació esta aplicación—.
-      // Y si no hay nada, no es un error: es una cuenta que empieza de cero, que
-      // es exactamente lo que le pasa a la primera persona de una asociación.
-      let doc = null;
-      try {
-        const res = await fetch("data.json?" + Date.now());
-        if (res.ok) doc = await res.json();
-      } catch (e) { doc = null; }
-      if (!doc) doc = { movimientos: [], inversiones: [], propiedades: [], pasivos: [], cobros: [], config: {} };
+      // Una cuenta nueva empieza VACÍA, siempre.
+      //
+      // Antes se adoptaba un data.json si lo había junto a la aplicación: así
+      // nació esto, migrando la hoja de cálculo. Con varias cuentas eso pasó de
+      // atajo a trampa —quien creara la suya se habría llevado los datos que
+      // hubiera en ese archivo, que no son los suyos—, y la migración ya está
+      // hecha hace mucho.
+      const doc = { movimientos: [], inversiones: [], propiedades: [], pasivos: [], cobros: [], config: {} };
       const blob = await C.encryptDoc(doc, p1);
       DB.storeBlob(blob);
       unlock(doc, p1);
+      // Existe en este navegador, pero todavía en ningún otro sitio: sin token,
+      // lo que registre se queda aquí, y eso hay que decirlo el primer día.
+      if (!DB.state.token) {
+        pintarEstado("sintoken", "Tus datos están cifrados en este dispositivo. Añade tu token en ⚙ Ajustes para que se guarden también en la nube.");
+        toast("Cuenta creada · añade tu token en ⚙ Ajustes para sincronizar", "#fbbf24");
+      }
     } catch (e) {
       setError("imp-error", "No se pudo importar: " + e.message);
     }

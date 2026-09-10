@@ -13,7 +13,8 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - "data.enc"          # tus guardados cifrados no cambian el código
+      - "data.enc"           # tus guardados cifrados no cambian el código
+      - "cuentas/**"        # ni los de las demás cuentas
       - "prices.json"       # ni los precios que sube el otro workflow
       - "fundamentals.json"
   pull_request:

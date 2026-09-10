@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p141" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p141" />
-  <link rel="stylesheet" href="src/css/components.css?v=p141" />
+  <link rel="stylesheet" href="src/css/base.css?v=p143" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p143" />
+  <link rel="stylesheet" href="src/css/components.css?v=p143" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -103,6 +103,7 @@
   <form id="import-form" class="boot-panel" style="display:none;">
     <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
     <div class="boot-title">Empezar aquí</div>
+    <div id="imp-cuenta" hidden style="color:#e5e7eb;font-weight:700;font-size:0.95rem;margin:-0.35rem 0 0.35rem;"></div>
     <div class="boot-sub">
       Esta cuenta todavía no tiene datos. Elige una contraseña: será la que cifre todo lo que
       registres, y sin ella nadie puede leerlo — <b style="color:#e5e7eb;">tú tampoco</b>.
@@ -317,17 +318,17 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p141"></script>
-<script src="src/js/config.js?v=p141"></script>
-<script src="src/js/model.js?v=p141"></script>
-<script src="src/js/charts.js?v=p141"></script>
-<script src="src/js/render.js?v=p141"></script>
-<script src="src/js/db.js?v=p141"></script>
-<script src="src/js/sync.js?v=p141"></script>
-<script src="src/js/forms.js?v=p141"></script>
-<script src="src/js/perfil.js?v=p141"></script>
-<script src="src/js/exportar.js?v=p141"></script>
-<script src="src/js/boot.js?v=p141"></script>
+<script src="src/js/crypto.js?v=p143"></script>
+<script src="src/js/config.js?v=p143"></script>
+<script src="src/js/model.js?v=p143"></script>
+<script src="src/js/charts.js?v=p143"></script>
+<script src="src/js/render.js?v=p143"></script>
+<script src="src/js/db.js?v=p143"></script>
+<script src="src/js/sync.js?v=p143"></script>
+<script src="src/js/forms.js?v=p143"></script>
+<script src="src/js/perfil.js?v=p143"></script>
+<script src="src/js/exportar.js?v=p143"></script>
+<script src="src/js/boot.js?v=p143"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

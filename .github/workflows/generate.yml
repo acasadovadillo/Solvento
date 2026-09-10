@@ -10,7 +10,8 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - "data.enc"      # los guardados cifrados del usuario no disparan rebuild
+      - "data.enc"           # tus guardados cifrados no cambian el código
+      - "cuentas/**"        # ni los de las demás cuentas
       - "prices.json"   # evita re-disparo por el propio commit de precios
       - "fundamentals.json"
   schedule:

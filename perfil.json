@@ -1,5 +1,5 @@
 {
-  "_": "Quién entra en este Solvento y dónde guarda cada uno. El login solo pide usuario y contraseña; esto dice qué abre cada usuario. El día que haya servidor, esta tabla la contesta el backend.",
+  "_": "Quién entra en este Solvento y dónde guarda cada uno. El login solo pide usuario y contraseña; esto dice qué abre cada usuario. Cada cuenta tiene SU archivo cifrado: sin su contraseña, el de otro es ruido. El día que haya servidor, esta tabla la contesta el backend.",
   "cuentas": [
     {
       "usuario": "alberto",
@@ -21,6 +21,17 @@
         "repo": "ABIES-Solvento",
         "branch": "main",
         "path": "data.enc"
+      }
+    },
+    {
+      "usuario": "hafsa",
+      "nombre": "Hafsa",
+      "tipo": "persona",
+      "almacen": {
+        "owner": "acasadovadillo",
+        "repo": "Solvento",
+        "branch": "main",
+        "path": "cuentas/hafsa.enc"
       }
     }
   ]
