@@ -1029,9 +1029,13 @@
       }).join("") : "";
       return `<tr class="table-row">
         <td style="text-align:left;">
-          <button onclick="v2PrestamoToggle('${jsN}')" style="background:none;border:none;color:#e5e7eb;font-weight:600;
+          <button onclick="v2PrestamoToggle('${jsN}')" title="Ver los movimientos de esta persona"
+            style="display:flex;align-items:center;gap:0.5rem;background:none;border:none;color:#e5e7eb;font-weight:600;
             font-family:inherit;font-size:0.9rem;cursor:pointer;padding:0;text-align:left;">
-            <span style="color:#6b7280;font-size:0.7rem;">${abierta ? "▾" : "▸"}</span> ${esc(p.nombre)}</button>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+              border:1px solid ${abierta ? "#3b82f6" : "#2a2d3a"};border-radius:6px;color:${abierta ? "#3b82f6" : "#9ca3af"};
+              font-size:0.7rem;flex-shrink:0;">${abierta ? "▾" : "▸"}</span>
+            <span>${esc(p.nombre)}</span></button>
           ${p.huerfano ? `<div style="color:#6b7280;font-size:0.72rem;padding-left:0.9rem;">
              te devolvió ${esc(fmtEur(p.devuelto))} de un adelanto que no está registrado como préstamo</div>` : ""}
           ${p.perdido > 0.005 ? `<div style="color:#6b7280;font-size:0.72rem;padding-left:0.9rem;">
@@ -1316,9 +1320,14 @@
       return `<tr class="table-row">
       <td style="text-align:left;">
         <button onclick="v2PasivoToggle('${jsN}')" title="Ver de dónde sale este saldo"
-          style="background:none;border:none;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;
-          cursor:pointer;padding:0;text-align:left;">
-          <span style="color:#6b7280;font-size:0.7rem;">${abierta ? "▾" : "▸"}</span> ${esc(d.nombre)}</button>
+          style="display:flex;align-items:center;gap:0.5rem;background:none;border:none;color:#fff;font-weight:600;
+          font-family:inherit;font-size:inherit;cursor:pointer;padding:0;text-align:left;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+            border:1px solid ${abierta ? "#3b82f6" : "#2a2d3a"};border-radius:6px;color:${abierta ? "#3b82f6" : "#9ca3af"};
+            font-size:0.7rem;flex-shrink:0;">${abierta ? "▾" : "▸"}</span>
+          <span>${esc(d.nombre)}</span>
+          <span style="color:#4b5563;font-size:0.72rem;font-weight:500;white-space:nowrap;">
+            ${abierta ? "" : "ver movimientos"}</span></button>
         ${d.entidad ? `<div style="color:#6b7280;font-size:0.78rem;padding-left:0.9rem;">${esc(d.entidad)}</div>` : ""}</td>
       <td style="text-align:left;color:#9ca3af;">${esc(d.tipo)}</td>
       <td style="text-align:right;font-weight:600;white-space:nowrap;color:${d.importe > 0.005 ? "#fff" : "#6b7280"};">
