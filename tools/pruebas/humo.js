@@ -223,6 +223,43 @@ comprobar("del menú guardado solo sobrevive lo que se puede ocultar de verdad",
   oculto.join(", "));
 C.usarDoc(doc);
 
+// ── Nada de nadie en la cuenta de nadie ─────────────────────────────────────
+// El código trae un catálogo de bancos y de activos que es el de una persona
+// concreta. Servía de valor por defecto, y así cualquier documento que no
+// declarara sus listas —uno recién creado, uno importado, uno cuyo config solo
+// traía el presupuesto— se llevaba seis bancos y doce ETF ajenos como si fueran
+// suyos. El catálogo sigue estando, pero solo para poner el logo de un banco
+// conocido y el ticker de un ISIN conocido.
+var nueva = { movimientos: [], inversiones: [], propiedades: [], pasivos: [], cobros: [],
+              config: { cuentas: [Object.assign({}, C.EFECTIVO)], activos: [] } };
+C.usarDoc(nueva);
+comprobar("una cuenta nueva empieza con Efectivo y nada más",
+  C.cuentas().length === 1 && C.cuentas()[0].cuenta === "Efectivo" && C.activos().length === 0,
+  C.cuentas().map(function (x) { return x.cuenta; }).join(", "));
+
+C.usarDoc({ movimientos: [], inversiones: [], config: {} });
+comprobar("un documento sin listas declaradas tampoco hereda las de otro",
+  C.cuentas().length === 1 && C.cuentas()[0].cuenta === "Efectivo" && C.activos().length === 0,
+  C.cuentas().map(function (x) { return x.cuenta; }).join(", "));
+
+// Y cuando sí hay datos, las cuentas son las suyas: las que mueven sus apuntes.
+// Una tarjeta de crédito aparece en los movimientos igual que una cuenta y no
+// lo es —comprar con ella no baja la caja, sube la deuda—, así que no entra.
+C.usarDoc({
+  pasivos: [{ nombre: "Tarjeta", tipo: "Tarjeta de crédito" }],
+  inversiones: [{ nombre: "Un fondo", isin: "IE00B4L5Y983", renta: "Renta variable", activo: "ETF", cuenta: "Banco Uno" }],
+  movimientos: [{ tipo: "Gasto", cuenta_origen: "Banco Uno" },
+                { tipo: "Gasto", cuenta_origen: "Tarjeta" },
+                { tipo: "Traspaso", cuenta_origen: "Banco Dos", cuenta_destino: "Banco Uno" }],
+  config: {},
+});
+var ded = C.cuentas().map(function (x) { return x.cuenta; });
+comprobar("sin lista declarada, las cuentas se deducen de tus movimientos",
+  ded.join(",") === "Banco Uno,Banco Dos,Efectivo" && C.activos().length === 1 &&
+  C.activos()[0].yf === "IWDA.AS",
+  ded.join(", "));
+C.usarDoc(doc);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

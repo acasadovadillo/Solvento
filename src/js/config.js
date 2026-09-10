@@ -194,7 +194,9 @@
   // en cuanto edites algo desde Ajustes, manda tu versión. Así puedes abrir una
   // cuenta o dar de alta un ETF sin tocar código.
   let DOC = null;
-  const usarDoc = (doc) => { DOC = doc; };
+  // Cambiar de documento invalida lo deducido del anterior: si no, al cambiar
+  // de cuenta seguirían saliendo las cuentas de la de antes.
+  const usarDoc = (doc) => { DOC = doc; _deducidas = null; _deducidosActivos = null; };
   const cfgDoc = () => (DOC && DOC.config) || {};
 
   // Los logos son cosméticos y viven en el código, no en el documento cifrado.
@@ -202,9 +204,67 @@
   // ejemplo— no los trae, y sin este relleno se quedaría sin marca aunque el
   // archivo estuviera en img/. Solo se completa lo que falta: lo que diga tu
   // documento manda siempre.
+  /*
+   * Cuando un documento no declara sus cuentas ni sus activos.
+   *
+   * Antes se devolvían las listas del código —Bankinter, Santander, los ETF de
+   * quien escribió esto— y eso no era un valor por defecto: era la cartera de
+   * una persona apareciendo en la cuenta de otra. Bastaba con que el config no
+   * trajera la clave para que a un usuario nuevo le salieran seis bancos y doce
+   * activos que no había dado de alta en su vida.
+   *
+   * Lo que se hace ahora es deducirlas de SUS datos: las cuentas que de verdad
+   * mueven sus apuntes y los activos que de verdad ha comprado. Un documento
+   * recién creado no tiene ni unos ni otros, así que se queda con Efectivo y
+   * nada más, que es lo mínimo para poder registrar algo el primer día.
+   *
+   * Las listas del código siguen siendo útiles, pero como CATÁLOGO: de ahí
+   * salen el logo y el color de un banco conocido y el ticker de un ISIN
+   * conocido. Eso es distinto de dárselos a alguien como suyos.
+   */
+  const EFECTIVO = { cuenta: "Efectivo", accent: "#2d9e5f", logo: null, emoji: "💵" };
+  let _deducidas = null, _deducidosActivos = null;
+
+  function cuentasDeducidas() {
+    if (_deducidas) return _deducidas;
+    // El nombre de una tarjeta o una hipoteca aparece en los movimientos igual
+    // que el de una cuenta, pero no es una cuenta: comprar con ella no baja la
+    // caja, sube la deuda.
+    const deudas = new Set(((DOC && DOC.pasivos) || [])
+      .map((d) => String(d.nombre || d.concepto || "").trim()).filter(Boolean));
+    const vistas = [];
+    ((DOC && DOC.movimientos) || []).forEach((m) => {
+      [m.cuenta_origen, m.cuenta_destino].forEach((x) => {
+        const n = String(x || "").trim();
+        if (!n || n === "-" || deudas.has(n) || vistas.indexOf(n) >= 0) return;
+        vistas.push(n);
+      });
+    });
+    if (vistas.indexOf(EFECTIVO.cuenta) < 0) vistas.push(EFECTIVO.cuenta);
+    _deducidas = vistas.map((n) => {
+      const d = CUENTAS_DEFECTO.find((x) => x.cuenta === n);
+      return d ? Object.assign({}, d) : { cuenta: n, accent: "#6b7280" };
+    });
+    return _deducidas;
+  }
+
+  function activosDeducidos() {
+    if (_deducidosActivos) return _deducidosActivos;
+    const porNombre = {};
+    ((DOC && DOC.inversiones) || []).forEach((r) => {
+      const nombre = String(r.nombre || "").trim();
+      if (!nombre || porNombre[nombre]) return;
+      porNombre[nombre] = {
+        nombre, isin: r.isin || "-", categoria: r.renta || "Renta variable",
+        tipo: r.activo || "ETF", banco: r.cuenta || "",
+      };
+    });
+    _deducidosActivos = Object.keys(porNombre).map((k) => porNombre[k]);
+    return _deducidosActivos;
+  }
+
   const cuentas = () => {
-    const propias = cfgDoc().cuentas;
-    if (!propias) return CUENTAS_DEFECTO;
+    const propias = cfgDoc().cuentas || cuentasDeducidas();
     return propias.map((c) => {
       if (c.logo) return c;
       const d = CUENTAS_DEFECTO.find((x) => x.cuenta === c.cuenta);
@@ -232,8 +292,7 @@
     return (a && a.yf) || null;
   };
   const activos = () => {
-    const propios = cfgDoc().activos;
-    if (!propios) return ACTIVOS_DEFECTO;
+    const propios = cfgDoc().activos || activosDeducidos();
     return propios.map((a) => (a.yf ? a : Object.assign({}, a, { yf: tickerConocido(a.isin) })));
   };
   const objetivo = () => cfgDoc().objetivo || OBJETIVO_DEFECTO;
@@ -276,7 +335,7 @@
   window.SolventoConfig = {
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
     PAGINAS, menuOculto, paginaVisible,
-    CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO,
+    CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO, EFECTIVO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT, BANCOS, logoBanco,
     assetLogo, SYNC,

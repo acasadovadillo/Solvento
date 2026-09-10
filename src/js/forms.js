@@ -660,11 +660,17 @@
   // que puedes abrir una cuenta o dar de alta un ETF sin que yo toque nada.
   // La primera vez que editas algo, se copia la configuración actual a tus datos
   // y a partir de ahí manda la tuya.
+  // Ajustes edita listas, así que lo primero es que existan. Se materializa lo
+  // que la aplicación YA está usando —las cuentas de tus movimientos, los
+  // activos de tus operaciones—, no el catálogo del código: abrir Ajustes no
+  // puede ser la puerta por la que a alguien le entran seis bancos ajenos.
   function cfgEditable() {
     const doc = DB.state.doc;
     if (!doc.config) doc.config = {};
-    if (!doc.config.cuentas)  doc.config.cuentas  = JSON.parse(JSON.stringify(CFG.CUENTAS_DEFECTO));
-    if (!doc.config.activos)  doc.config.activos  = JSON.parse(JSON.stringify(CFG.ACTIVOS_DEFECTO));
+    CFG.usarDoc(doc);
+    const copia = (x) => JSON.parse(JSON.stringify(x));
+    if (!doc.config.cuentas)  doc.config.cuentas  = copia(CFG.cuentas());
+    if (!doc.config.activos)  doc.config.activos  = copia(CFG.activos());
     if (!doc.config.objetivo) doc.config.objetivo = Object.assign({}, CFG.OBJETIVO_DEFECTO);
     CFG.usarDoc(doc);
     return doc.config;

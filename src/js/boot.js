@@ -574,13 +574,16 @@
       // hubiera en ese archivo, que no son los suyos—, y la migración ya está
       // hecha hace mucho.
       //
-      // Y vacía de verdad: sin cuentas y sin activos. El código trae una lista
+      // Y vacía de verdad: sin bancos y sin activos. El código trae una lista
       // por defecto —Bankinter, Santander, los ETF…— que es la de quien escribió
       // esto, y a una cuenta nueva le aparecían los bancos de otro como si fueran
-      // suyos. Con las listas puestas a cero, cada uno da de alta las suyas en
-      // Ajustes y no hereda nada de nadie.
+      // suyos. Cada uno da de alta los suyos en Ajustes y no hereda nada de nadie.
+      //
+      // Con una excepción: Efectivo. Sin ninguna cuenta no se puede registrar el
+      // primer movimiento, y el dinero en mano no es de ningún banco: lo tiene
+      // todo el mundo y no delata a nadie.
       const doc = { movimientos: [], inversiones: [], propiedades: [], pasivos: [], cobros: [],
-                    config: { cuentas: [], activos: [] } };
+                    config: { cuentas: [Object.assign({}, window.SolventoConfig.EFECTIVO)], activos: [] } };
       const blob = await C.encryptDoc(doc, p1);
       DB.storeBlob(blob);
       unlock(doc, p1);
