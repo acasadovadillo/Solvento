@@ -10,13 +10,15 @@
  */
 (function () {
   "use strict";
-  const LS_KEY = "solvento_data_enc";
+  // La llave depende de la cuenta abierta: cada una guarda su bloque cifrado
+  // aparte. La de por defecto conserva la de siempre, sin sufijo.
+  const LS_KEY = () => (window.SolventoPerfil ? window.SolventoPerfil.claveBlob() : "solvento_data_enc");
 
   const state = { doc: null };
 
   function getStoredBlob() {
     try {
-      const s = localStorage.getItem(LS_KEY);
+      const s = localStorage.getItem(LS_KEY());
       return s ? JSON.parse(s) : null;
     } catch (e) {
       return null;
@@ -24,14 +26,14 @@
   }
   function storeBlob(blob) {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify(blob));
+      localStorage.setItem(LS_KEY(), JSON.stringify(blob));
       return true;
     } catch (e) {
       return false;
     }
   }
   function clearBlob() {
-    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    try { localStorage.removeItem(LS_KEY()); } catch (e) {}
   }
   function hasData() { return !!getStoredBlob(); }
 

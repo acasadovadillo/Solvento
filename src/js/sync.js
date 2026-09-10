@@ -11,8 +11,10 @@
   "use strict";
   const C = window.SolventoCrypto;
   const SYNC = window.SolventoConfig.SYNC;
-  const TOKEN_KEY = "solvento_gh_token";
-  const SHA_KEY = "solvento_data_sha";
+  // Cada cuenta, su token y su sha: el token de una organización no puede
+  // escribir en el repositorio de otra ni al revés.
+  const TOKEN_KEY = () => (window.SolventoPerfil ? window.SolventoPerfil.claveToken() : "solvento_gh_token");
+  const SHA_KEY = () => (window.SolventoPerfil ? window.SolventoPerfil.claveSha() : "solvento_data_sha");
 
   const apiUrl = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${SYNC.path}`;
   // La API de contenidos NO devuelve el cuerpo de un fichero de más de 1 MB:
@@ -55,18 +57,18 @@
 
   // ── Token (cifrado con la contraseña) ──
   async function storeToken(token, password) {
-    localStorage.setItem(TOKEN_KEY, JSON.stringify(await C.encryptString(token, password)));
+    localStorage.setItem(TOKEN_KEY(), JSON.stringify(await C.encryptString(token, password)));
   }
   async function loadToken(password) {
-    const s = localStorage.getItem(TOKEN_KEY);
+    const s = localStorage.getItem(TOKEN_KEY());
     if (!s) return null;
     try { return await C.decryptString(JSON.parse(s), password); } catch (e) { return null; }
   }
-  const hasToken = () => !!localStorage.getItem(TOKEN_KEY);
-  const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+  const hasToken = () => !!localStorage.getItem(TOKEN_KEY());
+  const clearToken = () => localStorage.removeItem(TOKEN_KEY());
 
-  const getSha = () => localStorage.getItem(SHA_KEY) || null;
-  const setSha = (s) => { if (s) localStorage.setItem(SHA_KEY, s); };
+  const getSha = () => localStorage.getItem(SHA_KEY()) || null;
+  const setSha = (s) => { if (s) localStorage.setItem(SHA_KEY(), s); };
 
   // ── Alto nivel ──
   // Lee el bloque cifrado del repo (público). Devuelve {blob, sha} o null (404).

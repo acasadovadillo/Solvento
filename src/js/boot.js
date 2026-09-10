@@ -29,7 +29,54 @@
   function panel(name) {
     $("login-form").style.display = name === "login" ? "flex" : "none";
     $("import-form").style.display = name === "import" ? "flex" : "none";
+    $("cuenta-form").style.display = name === "cuenta" ? "flex" : "none";
     $("boot-checking").style.display = name === "checking" ? "flex" : "none";
+  }
+
+  // ── Cuentas ──
+  // El selector solo tiene sentido cuando hay más de una: con una sola, un
+  // desplegable de un elemento es una pregunta sin respuesta posible.
+  const P = () => window.SolventoPerfil;
+  function pintarSelectorCuentas() {
+    const sel = $("login-cuenta");
+    if (!sel || !P()) return;
+    const cuentas = P().cuentas(), actual = P().actual();
+    sel.innerHTML = cuentas.map((c) =>
+      `<option value="${c.id}" ${c.id === actual.id ? "selected" : ""}>${(c.nombre || "Mis finanzas")
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")}</option>`).join("");
+    sel.hidden = cuentas.length < 2;
+  }
+  // Cambiar de cuenta en el desplegable cambia de almacén y de llaves, así que
+  // hay que volver a mirar si esa cuenta tiene datos aquí o hay que bajarlos.
+  async function cambiarCuenta(id) {
+    P().usar(id);
+    setError("login-error", "");
+    $("login-pass").value = "";
+    await startBoot();
+  }
+  function alternarVerPass() {
+    const inp = $("login-pass"), btn = $("login-ver");
+    const ver = inp.type === "password";
+    inp.type = ver ? "text" : "password";
+    btn.querySelector(".ojo-ver").hidden = ver;
+    btn.querySelector(".ojo-tachado").hidden = !ver;
+    btn.title = btn.ariaLabel = ver ? "Ocultar la contraseña" : "Ver la contraseña";
+    inp.focus();
+  }
+  function altaCuenta(ev) {
+    ev.preventDefault();
+    try {
+      const c = P().alta({
+        nombre: $("cta-nombre").value.trim(),
+        tipo: $("cta-tipo").value,
+        almacen: { owner: $("cta-owner").value, repo: $("cta-repo").value, path: $("cta-path").value },
+      });
+      ["cta-nombre", "cta-owner", "cta-repo", "cta-path"].forEach((i) => ($(i).value = ""));
+      setError("cta-error", "");
+      cambiarCuenta(c.id);
+    } catch (e) {
+      setError("cta-error", e.message || "No se ha podido añadir");
+    }
   }
 
   // ── Desbloqueo / bloqueo ──
@@ -389,6 +436,7 @@
     document.documentElement.style.overflow = "hidden";
     $("boot-overlay").style.display = "flex";
     setError("login-error", ""); setError("imp-error", "");
+    pintarSelectorCuentas();
     if (DB.hasData()) {
       panel("login"); $("login-pass").value = ""; $("login-pass").focus();
       refrescarBlobRemoto();          // en segundo plano, mientras escribes
@@ -401,6 +449,14 @@
     if (remote) {
       DB.storeBlob(remote.blob);
       panel("login"); $("login-pass").value = ""; $("login-pass").focus();
+    } else if (P() && P().actual().id !== P().PRINCIPAL) {
+      // Una cuenta añadida a mano cuyo repositorio todavía no tiene bloque: lo
+      // que falta es que alguien lo cree desde ESA cuenta, no cifrar aquí unos
+      // datos que no son tuyos.
+      panel("login");
+      const a = window.SolventoConfig.SYNC;
+      setError("login-error", "En ese repositorio todavía no hay ningún bloque cifrado (" +
+               a.owner + "/" + a.repo + "/" + a.path + ").");
     } else {
       panel("import"); $("imp-pass").value = ""; $("imp-pass2").value = ""; $("imp-pass").focus();
     }
@@ -567,6 +623,12 @@
     // hasta la primera lectura, así que no puede llegar tarde.
     if (window.SolventoPerfil) { try { await window.SolventoPerfil.cargar(); } catch (e) {} }
     $("login-form").addEventListener("submit", handleLogin);
+    $("login-ver").addEventListener("click", alternarVerPass);
+    $("login-cuenta").addEventListener("change", (e) => cambiarCuenta(e.target.value));
+    $("login-nueva").addEventListener("click", () => { panel("cuenta"); $("cta-nombre").focus(); });
+    $("cuenta-form").addEventListener("submit", altaCuenta);
+    $("cta-cancelar").addEventListener("click", () => { setError("cta-error", ""); startBoot(); });
+    $("cuenta-btn").addEventListener("click", () => { lock(); });
     $("import-form").addEventListener("submit", handleImport);
     $("logout-btn").addEventListener("click", lock);
     $("sync-save-token").addEventListener("click", saveToken);

@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Solvento" />
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
-  <link rel="stylesheet" href="src/css/base.css?v=p137" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p137" />
-  <link rel="stylesheet" href="src/css/components.css?v=p137" />
+  <link rel="stylesheet" href="src/css/base.css?v=p138" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p138" />
+  <link rel="stylesheet" href="src/css/components.css?v=p138" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -80,10 +80,49 @@
   <form id="login-form" class="boot-panel" style="display:none;">
     <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
     <div class="boot-title">Solvento</div>
-    <div class="boot-sub">Introduce tu contraseña para descifrar tus datos</div>
-    <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" />
+    <div class="boot-sub">Elige la cuenta y su contraseña. Cada una tiene sus datos y su contraseña: no se abren entre ellas.</div>
+    <!-- El selector solo aparece cuando hay más de una cuenta en este dispositivo -->
+    <select id="login-cuenta" hidden></select>
+    <div style="position:relative;width:100%;">
+      <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" style="padding-right:2.6rem;" />
+      <button type="button" id="login-ver" aria-label="Ver la contraseña" title="Ver la contraseña"
+              style="position:absolute;right:0.55rem;top:50%;transform:translateY(-50%);background:none;border:none;
+              color:#6b7280;cursor:pointer;padding:0.2rem;display:flex;align-items:center;">
+        <svg class="ojo-ver" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="ojo-tachado" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+          <path d="M3 3l18 18"/><path d="M10.6 6.2A9.6 9.6 0 0 1 12 6c6.5 0 10.5 6 10.5 6a17 17 0 0 1-3.4 3.9"/>
+          <path d="M6.5 7.6A17 17 0 0 0 1.5 12S5.5 18 12 18a9.9 9.9 0 0 0 4-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+      </button>
+    </div>
     <button type="submit" class="primary">Desbloquear</button>
     <div id="login-error" class="boot-err"></div>
+    <button type="button" id="login-nueva" style="background:none;border:none;color:#6b7280;font-family:inherit;
+            font-size:0.8rem;cursor:pointer;text-decoration:underline dotted;margin-top:0.25rem;">
+      Abrir otra cuenta en este dispositivo</button>
+  </form>
+  <form id="cuenta-form" class="boot-panel" style="display:none;">
+    <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
+    <div class="boot-title">Otra cuenta</div>
+    <div class="boot-sub">
+      La de una asociación de la que llevas las cuentas, por ejemplo. Sus datos viven cifrados en
+      <b style="color:#e5e7eb;">su</b> repositorio, no en el tuyo, y se abren con <b style="color:#e5e7eb;">su</b> contraseña.
+      Esta lista se queda en este dispositivo.
+    </div>
+    <input id="cta-nombre" type="text" placeholder="Nombre (ABIES)" autocomplete="off" />
+    <select id="cta-tipo">
+      <option value="organizacion">Organización o asociación</option>
+      <option value="persona">Persona</option>
+    </select>
+    <input id="cta-owner" type="text" placeholder="Usuario u organización de GitHub" autocomplete="off" />
+    <input id="cta-repo" type="text" placeholder="Repositorio (abies-solvento)" autocomplete="off" />
+    <input id="cta-path" type="text" placeholder="Archivo cifrado (data.enc)" autocomplete="off" />
+    <button type="submit" class="primary">Añadir</button>
+    <div id="cta-error" class="boot-err"></div>
+    <button type="button" id="cta-cancelar" style="background:none;border:none;color:#6b7280;font-family:inherit;
+            font-size:0.8rem;cursor:pointer;text-decoration:underline dotted;margin-top:0.25rem;">Volver</button>
   </form>
   <form id="import-form" class="boot-panel" style="display:none;">
     <img src="img/logo-solvento.png" alt="" style="width:56px;height:56px;object-fit:contain;" />
@@ -145,6 +184,7 @@
             <div id="sync-estado" title="Estado del guardado"></div>
           </div>
           <button class="um-item" role="menuitem" onclick="v2UserIr('ajustes')">⚙ Ajustes</button>
+          <button class="um-item" id="cuenta-btn" role="menuitem">👤 Cambiar de cuenta</button>
           <button class="um-item" id="logout-btn" role="menuitem">🔒 Bloquear</button>
         </div>
       </div>
@@ -301,17 +341,17 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p137"></script>
-<script src="src/js/config.js?v=p137"></script>
-<script src="src/js/model.js?v=p137"></script>
-<script src="src/js/charts.js?v=p137"></script>
-<script src="src/js/render.js?v=p137"></script>
-<script src="src/js/db.js?v=p137"></script>
-<script src="src/js/sync.js?v=p137"></script>
-<script src="src/js/forms.js?v=p137"></script>
-<script src="src/js/perfil.js?v=p137"></script>
-<script src="src/js/exportar.js?v=p137"></script>
-<script src="src/js/boot.js?v=p137"></script>
+<script src="src/js/crypto.js?v=p138"></script>
+<script src="src/js/config.js?v=p138"></script>
+<script src="src/js/model.js?v=p138"></script>
+<script src="src/js/charts.js?v=p138"></script>
+<script src="src/js/render.js?v=p138"></script>
+<script src="src/js/db.js?v=p138"></script>
+<script src="src/js/sync.js?v=p138"></script>
+<script src="src/js/forms.js?v=p138"></script>
+<script src="src/js/perfil.js?v=p138"></script>
+<script src="src/js/exportar.js?v=p138"></script>
+<script src="src/js/boot.js?v=p138"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.
