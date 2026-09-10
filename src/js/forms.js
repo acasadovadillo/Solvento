@@ -799,9 +799,11 @@
       (i >= 0 ? "" : selectorBancos()) +
       field("c-nombre", "Nombre", input("c-nombre", "text", e.cuenta, 'placeholder="Revolut"')) +
       field("c-color", "Color", input("c-color", "color", e.accent || "#3b82f6")) +
-      field("c-donde", "¿Dónde cuenta su efectivo?",
-        selectKV("c-donde", [["caja", "En Caja (cuenta corriente)"], ["cartera", "En Cartera (bróker remunerado)"]],
-                 e.broker ? "cartera" : "caja")) +
+      // Aquí había un «¿Dónde cuenta su efectivo?». No tenía respuesta posible:
+      // TODO el efectivo vive en Caja, esté en una cuenta corriente o en un
+      // bróker remunerado. Que desde esa cuenta se pueda invertir no lo
+      // convierte en inversión mientras siga sin invertir. La pregunta que sí
+      // decide algo es la de abajo: si esa cuenta agrupa posiciones en Cartera.
       field("c-cartera", "¿Aparece en la pestaña Cartera?",
         selectKV("c-cartera", [["no", "No"], ["efectivo", "Sí, con su efectivo"], ["cero", "Sí, pero sin efectivo propio"]],
                  e.cartera || "no")) +
@@ -819,10 +821,10 @@
         // se escribió a mano, ni logo ni emoji: un círculo de color y su nombre.
         logo: elegido ? CFG.logoBanco(elegido) : (e.logo || null),
         emoji: elegido ? (elegido.emoji || undefined) : e.emoji,
-        broker: G("c-donde") === "cartera",
         cartera: cartera === "no" ? null : cartera,
         etiquetaEfectivo: G("c-etiqueta") || undefined,
       });
+      delete rec.broker;
       if (i >= 0) {
         // Si se renombra, arrastrar el cambio a los datos que la referencian
         const antes = c.cuentas[i].cuenta;
