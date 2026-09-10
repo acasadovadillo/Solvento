@@ -279,9 +279,24 @@
       const t = CFG.tickerConocido && CFG.tickerConocido(r.isin);
       if (t) symbols.push(t);
     });
-    const lista = Array.from(new Set(symbols)).sort();
+    // La lista es COMPARTIDA: un solo tickers.json para todas las cuentas, porque
+    // el proceso que descarga precios no puede leer nada cifrado y no sabe quién
+    // es quién. Así que se SUMA a lo que ya hay, nunca se sustituye.
+    //
+    // Sin esto pasó lo que tenía que pasar: una cuenta nueva borró los activos
+    // que no eran suyos, cada borrado republicó la lista con uno menos y en dos
+    // minutos los doce símbolos se quedaron en dos. Al día siguiente, media
+    // cartera sin precio. Un símbolo de más cuesta una llamada al día; uno de
+    // menos, una cartera que miente.
+    let previos = [];
+    try {
+      const r = await fetch("tickers.json?" + Date.now(), { cache: "no-store" });
+      if (r.ok) { const d = await r.json(); if (Array.isArray(d.tickers)) previos = d.tickers; }
+    } catch (e) { previos = []; }
+    const lista = Array.from(new Set(symbols.concat(previos))).sort();
     const firma = lista.join(",");
-    if (!firma || localStorage.getItem(TICKERS_KEY) === firma) return;
+    if (!firma || firma === previos.slice().sort().join(",")) return;   // no añade nada
+    if (localStorage.getItem(TICKERS_KEY) === firma) return;
     try {
       await SYNC.pushTickers(lista, DB.state.token);
       localStorage.setItem(TICKERS_KEY, firma);
@@ -464,7 +479,14 @@
       // atajo a trampa —quien creara la suya se habría llevado los datos que
       // hubiera en ese archivo, que no son los suyos—, y la migración ya está
       // hecha hace mucho.
-      const doc = { movimientos: [], inversiones: [], propiedades: [], pasivos: [], cobros: [], config: {} };
+      //
+      // Y vacía de verdad: sin cuentas y sin activos. El código trae una lista
+      // por defecto —Bankinter, Santander, los ETF…— que es la de quien escribió
+      // esto, y a una cuenta nueva le aparecían los bancos de otro como si fueran
+      // suyos. Con las listas puestas a cero, cada uno da de alta las suyas en
+      // Ajustes y no hereda nada de nadie.
+      const doc = { movimientos: [], inversiones: [], propiedades: [], pasivos: [], cobros: [],
+                    config: { cuentas: [], activos: [] } };
       const blob = await C.encryptDoc(doc, p1);
       DB.storeBlob(blob);
       unlock(doc, p1);

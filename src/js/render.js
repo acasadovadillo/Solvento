@@ -877,6 +877,18 @@
         : "";
       return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button class="solo-editor fila-acc" onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
+    // Una cuenta recién creada no tiene bancos: enseñarle una tabla vacía es
+    // dejarla mirando el hueco donde debería estar lo que aún no ha hecho.
+    if (!m.saldosCaja.length) {
+      return header("Caja", fmtEur(0)) +
+        `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;padding:3rem 1.5rem;">
+          <div style="color:#e5e7eb;font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Empieza por tus cuentas</div>
+          <div style="color:#6b7280;font-size:0.88rem;max-width:460px;margin:0 auto 1.5rem;">
+            Da de alta el banco o los bancos donde tienes el dinero —y el efectivo, si lo llevas encima—.
+            A partir de ahí puedes registrar movimientos y todo lo demás se calcula solo.</div>
+          ${addBtn("＋ Añadir una cuenta", "v2Tab('ajustes');v2AjSec('cuentas')")}
+        </div></div>` + movimientosList();
+    }
     return header("Caja", fmtEur(m.patrimonioLiquido)) +
       vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", null,
                  { sinLeyenda: true, desnudo: true }) +
