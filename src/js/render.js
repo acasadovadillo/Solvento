@@ -16,6 +16,8 @@
   const pct1 = (x) => (isFinite(x) ? x.toFixed(1) : "0");
   const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const GREEN = "#10b981", RED = "#ef4444";
+  // El azul es el del dinero que se mueve sin ser ni ingreso ni gasto.
+  const AZUL = "#60a5fa", AMBAR = "#f59e0b";
   const rc = (x) => (isFinite(x) && x < 0 ? RED : GREEN);
   const parseFechaES = (s) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || "")); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(0); };
   // Los botones de «＋ algo» son los de crear: en modo lectura se esconden (ver
@@ -376,22 +378,40 @@
     }).sort((a, b) => parseFechaES(b.fecha) - parseFechaES(a.fecha));
   }
 
+  // Quién es una tarjeta de crédito sale de los pasivos, no de una lista escrita
+  // a mano: alta una tarjeta nueva de cualquier banco y sus recibos se leen
+  // solos. Se calcula una vez por repintado, no una vez por fila.
+  function liquidaciones() {
+    const M = window.SolventoModel;
+    const nombres = new Set((M.tarjetas ? M.tarjetas(CURRENT_DOC) : []).map((t) => t.nombre));
+    return (r) => r.tipo === "Traspaso" && nombres.has(String(r.cuenta_destino || "").trim());
+  }
+
   function movimientosTabla() {
     const total = ((CURRENT_DOC && CURRENT_DOC.movimientos) || []).length;
     const todos = movimientosFiltrados();
     const visibles = todos.slice(0, MOV.limite);
+    // El recibo de una tarjeta también es un traspaso, pero de los que sí sacan
+    // dinero: los demás lo mueven de un bolsillo tuyo a otro y este paga una
+    // deuda. Salía igual que un traspaso normal —sin signo, en gris— y leerlo
+    // era imposible: parecía que entraban 102,30 € en la tarjeta. Ahora dice lo
+    // que es y con el signo que le corresponde.
+    const esLiquidacion = liquidaciones();
     const rows = visibles.map((r) => {
-      const signo = r.tipo === "Ingreso" ? "+" : (r.tipo === "Gasto" ? "−" : "");
-      const color = r.tipo === "Ingreso" ? GREEN : (r.tipo === "Gasto" ? RED : "#9ca3af");
+      const liq = esLiquidacion(r);
+      const signo = liq || r.tipo === "Gasto" ? "−" : (r.tipo === "Ingreso" ? "+" : "");
+      const color = liq ? AZUL : (r.tipo === "Ingreso" ? GREEN : (r.tipo === "Gasto" ? RED : "#9ca3af"));
       const det = esc(r.detalle || r.tipo_gasto || r.tipo_ingreso || "—");
       const cta = esc([r.cuenta_origen, r.cuenta_destino].filter(Boolean).join(" → "));
       // La palabra «Gasto» o «Ingreso» delante del concepto repetía lo que ya
       // dice el color del importe. Se queda como title de la fila, para quien
       // navegue con lector de pantalla o pase el ratón por encima.
-      return `<tr class="table-row" title="${esc(r.tipo)}">
+      return `<tr class="table-row" title="${esc(liq ? "Liquidación de tarjeta" : r.tipo)}">
         <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
-        <td style="text-align:left;"><span style="color:#e5e7eb;">${det}</span>
-          ${cta ? `<div style="color:#4b5563;font-size:0.72rem;">${cta}</div>` : ""}</td>
+        <td style="text-align:left;"><span style="color:#e5e7eb;">${det}</span>${liq
+          ? ` <span style="color:${AZUL};font-size:0.66rem;font-weight:700;background:${AZUL}22;
+               padding:0.1rem 0.4rem;border-radius:4px;white-space:nowrap;">Liquidación</span>` : ""}
+          ${cta ? `<div style="color:#4b5563;font-size:0.72rem;">${cta}${liq ? " · salda la tarjeta" : ""}</div>` : ""}</td>
         <td style="text-align:right;color:${color};font-weight:600;white-space:nowrap;">${signo}${fmtEur(Number(r.importe))}</td>
         ${rowActions(`v2EditMov('${r.id}')`, `v2DelMov('${r.id}')`)}</tr>`;
     }).join("");
@@ -1301,14 +1321,24 @@
         const suma = (m.tipo === "Gasto" && o === d.nombre) || (m.tipo === "Traspaso" && o === d.nombre);
         acumulado = Math.round((acumulado + (suma ? imp : -imp)) * 100) / 100;
         const contra = suma ? (String(m.cuenta_destino || "").trim() || m.tipo_gasto || "") : o;
+        // Un recibo es una liquidación: decir «Traspaso» aquí es lo que hacía
+        // que pareciese dinero entrando en la tarjeta en vez de deuda saldada.
+        const liq = m.tipo === "Traspaso" && String(m.cuenta_destino || "").trim() === d.nombre;
         if (idx < desde) return "";
+        // Un acumulado negativo significa que a la tarjeta se le ha pagado más
+        // de lo que debía: casi siempre, un recibo con el importe equivocado.
+        // Es la pista que hay que ver, no una cifra más en gris.
+        const rojoAbajo = acumulado < -0.005;
         return `<tr class="table-row" style="background:#14171f;">
           <td style="text-align:left;padding-left:2.2rem;color:#9ca3af;font-size:0.82rem;">
             ${esc(m.fecha)} · ${esc(String(m.detalle || m.tipo_gasto || m.tipo).slice(0, 46))}</td>
-          <td style="text-align:left;color:#4b5563;font-size:0.78rem;">${esc(m.tipo)}${contra ? " · " + esc(contra) : ""}</td>
+          <td style="text-align:left;color:${liq ? AZUL : "#4b5563"};font-size:0.78rem;">
+            ${liq ? "Liquidación" : esc(m.tipo)}${contra ? " · " + esc(contra) : ""}</td>
           <td style="text-align:right;white-space:nowrap;font-size:0.85rem;color:${suma ? RED : GREEN};">
             ${suma ? "+" : "−"}${esc(fmtEur(imp))}</td>
-          <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:#6b7280;">${esc(fmtEur(acumulado))}</td>
+          <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:${rojoAbajo ? AMBAR : "#6b7280"};"
+              ${rojoAbajo ? 'title="Se ha pagado más de lo que debía: revisa el importe del recibo"' : ""}>
+            ${esc(fmtEur(acumulado))}${rojoAbajo ? " ⚠" : ""}</td>
           <td></td></tr>`;
       }).join("");
     };
@@ -1328,7 +1358,14 @@
           <span>${esc(d.nombre)}</span>
           <span style="color:#4b5563;font-size:0.72rem;font-weight:500;white-space:nowrap;">
             ${abierta ? "" : "ver movimientos"}</span></button>
-        ${d.entidad ? `<div style="color:#6b7280;font-size:0.78rem;padding-left:0.9rem;">${esc(d.entidad)}</div>` : ""}</td>
+        ${d.entidad ? `<div style="color:#6b7280;font-size:0.78rem;padding-left:0.9rem;">${esc(d.entidad)}</div>` : ""}
+        ${d.tipo === "Tarjeta de crédito" && d.importe > 0.005
+          ? `<button class="solo-editor solo-edicion" onclick="v2Liquidar('${jsN}')"
+               title="Registrar el recibo del banco: salda la tarjeta y saca el dinero de la cuenta"
+               style="margin:0.35rem 0 0 0.9rem;background:none;border:1px solid ${AZUL}66;border-radius:8px;
+               color:${AZUL};font-size:0.72rem;font-weight:600;font-family:inherit;padding:0.2rem 0.55rem;
+               cursor:pointer;white-space:nowrap;">Liquidar ${esc(fmtEur(d.importe))}</button>`
+          : ""}</td>
       <td style="text-align:left;color:#9ca3af;">${esc(d.tipo)}</td>
       <td style="text-align:right;font-weight:600;white-space:nowrap;color:${d.importe > 0.005 ? "#fff" : "#6b7280"};">
         ${d.importe > 0.005 ? fmtEur(d.importe) : "saldada"}</td>
@@ -1956,6 +1993,21 @@
   window.v2AddNav = () => F() && F().openNav();
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
   window.v2AddPas = () => F() && F().openPasivo();
+  // El recibo del mes, ya escrito: la tarjeta sabe cuánto debe y por qué cuenta
+  // se cobra, así que lo único que queda por confirmar es la fecha.
+  window.v2Liquidar = (nombre) => {
+    const M = window.SolventoModel;
+    const t = M.tarjetas(CURRENT_DOC).find((x) => x.nombre === nombre);
+    if (!t || !F()) return;
+    const c = M.cicloTarjeta(nombre, CURRENT_DOC.movimientos, null, null);
+    const d = new Date(), pad = (n) => String(n).padStart(2, "0");
+    F().openMovimiento({
+      tipo: "Traspaso", fecha: `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`,
+      importe: String(c.pendiente),
+      cuenta_origen: t.cuenta || "", cuenta_destino: nombre,
+      detalle: "Recibo " + nombre,
+    });
+  };
   // Página de Ajustes: la parte estática vive en el HTML (para que sus
   // manejadores no se pierdan al repintar) y aquí solo se rellenan las listas.
   window.v2AjPintar = () => {

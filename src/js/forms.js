@@ -222,6 +222,12 @@
       field("m-importe", "Importe (€)", input("m-importe", "number", e.importe, 'step="0.01" min="0"')) +
       field("m-origen", "Cuenta origen", select("m-origen", donde, e.cuenta_origen || donde[0])) +
       field("m-destino", "Cuenta destino", select("m-destino", donde, e.cuenta_destino || donde[0])) +
+      // El recibo de una tarjeta se registra aquí, como un traspaso más, y hasta
+      // ahora se guardaba a ciegas: si el importe no era exactamente lo que la
+      // tarjeta debía, la deuda quedaba arrastrando un resto y nadie se enteraba
+      // hasta mirar el acumulado meses después. Este panel lo dice mientras se
+      // escribe, y ofrece la cifra exacta.
+      `<div id="m-liq"></div>` +
       field("m-catg", "Categoría de gasto", selectorArbol("m-catg", e.tipo_gasto)) +
       field("m-cati", "Categoría de ingreso", selectorArbol("m-cati", e.tipo_ingreso)) +
       // El centro de coste es el segundo eje: la categoría dice QUÉ se compró y
@@ -243,7 +249,7 @@
              ${e.imp_ref ? `<div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">Extracto: ${esc(e.imp_ref)}</div>` : ""}
            </div>`
         : "");
-    shell(existing ? "Editar movimiento" : "Nuevo movimiento", body, () => {
+    shell(e.id ? "Editar movimiento" : "Nuevo movimiento", body, () => {
       const tipo = G("m-tipo"), importe = parseFloat(G("m-importe"));
       if (!isFinite(importe) || importe <= 0) return "Introduce un importe válido";
       // Se parte del movimiento que había, no de cero: un apunte reconstruido
@@ -291,6 +297,75 @@
     wireArbol("m-centro", centros, "— Sin imputar —",
               (k) => (k === 0 ? "+ Nuevo centro…" : "+ Nuevo centro dentro…"));
     wireMovVisibility();
+    wireLiquidacion(doc, e);
+  }
+
+  // ── La liquidación de una tarjeta, mientras se escribe ────────────────────
+  // Un traspaso cuyo destino es una tarjeta de crédito no es un traspaso normal:
+  // no cambia dinero de bolsillo, paga una deuda. Aquí se comprueba lo único que
+  // hay que comprobar —que el importe sea lo que la tarjeta debe ese día— y se
+  // enseña de dónde sale esa cifra. Vale para cualquier tarjeta: la lista sale
+  // de los pasivos, no de un nombre escrito en el código.
+  function wireLiquidacion(doc, e) {
+    const caja = document.getElementById("m-liq");
+    if (!caja) return;
+    const M = window.SolventoModel;
+    const el = (id) => document.getElementById(id);
+    const tarjetas = M.tarjetas(doc);
+
+    function pintar() {
+      const r = M.revisarLiquidacion(doc, {
+        id: e.id, tipo: el("m-tipo").value, importe: el("m-importe").value,
+        fecha: fromISO(el("m-fecha").value), cuenta_destino: el("m-destino").value,
+      });
+      if (!r) { caja.innerHTML = ""; return; }
+      const sin = !r.importe;
+      // Verde cuando la deja a cero; ámbar cuando no, con la diferencia exacta:
+      // esa cifra es la que se va a buscar al extracto.
+      const c = sin ? "#6b7280" : (r.cuadra ? "#10b981" : "#f59e0b");
+      const veredicto = sin
+        ? "Escribe el importe del recibo."
+        : r.cuadra
+          ? "✓ Cuadra: deja la tarjeta a 0,00 €."
+          : (r.diferencia > 0 ? "Sobran " : "Faltan ") + eur(Math.abs(r.diferencia)) +
+            ". La tarjeta quedaría en " + eur(r.saldoDespues) + ".";
+      const origen = el("m-origen").value;
+      caja.innerHTML = `<div style="border:1px solid ${c}55;background:${c}12;border-radius:10px;padding:0.7rem 0.85rem;margin-top:0.9rem;">
+        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:${c};font-weight:700;">
+          Liquidación de ${esc(r.tarjeta.nombre)}</div>
+        <div style="font-size:0.82rem;color:#e5e7eb;margin-top:0.35rem;">
+          Pendiente el ${esc(fromISO(el("m-fecha").value) || "ese día")}:
+          <b>${esc(eur(r.pendiente))}</b></div>
+        <div style="font-size:0.74rem;color:#6b7280;margin-top:0.2rem;">
+          ${r.n} ${r.n === 1 ? "cargo" : "cargos"} por ${esc(eur(r.cargado))}${
+            Math.abs(r.arrastre) > 0.005
+              ? ` · ${r.arrastre > 0 ? "arrastra" : "a favor"} ${esc(eur(Math.abs(r.arrastre)))} del ciclo anterior`
+              : ""}</div>
+        <div style="font-size:0.8rem;color:${c};font-weight:600;margin-top:0.45rem;">${esc(veredicto)}</div>
+        ${!r.cuadra && r.pendiente > 0
+          ? `<button type="button" id="m-liq-usar" style="margin-top:0.55rem;background:none;border:1px solid ${c};
+               border-radius:8px;color:${c};font-size:0.76rem;font-weight:600;font-family:inherit;
+               padding:0.3rem 0.65rem;cursor:pointer;">Usar ${esc(eur(r.pendiente))}</button>`
+          : ""}
+        ${r.tarjeta.cuenta && origen !== r.tarjeta.cuenta
+          ? `<div style="font-size:0.74rem;color:#f59e0b;margin-top:0.45rem;">
+               Esta tarjeta se cobra en <b>${esc(r.tarjeta.cuenta)}</b>, y el origen dice ${esc(origen || "—")}.</div>`
+          : ""}</div>`;
+      const usar = el("m-liq-usar");
+      if (usar) usar.addEventListener("click", () => { el("m-importe").value = r.pendiente; pintar(); });
+    }
+
+    // Elegir la tarjeta ya dice por dónde se cobra: el origen se rellena solo.
+    el("m-destino").addEventListener("change", () => {
+      const t = tarjetas.find((x) => x.nombre === el("m-destino").value);
+      const o = el("m-origen");
+      if (t && t.cuenta && Array.from(o.options).some((x) => x.value === t.cuenta)) o.value = t.cuenta;
+      pintar();
+    });
+    ["m-tipo", "m-importe", "m-fecha", "m-origen"].forEach((id) =>
+      el(id).addEventListener("input", pintar));
+    el("m-tipo").addEventListener("change", pintar);
+    pintar();
   }
   function wireMovVisibility() {
     const tipoEl = document.getElementById("m-tipo"), tpresEl = document.getElementById("m-tpres");
@@ -382,8 +457,9 @@
   }
 
   // ── Pasivo (deuda) ──
+  const TARJETA = "Tarjeta de crédito";
   const PASIVO_TIPOS = ["Hipoteca", "Préstamo personal", "Préstamo coche",
-                        "Tarjeta de crédito", "Deuda con particular", "Otro"];
+                        TARJETA, "Deuda con particular", "Otro"];
   function openPasivo(existing) {
     const doc = DB.state.doc, e = existing || {};
     if (!Array.isArray(doc.pasivos)) doc.pasivos = [];
@@ -391,19 +467,54 @@
       field("d-nombre", "Concepto", input("d-nombre", "text", e.nombre, 'placeholder="Hipoteca de la vivienda"')) +
       field("d-tipo", "Tipo", select("d-tipo", PASIVO_TIPOS, e.tipo || PASIVO_TIPOS[0])) +
       field("d-entidad", "Entidad", datalist("d-entidad", CUENTAS(), e.entidad)) +
+      // Por dónde se cobra. En una tarjeta no es un dato de adorno: es lo que
+      // permite que el recibo del mes sepa de qué cuenta sale el dinero, y que
+      // mañana una tarjeta de otro banco funcione igual sin tocar nada.
+      field("d-cuenta", "Cuenta de cargo", selectKV("d-cuenta",
+        [["", "— Ninguna —"]].concat(CUENTAS().map((c) => [c, c])), e.cuenta || "")) +
       field("d-importe", "Pendiente de pagar (€)", input("d-importe", "number", e.importe, 'step="0.01" min="0" placeholder="120000"')) +
-      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.</div>`;
+      `<div class="ff-nota" id="d-nota" style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.</div>`;
     shell(existing ? "Editar deuda" : "Nueva deuda", body, () => {
       const nombre = G("d-nombre");
       if (!nombre) return "Indica el concepto de la deuda";
+      const tipo = G("d-tipo");
       const importe = parseFloat(G("d-importe"));
-      if (!isFinite(importe) || importe <= 0) return "Introduce el importe pendiente";
-      upsert(doc.pasivos, {
-        id: e.id || newId("d"), nombre, tipo: G("d-tipo"),
-        entidad: G("d-entidad"), importe: String(importe),
-      });
+      // Una tarjeta no lleva su saldo escrito a mano: lo dicen sus compras y sus
+      // recibos, y cada mes es otro. Escribirlo aquí sería congelarlo.
+      const calculada = tipo === TARJETA && !isFinite(importe);
+      if (!calculada && (!isFinite(importe) || importe <= 0)) return "Introduce el importe pendiente";
+      const rec = {
+        id: e.id || newId("d"), nombre, tipo,
+        entidad: G("d-entidad"), cuenta: G("d-cuenta"),
+      };
+      if (!calculada) rec.importe = String(importe);
+      upsert(doc.pasivos, rec);
       return null;
     });
+    wirePasivoVisibility();
+  }
+  // El formulario cambia de sentido según el tipo: una hipoteca se declara y una
+  // tarjeta se calcula sola.
+  function wirePasivoVisibility() {
+    const tipoEl = document.getElementById("d-tipo");
+    if (!tipoEl) return;
+    const impEl = document.getElementById("d-importe");
+    const nota = document.getElementById("d-nota");
+    const lbl = document.querySelector('.ff[data-for="d-importe"] label');
+    const cuenta = document.querySelector('.ff[data-for="d-cuenta"]');
+    function upd() {
+      const t = tipoEl.value === TARJETA;
+      if (cuenta) cuenta.style.display = t ? "" : "none";
+      if (lbl) lbl.textContent = t ? "Pendiente de pagar (€) — opcional" : "Pendiente de pagar (€)";
+      if (impEl) impEl.placeholder = t ? "Déjalo vacío: se calcula solo" : "120000";
+      if (nota) {
+        nota.innerHTML = t
+          ? `Déjalo <b>vacío</b> y el saldo lo calculan sus movimientos: cada compra suma y cada recibo la salda.
+             La <b>cuenta de cargo</b> es de donde sale el dinero el día del recibo.`
+          : `Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.`;
+      }
+    }
+    tipoEl.addEventListener("change", upd); upd();
   }
   // ── Cobro pendiente ──
   // Lo que te deben y todavía no ha entrado: una cuota de alquiler a medias, un

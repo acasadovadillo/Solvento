@@ -120,6 +120,85 @@ comprobar("dar un préstamo por incobrable resta del patrimonio y no toca la caj
   cerca(mi.patrimonioNeto, m.patrimonioNeto - 500) && cerca(mi.patrimonioLiquido, mp.patrimonioLiquido),
   "neto " + mi.patrimonioNeto);
 
+// ── La tarjeta de crédito ────────────────────────────────────────────────────
+// Comprar con una tarjeta no saca dinero: crea deuda. El dinero sale una vez al
+// mes, cuando llega el recibo. Y ese recibo, que es el movimiento que más se
+// malinterpreta de toda la aplicación, no te empobrece ni un céntimo: baja la
+// caja y baja la deuda exactamente lo mismo.
+var tjs = M.tarjetas(doc);
+comprobar("la tarjeta se reconoce y sabe por qué cuenta se cobra",
+  tjs.length === 1 && tjs[0].cuenta === "Banco Uno", JSON.stringify(tjs));
+
+// En el documento de ejemplo la tarjeta está saldada, así que el ciclo vivo se
+// monta aquí: dos compras de septiembre sin recibo todavía. Es exactamente la
+// situación en la que se abre el formulario del recibo.
+var TJ = tjs[0].nombre;
+var conCargos = JSON.parse(JSON.stringify(doc));
+conCargos.movimientos.push(
+  { id: "m-prueba-c1", fecha: "04/09/2026", tipo: "Gasto", importe: "60.20",
+    cuenta_origen: TJ, cuenta_destino: "", tipo_gasto: "Compras", detalle: "Compra de prueba" },
+  { id: "m-prueba-c2", fecha: "18/09/2026", tipo: "Gasto", importe: "42.10",
+    cuenta_origen: TJ, cuenta_destino: "", tipo_gasto: "Compras", detalle: "Compra de prueba" });
+var mc = M.build(conCargos, precios);
+
+var ciclo = M.cicloTarjeta(TJ, conCargos.movimientos, null, null);
+var enPasivos = mc.pas.items.filter(function (x) { return x.nombre === TJ; })[0];
+comprobar("lo pendiente en la tarjeta es su saldo en pasivos",
+  cerca(ciclo.pendiente, 102.30) && cerca(ciclo.pendiente, enPasivos.importe),
+  ciclo.pendiente + " vs " + (enPasivos && enPasivos.importe));
+comprobar("lo pendiente es el arrastre más lo cargado en el ciclo",
+  cerca(ciclo.pendiente, ciclo.arrastre + ciclo.cargado) && ciclo.n === 2);
+comprobar("comprar con la tarjeta no toca la caja, sube la deuda",
+  cerca(mc.patrimonioLiquido, m.patrimonioLiquido) &&
+  cerca(mc.pas.total, m.pas.total + 102.30),
+  "caja " + mc.patrimonioLiquido + " vs " + m.patrimonioLiquido);
+
+var recibo = { id: "m-prueba-recibo", fecha: "30/09/2026", tipo: "Traspaso",
+               importe: String(ciclo.pendiente), cuenta_origen: "Banco Uno",
+               cuenta_destino: TJ, detalle: "Recibo de prueba" };
+var rev2 = M.revisarLiquidacion(conCargos, recibo);
+comprobar("el recibo por lo pendiente cuadra y deja la tarjeta a cero",
+  rev2 && rev2.cuadra && cerca(rev2.saldoDespues, 0), rev2 && JSON.stringify(rev2.diferencia));
+comprobar("un recibo de más avisa de la diferencia exacta",
+  cerca(M.revisarLiquidacion(conCargos, Object.assign({}, recibo,
+        { importe: String(ciclo.pendiente + 35) })).diferencia, 35));
+comprobar("un traspaso entre cuentas normales no es una liquidación",
+  M.revisarLiquidacion(conCargos, { tipo: "Traspaso", importe: "10", fecha: "30/09/2026",
+                                    cuenta_origen: "Banco Uno", cuenta_destino: "Banco Dos" }) === null);
+
+var conRecibo = JSON.parse(JSON.stringify(conCargos));
+conRecibo.movimientos.push(recibo);
+var mr = M.build(conRecibo, precios);
+comprobar("pagar el recibo de la tarjeta no cambia el patrimonio: baja la caja y baja la deuda",
+  cerca(mr.patrimonioNeto, mc.patrimonioNeto) &&
+  cerca(mr.patrimonioLiquido, mc.patrimonioLiquido - ciclo.pendiente) &&
+  cerca(mr.pas.total, mc.pas.total - ciclo.pendiente),
+  "neto " + mr.patrimonioNeto + " vs " + mc.patrimonioNeto);
+var salidasDe = function (d) {
+  var mes = M.flujoMensual(d).meses.filter(function (x) { return x.ym === "2026-09"; })[0];
+  return mes ? mes.salidas : 0;
+};
+comprobar("y el recibo sale de la caja el mes en que se paga",
+  cerca(salidasDe(conRecibo), salidasDe(conCargos) + ciclo.pendiente),
+  salidasDe(conRecibo) + " vs " + salidasDe(conCargos));
+
+// Lo comprado después del recibo es del ciclo siguiente, no del que se paga:
+// ese desfase es cómo funciona una tarjeta, no un error que haya que parchear.
+var conPosterior = JSON.parse(JSON.stringify(conRecibo));
+conPosterior.movimientos.push({ id: "m-prueba-post", fecha: "02/10/2026", tipo: "Gasto",
+  importe: "40", cuenta_origen: TJ, cuenta_destino: "", tipo_gasto: "Compras" });
+comprobar("una compra posterior al recibo no entra en el recibo",
+  cerca(M.cicloTarjeta(TJ, conPosterior.movimientos, "30/09/2026", "m-prueba-recibo").pendiente, ciclo.pendiente) &&
+  cerca(M.cicloTarjeta(TJ, conPosterior.movimientos, null, null).pendiente, 40));
+
+// Y el caso que dispara todo esto: un recibo por MÁS de lo que la tarjeta debe
+// la deja en negativo y arrastra ese saldo a favor al ciclo siguiente.
+var conExceso = JSON.parse(JSON.stringify(conCargos));
+conExceso.movimientos.push(Object.assign({}, recibo, { importe: String(ciclo.pendiente + 35) }));
+var cx = M.cicloTarjeta(TJ, conExceso.movimientos, null, null);
+comprobar("pagar de más deja la tarjeta a favor y se arrastra al ciclo siguiente",
+  cerca(cx.pendiente, -35) && cerca(cx.arrastre, -35), "pendiente " + cx.pendiente);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

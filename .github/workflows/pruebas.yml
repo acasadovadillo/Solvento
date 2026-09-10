@@ -1,6 +1,6 @@
 name: Prueba de humo
 
-# Doce invariantes del motor de cálculo: cosas que tienen que cumplirse pase lo
+# Las invariantes del motor de cálculo: cosas que tienen que cumplirse pase lo
 # que pase (que la suma de los flujos mensuales sea la caja de hoy, que el árbol
 # de categorías sume el gasto del mes, que un préstamo devuelto quede saldado).
 # Si una deja de cumplirse, algo se ha roto aunque la pantalla parezca normal:

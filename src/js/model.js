@@ -357,6 +357,105 @@
     return { items, vivas, n: vivas.length, total: round2(vivas.reduce((s, x) => s + x.importe, 0)) };
   }
 
+
+  // ── Tarjetas de crédito ──────────────────────────────────────────────────
+  // Una tarjeta de crédito no es una cuenta y por eso se porta distinto que
+  // todo lo demás: comprar con ella no saca dinero de ningún sitio, crea deuda.
+  // El dinero sale una sola vez, de golpe, el día que el banco pasa el recibo.
+  //
+  // Ese recibo es un traspaso, pero no uno cualquiera: los otros llevan dinero
+  // de un bolsillo tuyo a otro y no cambian nada; este va de una cuenta a una
+  // DEUDA y la deja en cero. Merece llamarse por su nombre —liquidación— y
+  // comprobarse: si el importe no coincide con lo que la tarjeta debe ese día,
+  // o falta un cargo o sobra otro, y la deuda se queda arrastrando un resto que
+  // nadie sabe explicar tres meses después.
+  //
+  // Nada de esto está escrito para una tarjeta concreta: sale de los pasivos de
+  // tipo «Tarjeta de crédito» y de la cuenta por la que se cobra cada una, así
+  // que la Mastercard que se carga en Bankinter y la que mañana se cargue en
+  // otro banco funcionan igual sin tocar una línea.
+  function tarjetas(db) {
+    const cuentas = new Set(CFG.cuentas().map((c) => c.cuenta));
+    return ((db && db.pasivos) || [])
+      .filter((r) => (r.tipo || "") === "Tarjeta de crédito")
+      .map((r) => {
+        // De dónde sale el dinero cuando llega el recibo. Se declara en la
+        // deuda; si no está, se prueba con la entidad, que muchas veces ES la
+        // cuenta —«Bankinter»— y así las tarjetas de siempre ya vienen atadas.
+        const cuenta = [r.cuenta, r.entidad].map((x) => String(x || "").trim())
+          .find((x) => cuentas.has(x)) || "";
+        return { id: r.id, nombre: r.nombre || r.concepto || "Tarjeta", cuenta, entidad: r.entidad || "" };
+      })
+      .filter((t) => t.nombre);
+  }
+
+  // La tarjeta que salda este movimiento, si es que salda alguna.
+  function tarjetaDeLiquidacion(db, m) {
+    if (!m || m.tipo !== "Traspaso") return null;
+    const d = String(m.cuenta_destino || "").trim();
+    return tarjetas(db).find((t) => t.nombre === d) || null;
+  }
+
+  /*
+   * Lo que la tarjeta debe el día `hasta`, y de qué viene.
+   *
+   *   pendiente  lo que hay que pagar para dejarla a cero: EL importe del recibo
+   *   arrastre   lo que quedó vivo después del recibo anterior
+   *   cargado    lo comprado en este ciclo (pendiente − arrastre)
+   *   cargos     esos movimientos, para poder enseñarlos
+   *
+   * El arrastre entra en el pendiente, y tiene que entrar: si una compra del
+   * día 29 el banco la mete en el recibo del mes siguiente, ese resto es deuda
+   * viva hasta que se pague. Es el desfase del ciclo, y no es un error: es
+   * cómo funciona una tarjeta.
+   *
+   * `excluir` es el id del propio recibo cuando se está editando. Sin eso, el
+   * pendiente cambiaría cada vez que se toca el importe y jamás cuadraría.
+   */
+  function cicloTarjeta(nombre, movimientos, hasta, excluir) {
+    const limite = hasta ? parseFechaES(hasta) : null;
+    const lista = (movimientos || [])
+      .filter((m) => {
+        if (excluir && m.id === excluir) return false;
+        const o = String(m.cuenta_origen || "").trim();
+        const d = String(m.cuenta_destino || "").trim();
+        if (o !== nombre && d !== nombre) return false;
+        if (!limite) return true;
+        const f = parseFechaES(m.fecha);
+        return f && f <= limite;
+      })
+      .sort((a, b) => (parseFechaES(a.fecha) || 0) - (parseFechaES(b.fecha) || 0));
+
+    let pendiente = 0, arrastre = 0, desde = "";
+    let cargos = [];
+    for (const m of lista) {
+      const imp = Math.abs(num(m.importe)) || 0;
+      const o = String(m.cuenta_origen || "").trim();
+      const d = String(m.cuenta_destino || "").trim();
+      const suma = (m.tipo === "Gasto" && o === nombre) || (m.tipo === "Traspaso" && o === nombre);
+      pendiente = round2(pendiente + (suma ? imp : -imp));
+      // Cada recibo cierra un ciclo y abre el siguiente con lo que quede.
+      if (m.tipo === "Traspaso" && d === nombre) { desde = m.fecha; arrastre = pendiente; cargos = []; }
+      else cargos.push(m);
+    }
+    return { nombre, pendiente, arrastre: round2(arrastre), cargado: round2(pendiente - arrastre),
+             desde, cargos, n: cargos.length };
+  }
+
+  // ¿Cuadra este recibo con lo que la tarjeta debe? La respuesta que necesita
+  // el formulario: sin adornos y con la diferencia exacta, que es lo único que
+  // sirve para ir a buscar lo que falta.
+  function revisarLiquidacion(db, mov) {
+    const t = tarjetaDeLiquidacion(db, mov);
+    if (!t) return null;
+    const c = cicloTarjeta(t.nombre, (db || {}).movimientos, mov.fecha, mov.id);
+    const importe = Math.abs(num(mov.importe)) || 0;
+    const diferencia = round2(importe - c.pendiente);
+    return Object.assign({ tarjeta: t, importe, diferencia,
+                           cuadra: Math.abs(diferencia) < 0.005,
+                           saldoDespues: round2(c.pendiente - importe) }, c);
+  }
+
   // ── Cobros pendientes ────────────────────────────────────────────────────
   // Un derecho de cobro no es un movimiento: el dinero todavía no se ha movido.
   // Una cuota de alquiler que alguien te debe no puede registrarse como préstamo
@@ -1292,5 +1391,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, tarjetas, tarjetaDeLiquidacion, cicloTarjeta, revisarLiquidacion, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();
