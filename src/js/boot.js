@@ -101,11 +101,20 @@
     $("app").style.display = "block";
     render();
     try { DB.state.token = await SYNC.loadToken(password); } catch (e) { DB.state.token = null; }
-    // Si elegiste que el token viaje con tus datos, en un dispositivo nuevo se
-    // recoge de ahí y no hay que volver a pegarlo.
-    if (!DB.state.token && doc && doc.config && doc.config.token) {
-      DB.state.token = doc.config.token;
-      try { await SYNC.storeToken(DB.state.token, password); } catch (e) {}
+    // Hubo una opción para que el token viajara DENTRO del documento cifrado, y
+    // se ha quitado: si esa contraseña fuese débil, quien descifrara la copia
+    // del repositorio se llevaría además permiso de escritura sobre él. Al
+    // encontrarlo ahí se recoge —para no dejar a nadie sin sincronizar— y se
+    // saca del documento, que es el sitio donde no debe estar.
+    if (doc && doc.config && doc.config.token) {
+      if (!DB.state.token) {
+        DB.state.token = doc.config.token;
+        try { await SYNC.storeToken(DB.state.token, password); } catch (e) {}
+      }
+      delete doc.config.token;
+      guardarLocal();
+      toast("El token ya no viaja con tus datos: se queda cifrado solo en este dispositivo", "#fbbf24");
+      setTimeout(() => { saveDoc(); }, 1200);   // y que salga también del repositorio
     }
     updateSyncUi();
     pintarLectura();
@@ -523,16 +532,6 @@
     }
   }
 
-  // El token puede viajar dentro del documento cifrado (opcional, lo decides tú
-  // con la casilla del modal). Así un dispositivo nuevo no tiene que pegarlo.
-  function aplicarTokenViajero(t) {
-    const cb = $("sync-token-viaja");
-    if (!cb || !DB.state.doc) return;
-    if (!DB.state.doc.config) DB.state.doc.config = {};
-    if (cb.checked) DB.state.doc.config.token = t != null ? t : DB.state.token;
-    else delete DB.state.doc.config.token;
-  }
-
   // ── Sincronización (UI) ──
   function updateSyncUi() {
     const has = SYNC.hasToken();
@@ -598,8 +597,6 @@
     if (window.v2AjSec) window.v2AjSec("sync");
     setError("sync-status", "");
     rellenarToken();
-    const cb = $("sync-token-viaja");
-    if (cb) cb.checked = !!(DB.state.doc && DB.state.doc.config && DB.state.doc.config.token);
     updateSyncUi();
   }
   function alternarVerToken() {
@@ -616,7 +613,6 @@
     if (!t) { setError("sync-status", "Pega tu token de GitHub"); return; }
     await SYNC.storeToken(t, DB.state.password);
     DB.state.token = t;
-    aplicarTokenViajero(t);
     rellenarToken();                     // se queda puesto, oculto y bloqueado
     updateSyncUi();
     pintarLectura();                     // con token ya no es un invitado
@@ -744,7 +740,6 @@
     $("sync-token-ver").addEventListener("click", alternarVerToken);
     $("sync-token-cambiar").addEventListener("click", cambiarToken);
     $("sync-token-quitar").addEventListener("click", quitarToken);
-    $("sync-token-viaja").addEventListener("change", () => { aplicarTokenViajero(); saveDoc(); });
     $("sync-push").addEventListener("click", doPush);
     $("sync-pull").addEventListener("click", doPull);
     $("sync-export").addEventListener("click", doExport);
