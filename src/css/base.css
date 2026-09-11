@@ -1,9 +1,50 @@
+/* ── Los colores, con nombre ──────────────────────────────────────────────
+   Solvento nació oscuro y cada color estaba escrito a mano donde se usaba:
+   seiscientas veces «#6b7280», y ninguna sabía que las otras eran el mismo
+   gris. Para que exista un tema claro los colores tienen que tener nombre, y
+   el nombre dice para qué sirve, no de qué color es: --t2 es «texto
+   secundario» y en cada tema vale lo que tenga que valer.
+
+     f0…f4   fondos, de la página (f0) a lo que flota encima (f4)
+     b1…b3   bordes, de más discreto a más marcado
+     t0…t4   texto, de titular (t0) a casi invisible (t4)
+
+   Los colores con significado —verde de ingreso, rojo de gasto, ámbar de
+   aviso— también cambian: un ámbar que se lee sobre negro es ilegible sobre
+   blanco. Los de marca (el naranja de Bankinter) y los de las gráficas no
+   cambian: no son de la interfaz, son del mundo. */
+:root {
+  --f0: #0f1117;  --f1: #12141d;  --f1b: #14171f;  --f2: #171a24;  --f3: #1a1d27;  --f4: #1e2130;
+  --b1: #232733;  --b2: #2a2d3a;  --b3: #3b4257;
+  --t0: #ffffff;  --t1: #e5e7eb;  --t1b: #9ca3af;  --t2: #6b7280;  --t3: #4b5563;  --t4: #374151;
+  --primario-bg: #ffffff;  --primario-t: #000000;
+  --tip-bg: #000000;       --tip-t: #ffffff;
+  --blanco: #ffffff;
+  --verde: #10b981;  --rojo: #ef4444;  --azul: #3b82f6;  --azul-2: #60a5fa;
+  --ambar: #f59e0b;  --ambar-2: #fbbf24;  --ambar-fondo: #2a2109;  --rojo-fondo: #2b1414;  --verde-fondo: #0f2a1c;
+  --violeta: #8b5cf6;  --violeta-2: #a78bfa;
+  color-scheme: dark;
+}
+/* Tema claro. Se activa desde Ajustes → Apariencia, o solo, siguiendo al
+   sistema. Lo pone tema.js en <html data-tema="claro">. */
+:root[data-tema="claro"] {
+  --f0: #eef0f4;  --f1: #ffffff;  --f1b: #f7f8fa;  --f2: #ffffff;  --f3: #f3f4f7;  --f4: #e9ebf0;
+  --b1: #e5e7eb;  --b2: #d3d6de;  --b3: #b0b5c0;
+  --t0: #0b0f19;  --t1: #1f2430;  --t1b: #3d4452;  --t2: #5b6170;  --t3: #7b8190;  --t4: #a3a8b3;
+  --primario-bg: #0b0f19;  --primario-t: #ffffff;
+  --tip-bg: #111827;       --tip-t: #ffffff;
+  --verde: #059669;  --rojo: #dc2626;  --azul: #2563eb;  --azul-2: #1d4ed8;
+  --ambar: #d97706;  --ambar-2: #b45309;  --ambar-fondo: #fef3c7;  --rojo-fondo: #fee2e2;  --verde-fondo: #d1fae5;
+  --violeta: #7c3aed;  --violeta-2: #6d28d9;
+  color-scheme: light;
+}
+
 *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: "Segoe UI", system-ui, sans-serif;
-  background: #0f1117;
-  color: #e8eaf0;
+  background: var(--f0);
+  color: var(--t1);
   min-height: 100vh;
   padding: 5rem 1.5rem 3rem;
 }

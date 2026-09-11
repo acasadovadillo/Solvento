@@ -32,15 +32,15 @@
     m = document.createElement("div");
     m.id = "form-modal";
     m.style.cssText = "display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1200;align-items:center;justify-content:center;padding:1.5rem;";
-    m.innerHTML = '<div class="modal-card" style="background:#171a24;border:1px solid #232733;border-radius:14px;padding:1.5rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;"></div>';
+    m.innerHTML = '<div class="modal-card" style="background:var(--f2);border:1px solid var(--b1);border-radius:14px;padding:1.5rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;"></div>';
     m.addEventListener("mousedown", (e) => { if (e.target === m) close(); });
     document.body.appendChild(m);
     return m;
   }
   function close() { const m = document.getElementById("form-modal"); if (m) m.style.display = "none"; }
 
-  const styleInput = "width:100%;background:#12141d;border:1px solid #2a2d3a;border-radius:10px;color:#e5e7eb;font-size:0.9rem;padding:0.6rem 0.8rem;outline:none;font-family:inherit;";
-  const styleLabel = "display:block;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;font-weight:700;margin:0.85rem 0 0.3rem;";
+  const styleInput = "width:100%;background:var(--f1);border:1px solid var(--b2);border-radius:10px;color:var(--t1);font-size:0.9rem;padding:0.6rem 0.8rem;outline:none;font-family:inherit;";
+  const styleLabel = "display:block;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--t2);font-weight:700;margin:0.85rem 0 0.3rem;";
   const field = (id, label, inputHtml) => `<div class="ff" data-for="${id}"><label style="${styleLabel}" for="${id}">${esc(label)}</label>${inputHtml}</div>`;
   const input = (id, type, val, extra) => `<input id="${id}" type="${type}" value="${esc(val == null ? "" : val)}" style="${styleInput}" ${extra || ""}>`;
   const select = (id, opts, val) => `<select id="${id}" style="${styleInput}">${opts.map((o) => `<option ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
@@ -141,7 +141,7 @@
         if (actual && actual.nueva && !actual.valor) break;
       }
       const eco = document.createElement("div");
-      eco.style.cssText = "font-size:0.75rem;color:#6b7280;margin-top:0.15rem;";
+      eco.style.cssText = "font-size:0.75rem;color:var(--t2);margin-top:0.15rem;";
       eco.textContent = hidden.value || "sin asignar";
       wrap.appendChild(eco);
     }
@@ -175,12 +175,12 @@
     const m = ensureModal();
     m.querySelector(".modal-card").innerHTML =
       `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-        <div style="font-size:1.1rem;font-weight:800;color:#fff;">${esc(titulo)}</div>
-        <button id="ff-close" style="border:none;background:none;color:#9ca3af;font-size:1.1rem;cursor:pointer;">✕</button>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--t0);">${esc(titulo)}</div>
+        <button id="ff-close" style="border:none;background:none;color:var(--t1b);font-size:1.1rem;cursor:pointer;">✕</button>
       </div>
       <form id="ff-form">${bodyHtml}
-        <div id="ff-error" style="display:none;color:#ef4444;font-size:0.82rem;font-weight:600;margin-top:0.75rem;"></div>
-        <button type="submit" class="primary" style="width:100%;margin-top:1.25rem;background:#fff;color:#000;border:none;border-radius:10px;font-size:0.92rem;font-weight:700;padding:0.7rem;cursor:pointer;font-family:inherit;">Guardar</button>
+        <div id="ff-error" style="display:none;color:var(--rojo);font-size:0.82rem;font-weight:600;margin-top:0.75rem;"></div>
+        <button type="submit" class="primary" style="width:100%;margin-top:1.25rem;background:var(--primario-bg);color:var(--primario-t);border:none;border-radius:10px;font-size:0.92rem;font-weight:700;padding:0.7rem;cursor:pointer;font-family:inherit;">Guardar</button>
       </form>`;
     m.style.display = "flex";
     document.getElementById("ff-close").addEventListener("click", close);
@@ -242,11 +242,11 @@
       // fue; esto prueba de dónde salió, y hasta ahora había que abrir el PDF
       // del extracto para verlo. No se puede editar a propósito: es la fuente.
       ((e.detalle_banco || e.imp_ref)
-        ? `<div style="background:#12141d;border:1px solid #232733;border-radius:10px;
+        ? `<div style="background:var(--f1);border:1px solid var(--b1);border-radius:10px;
                  padding:0.6rem 0.8rem;margin-top:0.9rem;">
-             <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:#4b5563;font-weight:700;">Según el banco</div>
-             ${e.detalle_banco ? `<div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.78rem;color:#9ca3af;margin-top:0.3rem;word-break:break-word;">${esc(e.detalle_banco)}</div>` : ""}
-             ${e.imp_ref ? `<div style="font-size:0.7rem;color:#4b5563;margin-top:0.3rem;">Extracto: ${esc(e.imp_ref)}</div>` : ""}
+             <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--t3);font-weight:700;">Según el banco</div>
+             ${e.detalle_banco ? `<div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.78rem;color:var(--t1b);margin-top:0.3rem;word-break:break-word;">${esc(e.detalle_banco)}</div>` : ""}
+             ${e.imp_ref ? `<div style="font-size:0.7rem;color:var(--t3);margin-top:0.3rem;">Extracto: ${esc(e.imp_ref)}</div>` : ""}
            </div>`
         : "");
     shell(e.id ? "Editar movimiento" : "Nuevo movimiento", body, () => {
@@ -322,7 +322,7 @@
       const sin = !r.importe;
       // Verde cuando la deja a cero; ámbar cuando no, con la diferencia exacta:
       // esa cifra es la que se va a buscar al extracto.
-      const c = sin ? "#6b7280" : (r.cuadra ? "#10b981" : "#f59e0b");
+      const c = sin ? "var(--t2)" : (r.cuadra ? "var(--verde)" : "var(--ambar)");
       const veredicto = sin
         ? "Escribe el importe del recibo."
         : r.cuadra
@@ -330,13 +330,13 @@
           : (r.diferencia > 0 ? "Sobran " : "Faltan ") + eur(Math.abs(r.diferencia)) +
             ". La tarjeta quedaría en " + eur(r.saldoDespues) + ".";
       const origen = el("m-origen").value;
-      caja.innerHTML = `<div style="border:1px solid ${c}55;background:${c}12;border-radius:10px;padding:0.7rem 0.85rem;margin-top:0.9rem;">
+      caja.innerHTML = `<div style="border:1px solid color-mix(in srgb, ${c} 33%, transparent);background:color-mix(in srgb, ${c} 7%, transparent);border-radius:10px;padding:0.7rem 0.85rem;margin-top:0.9rem;">
         <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:${c};font-weight:700;">
           Liquidación de ${esc(r.tarjeta.nombre)}</div>
-        <div style="font-size:0.82rem;color:#e5e7eb;margin-top:0.35rem;">
+        <div style="font-size:0.82rem;color:var(--t1);margin-top:0.35rem;">
           Pendiente el ${esc(fromISO(el("m-fecha").value) || "ese día")}:
           <b>${esc(eur(r.pendiente))}</b></div>
-        <div style="font-size:0.74rem;color:#6b7280;margin-top:0.2rem;">
+        <div style="font-size:0.74rem;color:var(--t2);margin-top:0.2rem;">
           ${r.n} ${r.n === 1 ? "cargo" : "cargos"} por ${esc(eur(r.cargado))}${
             Math.abs(r.arrastre) > 0.005
               ? ` · ${r.arrastre > 0 ? "arrastra" : "a favor"} ${esc(eur(Math.abs(r.arrastre)))} del ciclo anterior`
@@ -348,7 +348,7 @@
                padding:0.3rem 0.65rem;cursor:pointer;">Usar ${esc(eur(r.pendiente))}</button>`
           : ""}
         ${r.tarjeta.cuenta && origen !== r.tarjeta.cuenta
-          ? `<div style="font-size:0.74rem;color:#f59e0b;margin-top:0.45rem;">
+          ? `<div style="font-size:0.74rem;color:var(--ambar);margin-top:0.45rem;">
                Esta tarjeta se cobra en <b>${esc(r.tarjeta.cuenta)}</b>, y el origen dice ${esc(origen || "—")}.</div>`
           : ""}</div>`;
       const usar = el("m-liq-usar");
@@ -432,7 +432,7 @@
   function openCuadrar(cuenta, saldoActual) {
     const doc = DB.state.doc;
     const body =
-      `<div style="font-size:0.85rem;color:#9ca3af;margin:0.5rem 0 0.25rem;">Saldo según Solvento: <b style="color:#fff;">${saldoActual.toFixed(2).replace(".", ",")} €</b></div>` +
+      `<div style="font-size:0.85rem;color:var(--t1b);margin:0.5rem 0 0.25rem;">Saldo según Solvento: <b style="color:var(--t0);">${saldoActual.toFixed(2).replace(".", ",")} €</b></div>` +
       field("c-real", "Saldo real en el banco (€)", input("c-real", "number", "", 'step="0.01"')) +
       field("c-fecha", "Fecha del ajuste", input("c-fecha", "date", toISO(hoyES()))) +
       field("c-detalle", "Detalle", input("c-detalle", "text", "Ajuste de saldo"));
@@ -473,7 +473,7 @@
       field("d-cuenta", "Cuenta de cargo", selectKV("d-cuenta",
         [["", "— Ninguna —"]].concat(CUENTAS().map((c) => [c, c])), e.cuenta || "")) +
       field("d-importe", "Pendiente de pagar (€)", input("d-importe", "number", e.importe, 'step="0.01" min="0" placeholder="120000"')) +
-      `<div class="ff-nota" id="d-nota" style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.</div>`;
+      `<div class="ff-nota" id="d-nota" style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.</div>`;
     shell(existing ? "Editar deuda" : "Nueva deuda", body, () => {
       const nombre = G("d-nombre");
       if (!nombre) return "Indica el concepto de la deuda";
@@ -535,7 +535,7 @@
       field("c-fecha", "Desde cuándo", input("c-fecha", "date", toISO(e.fecha || hoyES()))) +
       field("c-cat", "Categoría de ingreso", selectorArbol("c-cat", e.categoria)) +
       field("c-centro", "Centro de coste", selectorArbol("c-centro", e.centro)) +
-      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">
          Esto <b>no toca tu caja ni tu patrimonio</b>: el dinero no ha entrado todavía. La categoría y el
          centro son los que llevará el ingreso el día que lo cobres.</div>`;
     if (!shell(existing ? "Editar cobro pendiente" : "Nuevo cobro pendiente", body, () => {
@@ -633,7 +633,7 @@
             datalist("pa-nombre", sugerencias, nombre || "")) +
       field("pa-importe", "Aprobado para " + anio + " (€)",
             input("pa-importe", "number", actual, 'step="0.01" min="0" placeholder="0"')) +
-      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">
          Es lo que se aprobó, no lo que se ha gastado: eso lo cuentan los movimientos del año.
          Déjalo vacío para quitar la partida.</div>`;
     shell(nombre ? "Partida · " + nombre : "Nueva partida", body, () => {
@@ -677,11 +677,11 @@
   }
 
   const filaAjuste = (izq, der, acciones) =>
-    `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;border-bottom:1px solid #232733;">
-      <div style="flex:1;min-width:0;"><div style="color:#e5e7eb;font-weight:600;font-size:0.88rem;">${izq}</div>
-        <div style="color:#6b7280;font-size:0.75rem;">${der}</div></div>${acciones}</div>`;
+    `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;border-bottom:1px solid var(--b1);">
+      <div style="flex:1;min-width:0;"><div style="color:var(--t1);font-weight:600;font-size:0.88rem;">${izq}</div>
+        <div style="color:var(--t2);font-size:0.75rem;">${der}</div></div>${acciones}</div>`;
   const miniBtn = (txt, onclick, color) =>
-    `<button type="button" onclick="${onclick}" style="background:none;border:none;color:${color || "#6b7280"};cursor:pointer;font-size:0.85rem;padding:0.2rem 0.35rem;font-family:inherit;">${txt}</button>`;
+    `<button type="button" onclick="${onclick}" style="background:none;border:none;color:${color || "var(--t2)"};cursor:pointer;font-size:0.85rem;padding:0.2rem 0.35rem;font-family:inherit;">${txt}</button>`;
 
 
   // Fragmentos que rellena la página de Ajustes. Se devuelven como HTML para
@@ -692,17 +692,17 @@
     const c = cfgEditable();
     const obj = c.objetivo;
     const cuentas = c.cuentas.map((x, i) => filaAjuste(
-      `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(x.accent || "#6b7280")};margin-right:0.4rem;"></span>${esc(x.cuenta)}`,
+      `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(x.accent || "var(--t2)")};margin-right:0.4rem;"></span>${esc(x.cuenta)}`,
       [x.cartera === "cero" ? "aparece en Cartera sin efectivo propio"
                             : (x.cartera ? "agrupa posiciones en Cartera" : "")].filter(Boolean).join(" · ") || "cuenta de efectivo",
       miniBtn("✎", `v2CfgCuenta(${i})`) + miniBtn("✕", `v2CfgDelCuenta(${i})`)
-    )).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir cuenta", "v2CfgCuenta(-1)", "#3b82f6")}</div>`;
+    )).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir cuenta", "v2CfgCuenta(-1)", "var(--azul)")}</div>`;
 
     const activos = c.activos.map((x, i) => filaAjuste(
       esc(x.nombre),
       `${esc(x.isin || "-")} · ${esc(x.banco || "")}${x.yf ? " · " + esc(x.yf) : " · sin precio automático"}`,
       miniBtn("✎", `v2CfgActivo(${i})`) + miniBtn("✕", `v2CfgDelActivo(${i})`)
-    )).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir activo", "v2CfgActivo(-1)", "#3b82f6")}</div>`;
+    )).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir activo", "v2CfgActivo(-1)", "var(--azul)")}</div>`;
 
     const objetivo = filaAjuste("Renta variable / Renta fija",
       `${(+obj["Renta variable"] || 0).toFixed(0)}% / ${(+obj["Renta fija"] || 0).toFixed(0)}%`,
@@ -710,15 +710,15 @@
 
     const categorias = catalogoArbol(categoriasCfg(), {
       nueva: "v2CatNueva", renombrar: "v2CatRenombrar", borrar: "v2CatBorrar",
-    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría", "v2CatNueva('')", "#3b82f6")}</div>`;
+    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría", "v2CatNueva('')", "var(--azul)")}</div>`;
 
     const categoriasIngreso = catalogoArbol(categoriasIngresoCfg(), {
       nueva: "v2CatIngNueva", renombrar: "v2CatIngRenombrar", borrar: "v2CatIngBorrar",
-    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría de ingreso", "v2CatIngNueva('')", "#3b82f6")}</div>`;
+    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir categoría de ingreso", "v2CatIngNueva('')", "var(--azul)")}</div>`;
 
     const centros = catalogoArbol(centrosCfg(), {
       nueva: "v2CenNueva", renombrar: "v2CenRenombrar", borrar: "v2CenBorrar",
-    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir centro", "v2CenNueva('')", "#3b82f6")}</div>`;
+    }) + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir centro", "v2CenNueva('')", "var(--azul)")}</div>`;
 
     // Las páginas del menú. «Presupuesto» solo se ofrece a quien la tiene: en
     // una cuenta personal no existe, y una casilla para esconder algo que no
@@ -727,12 +727,12 @@
     const menu = CFG.PAGINAS.filter((p) => !p.org || esOrg).map((p) => {
       const visible = p.fijo || CFG.paginaVisible(p.id);
       const control = p.fijo
-        ? `<span style="color:#4b5563;font-size:0.74rem;white-space:nowrap;">siempre visible</span>`
+        ? `<span style="color:var(--t3);font-size:0.74rem;white-space:nowrap;">siempre visible</span>`
         : `<label style="display:inline-flex;align-items:center;gap:0.4rem;cursor:pointer;
-             color:${visible ? "#e5e7eb" : "#6b7280"};font-size:0.78rem;font-weight:600;white-space:nowrap;">
+             color:${visible ? "var(--t1)" : "var(--t2)"};font-size:0.78rem;font-weight:600;white-space:nowrap;">
              <input type="checkbox" ${visible ? "checked" : ""}
                     onchange="v2MenuVer('${p.id}', this.checked)"
-                    style="width:15px;height:15px;accent-color:#3b82f6;cursor:pointer;margin:0;">
+                    style="width:15px;height:15px;accent-color:var(--azul);cursor:pointer;margin:0;">
              ${visible ? "En el menú" : "Oculta"}</label>`;
       return filaAjuste(esc(p.nombre), esc(p.nota || ""), control);
     }).join("");
@@ -768,7 +768,7 @@
     // igual y no deja el catálogo lleno de imágenes rotas.
     const inicial = esc(String(b.nombre).trim().charAt(0).toUpperCase());
     return `<span style="width:${px}px;height:${px}px;border-radius:6px;flex-shrink:0;display:inline-flex;
-      align-items:center;justify-content:center;background:${esc(b.accent)};color:#fff;
+      align-items:center;justify-content:center;background:${esc(b.accent)};color:var(--blanco);
       font-weight:800;font-size:${px * 0.5}px;">${inicial}</span>`;
   }
 
@@ -779,15 +779,15 @@
     const fichas = CFG.BANCOS.map((b) => {
       const js = JSON.stringify(b).replace(/"/g, "&quot;");
       return `<button type="button" onclick="v2ElegirBanco(${js})" title="${esc(b.nombre)}"
-        style="display:flex;align-items:center;gap:0.5rem;background:#12141d;border:1px solid #2a2d3a;border-radius:9px;
-        padding:0.4rem 0.55rem;cursor:pointer;font-family:inherit;font-size:0.8rem;color:#e5e7eb;text-align:left;">
+        style="display:flex;align-items:center;gap:0.5rem;background:var(--f1);border:1px solid var(--b2);border-radius:9px;
+        padding:0.4rem 0.55rem;cursor:pointer;font-family:inherit;font-size:0.8rem;color:var(--t1);text-align:left;">
         ${marcaBanco(b)}<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.nombre)}</span></button>`;
     }).join("");
     return `<div class="ff">
       <label style="${styleLabel}">Elige dónde tienes el dinero</label>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.4rem;
         max-height:230px;overflow-y:auto;padding:0.15rem;">${fichas}</div>
-      <div style="font-size:0.75rem;color:#6b7280;margin-top:0.4rem;">
+      <div style="font-size:0.75rem;color:var(--t2);margin-top:0.4rem;">
         ¿No está el tuyo? Escríbelo abajo y listo.</div>
     </div>`;
   }
@@ -798,7 +798,7 @@
     const body =
       (i >= 0 ? "" : selectorBancos()) +
       field("c-nombre", "Nombre", input("c-nombre", "text", e.cuenta, 'placeholder="Revolut"')) +
-      field("c-color", "Color", input("c-color", "color", e.accent || "#3b82f6")) +
+      field("c-color", "Color", input("c-color", "color", e.accent || "var(--azul)")) +
       // Aquí había un «¿Dónde cuenta su efectivo?». No tenía respuesta posible:
       // TODO el efectivo vive en Caja, esté en una cuenta corriente o en un
       // bróker remunerado. Que desde esa cuenta se pueda invertir no lo
@@ -875,7 +875,7 @@
       field("a-tipo", "Tipo", select("a-tipo", ACTIVO_TIPOS, e.tipo || ACTIVO_TIPOS[0])) +
       field("a-banco", "Cuenta / bróker", select("a-banco", CUENTAS(), e.banco || CUENTAS()[0])) +
       field("a-yf", "Ticker de Yahoo Finance", input("a-yf", "text", e.yf, 'placeholder="VWCE.DE"')) +
-      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">El ticker es lo que da el precio automático. Compruébalo en finance.yahoo.com y verifica que el precio se parece a lo que pagaste por unidad: un ticker equivocado infla la rentabilidad sin avisar. Déjalo vacío si el activo se valora por su valor liquidativo.</div>`;
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">El ticker es lo que da el precio automático. Compruébalo en finance.yahoo.com y verifica que el precio se parece a lo que pagaste por unidad: un ticker equivocado infla la rentabilidad sin avisar. Déjalo vacío si el activo se valora por su valor liquidativo.</div>`;
     shell(i >= 0 ? "Editar activo" : "Nuevo activo", body, () => {
       const nombre = G("a-nombre");
       if (!nombre) return "Indica el nombre del activo";
@@ -902,7 +902,7 @@
     const body =
       field("o-rv", "Renta variable (%)", input("o-rv", "number", o["Renta variable"], 'step="1" min="0" max="100"')) +
       field("o-rf", "Renta fija (%)", input("o-rf", "number", o["Renta fija"], 'step="1" min="0" max="100"')) +
-      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Es el reparto al que quieres tender. La página Cartera te muestra cuánto te desvías.</div>`;
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Es el reparto al que quieres tender. La página Cartera te muestra cuánto te desvías.</div>`;
     shell("Objetivo de asignación", body, () => {
       const rv = parseFloat(G("o-rv")), rf = parseFloat(G("o-rf"));
       if (!isFinite(rv) || !isFinite(rf)) return "Introduce ambos porcentajes";
@@ -948,14 +948,14 @@
     const pinta = (padre, prof) => hijasDe(padre).map((ruta) => {
       const nombre = partesRuta(ruta).slice(-1)[0];
       const js = String(ruta).replace(/'/g, "\\'");
-      return `<div style="display:flex;align-items:center;gap:0.4rem;border-bottom:1px solid #1e222c;
+      return `<div style="display:flex;align-items:center;gap:0.4rem;border-bottom:1px solid var(--b1);
                   padding:0.35rem 0 0.35rem ${(prof * 1.4).toFixed(1)}rem;">
-          <div style="flex:1;color:${prof ? "#9ca3af" : "#e5e7eb"};font-weight:${prof ? 400 : 600};
+          <div style="flex:1;color:${prof ? "var(--t1b)" : "var(--t1)"};font-weight:${prof ? 400 : 600};
                font-size:${prof ? "0.84rem" : "0.9rem"};">${esc(nombre)}</div>
-          ${miniBtn("＋", `${acc.nueva}('${js}')`, "#3b82f6")}${miniBtn("✎", `${acc.renombrar}('${js}')`)}${miniBtn("✕", `${acc.borrar}('${js}')`)}
+          ${miniBtn("＋", `${acc.nueva}('${js}')`, "var(--azul)")}${miniBtn("✎", `${acc.renombrar}('${js}')`)}${miniBtn("✕", `${acc.borrar}('${js}')`)}
         </div>` + pinta(ruta, prof + 1);
     }).join("");
-    return pinta("", 0) || `<div style="color:#6b7280;font-size:0.84rem;padding:0.5rem 0;">Todavía no hay ninguno.</div>`;
+    return pinta("", 0) || `<div style="color:var(--t2);font-size:0.84rem;padding:0.5rem 0;">Todavía no hay ninguno.</div>`;
   }
 
   // Renombrar no es cambiar una etiqueta: la ruta está escrita tal cual dentro de
@@ -966,9 +966,9 @@
     const partes = partesRuta(ruta);
     const viejo = partes[partes.length - 1];
     const body =
-      `<div style="font-size:0.8rem;color:#9ca3af;margin:0.5rem 0 0;">${esc(ruta)}</div>` +
+      `<div style="font-size:0.8rem;color:var(--t1b);margin:0.5rem 0 0;">${esc(ruta)}</div>` +
       field("rn-nombre", "Nuevo nombre", input("rn-nombre", "text", viejo)) +
-      `<div id="rn-aviso" style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;"></div>`;
+      `<div id="rn-aviso" style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;"></div>`;
     shell(titulo, body, () => {
       const n = G("rn-nombre");
       if (!n) return "Escribe un nombre";
@@ -1030,7 +1030,7 @@
   function openCategoriaIngresoNueva(padre) {
     const lista = categoriasIngresoCfg();
     const body =
-      (padre ? `<div style="font-size:0.8rem;color:#9ca3af;margin:0.5rem 0 0;">Dentro de <b style="color:#fff;">${esc(padre)}</b></div>` : "") +
+      (padre ? `<div style="font-size:0.8rem;color:var(--t1b);margin:0.5rem 0 0;">Dentro de <b style="color:var(--t0);">${esc(padre)}</b></div>` : "") +
       field("ki-nombre", padre ? "Nombre de la subcategoría" : "Nombre de la categoría",
             input("ki-nombre", "text", "", padre ? 'placeholder="Alquileres"' : 'placeholder="Rentas"'));
     shell(padre ? "Nueva subcategoría de ingreso" : "Nueva categoría de ingreso", body, () => {
@@ -1065,7 +1065,7 @@
   function openCategoriaNueva(madre) {
     const cats = categoriasCfg();
     const body =
-      (madre ? `<div style="font-size:0.8rem;color:#9ca3af;margin:0.5rem 0 0;">Subcategoría dentro de <b style="color:#fff;">${esc(madre)}</b></div>` : "") +
+      (madre ? `<div style="font-size:0.8rem;color:var(--t1b);margin:0.5rem 0 0;">Subcategoría dentro de <b style="color:var(--t0);">${esc(madre)}</b></div>` : "") +
       field("k-nombre", madre ? "Nombre de la subcategoría" : "Nombre de la categoría",
             input("k-nombre", "text", "", madre ? 'placeholder="Formaciones"' : 'placeholder="Educación"'));
     shell(madre ? "Nueva subcategoría" : "Nueva categoría", body, () => {
@@ -1115,7 +1115,7 @@
   function openCentroNuevo(padre) {
     const lista = centrosCfg();
     const body =
-      (padre ? `<div style="font-size:0.8rem;color:#9ca3af;margin:0.5rem 0 0;">Dentro de <b style="color:#fff;">${esc(padre)}</b></div>` : "") +
+      (padre ? `<div style="font-size:0.8rem;color:var(--t1b);margin:0.5rem 0 0;">Dentro de <b style="color:var(--t0);">${esc(padre)}</b></div>` : "") +
       field("cn-nombre", padre ? "Nombre del centro de dentro" : "Nombre del centro",
             input("cn-nombre", "text", "", padre ? 'placeholder="Garaje"' : 'placeholder="Inmuebles"'));
     shell(padre ? "Nuevo centro dentro" : "Nuevo centro de coste", body, () => {
@@ -1175,7 +1175,7 @@
       field("r-nec", "Necesario (%)", input("r-nec", "number", r.necesario, 'step="1" min="0" max="100"')) +
       field("r-des", "Deseos (%)", input("r-des", "number", r.deseo, 'step="1" min="0" max="100"')) +
       field("r-aho", "Ahorro e inversión (%)", input("r-aho", "number", r.ahorro, 'step="1" min="0" max="100"')) +
-      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">El reparto clásico es 50/30/20, pero puedes ajustarlo a lo que te encaje. Los tres deben sumar 100.</div>`;
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">El reparto clásico es 50/30/20, pero puedes ajustarlo a lo que te encaje. Los tres deben sumar 100.</div>`;
     shell("Objetivos del reparto", body, () => {
       const n = parseFloat(G("r-nec")), d = parseFloat(G("r-des")), a = parseFloat(G("r-aho"));
       if (![n, d, a].every(isFinite)) return "Introduce los tres porcentajes";
@@ -1196,7 +1196,7 @@
     const actual = doc.config.presupuesto[cat];
     const body =
       field("g-tope", `Tope mensual para "${esc(cat)}" (€)`, input("g-tope", "number", actual, 'step="1" min="0" placeholder="300"')) +
-      `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Cuando el gasto del mes supere este tope, la categoría se marca en rojo. Déjalo vacío para quitar el presupuesto.</div>`;
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Cuando el gasto del mes supere este tope, la categoría se marca en rojo. Déjalo vacío para quitar el presupuesto.</div>`;
     shell("Presupuesto", body, () => {
       const v = G("g-tope");
       if (v === "") delete doc.config.presupuesto[cat];
@@ -1221,14 +1221,14 @@
       `<div id="p-porpeso" style="display:none;">
         ${field("p-metal", "Metal", selectKV("p-metal", [["oro", "Oro"], ["plata", "Plata"]], String(e.metal || "oro")))}
         ${field("p-peso", "Peso (gramos)", input("p-peso", "number", e.peso_g, 'step="0.01" min="0" placeholder="31.1"'))}
-        <div style="font-size:0.75rem;color:#6b7280;margin-top:0.4rem;">El valor se calcula solo con el precio del metal, que se actualiza a diario.</div>
+        <div style="font-size:0.75rem;color:var(--t2);margin-top:0.4rem;">El valor se calcula solo con el precio del metal, que se actualiza a diario.</div>
       </div>` +
       `<div id="p-portasacion">
         ${field("p-valor", "Valor actual (€)", input("p-valor", "number", e.valor != null ? e.valor : e.tasacion, 'step="0.01" min="0"'))}
       </div>` +
       field("p-compra", "Valor de compra (€)", input("p-compra", "number", e.valor_compra, 'step="0.01" min="0"')) +
       field("p-fecha", "Fecha de adquisición", input("p-fecha", "date", toISO(e.fecha_adquisicion))) +
-      `<label style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:#9ca3af;margin-top:0.9rem;cursor:pointer;">
+      `<label style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:var(--t1b);margin-top:0.9rem;cursor:pointer;">
          <input type="checkbox" id="p-alq" ${e.alquilada ? "checked" : ""}> Está alquilada</label>` +
       // El centro de coste es lo que une la ficha con la contabilidad: sin él,
       // los recibos de la comunidad y el alquiler cobrado están en los datos
@@ -1238,11 +1238,11 @@
       // derrama: cualquier cifra escrita aquí envejece el mismo día. Lo que se
       // ha cobrado y pagado por este inmueble está en los movimientos que llevan
       // su centro, y de ahí se saca.
-      `<div id="p-alquiler" style="display:none;font-size:0.78rem;color:#6b7280;
-            background:#12141d;border:1px solid #232733;border-radius:10px;padding:0.7rem 0.85rem;margin-top:0.6rem;">
+      `<div id="p-alquiler" style="display:none;font-size:0.78rem;color:var(--t2);
+            background:var(--f1);border:1px solid var(--b1);border-radius:10px;padding:0.7rem 0.85rem;margin-top:0.6rem;">
         La renta y los gastos salen de tus movimientos, no de un importe escrito aquí:
         se suman los ingresos y los gastos de los últimos doce meses imputados a su centro de coste.
-        <div id="p-alquiler-aviso" style="color:#f59e0b;margin-top:0.4rem;"></div>
+        <div id="p-alquiler-aviso" style="color:var(--ambar);margin-top:0.4rem;"></div>
       </div>`;
     shell(existing ? "Editar propiedad" : "Nueva propiedad", body, () => {
       const nombre = G("p-nombre");
@@ -1343,11 +1343,11 @@
       .concat((doc.movimientos || []).map((m) => m.centro))
       .concat((doc.propiedades || doc.inmuebles || []).map((r) => r.centro)));
     const body =
-      `<div style="background:#12141d;border:1px solid #232733;border-radius:10px;padding:0.7rem 0.85rem;
-            font-size:0.82rem;color:#9ca3af;margin:0.5rem 0 0;">
-        Vas a imputar <b style="color:#fff;">${afectados.length}</b> movimiento${afectados.length === 1 ? "" : "s"}
+      `<div style="background:var(--f1);border:1px solid var(--b1);border-radius:10px;padding:0.7rem 0.85rem;
+            font-size:0.82rem;color:var(--t1b);margin:0.5rem 0 0;">
+        Vas a imputar <b style="color:var(--t0);">${afectados.length}</b> movimiento${afectados.length === 1 ? "" : "s"}
         (${esc(suma.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} €) al centro que elijas.
-        ${conCentro ? `<div style="color:#f59e0b;margin-top:0.4rem;">${conCentro} ya tiene${conCentro === 1 ? "" : "n"} centro y se sobrescribirá${conCentro === 1 ? "" : "n"}.</div>` : ""}
+        ${conCentro ? `<div style="color:var(--ambar);margin-top:0.4rem;">${conCentro} ya tiene${conCentro === 1 ? "" : "n"} centro y se sobrescribirá${conCentro === 1 ? "" : "n"}.</div>` : ""}
       </div>` +
       field("ic-centro", "Centro de coste", selectorArbol("ic-centro", ""));
     shell("Imputar en bloque", body, () => {

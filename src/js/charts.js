@@ -26,9 +26,9 @@
 
   function mount(container, series, opts) {
     opts = opts || {};
-    const color = opts.color || "#10b981";
+    const color = opts.color || "var(--verde)";
     series = (series || []).filter((p) => isFinite(p[0]) && isFinite(p[1]));
-    if (series.length < 2) { container.innerHTML = '<div style="color:#6b7280;padding:2rem;text-align:center;font-size:0.85rem;">Sin datos suficientes para la gráfica</div>'; return; }
+    if (series.length < 2) { container.innerHTML = '<div style="color:var(--t2);padding:2rem;text-align:center;font-size:0.85rem;">Sin datos suficientes para la gráfica</div>'; return; }
 
     const state = { period: "MAX", custom: null };
     const uid = opts.id || "x";
@@ -37,15 +37,15 @@
       `<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
          <div>
            <div class="ch-badge" style="display:inline-block;font-size:1.05rem;font-weight:700;padding:0.3rem 0.75rem;border-radius:6px;"></div>
-           <div class="ch-val" style="font-size:1.5rem;font-weight:800;color:#fff;letter-spacing:-0.02em;margin-top:0.35rem;"></div>
+           <div class="ch-val" style="font-size:1.5rem;font-weight:800;color:var(--t0);letter-spacing:-0.02em;margin-top:0.35rem;"></div>
          </div>
          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end;">
-           <span class="ch-custom" style="display:none;align-items:center;gap:0.4rem;background:#1e2130;border:1px solid #4b5563;border-radius:6px;padding:0.25rem 0.35rem 0.25rem 0.6rem;font-size:0.72rem;color:#e5e7eb;font-weight:600;white-space:nowrap;">
+           <span class="ch-custom" style="display:none;align-items:center;gap:0.4rem;background:var(--f4);border:1px solid var(--t3);border-radius:6px;padding:0.25rem 0.35rem 0.25rem 0.6rem;font-size:0.72rem;color:var(--t1);font-weight:600;white-space:nowrap;">
              <span class="ch-custom-lbl"></span>
-             <button class="ch-custom-x" title="Quitar el zoom" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:0.8rem;padding:0 0.15rem;line-height:1;font-family:inherit;">✕</button>
+             <button class="ch-custom-x" title="Quitar el zoom" style="background:none;border:none;color:var(--t1b);cursor:pointer;font-size:0.8rem;padding:0 0.15rem;line-height:1;font-family:inherit;">✕</button>
            </span>
            <div class="ch-periods" style="display:flex;gap:0.25rem;">
-             ${PERIODS.map(([lbl]) => `<button data-p="${lbl}" style="background:transparent;border:1px solid #2a2d3a;border-radius:6px;color:#9ca3af;font-size:0.78rem;font-weight:600;padding:0.3rem 0.6rem;cursor:pointer;font-family:inherit;">${lbl}</button>`).join("")}
+             ${PERIODS.map(([lbl]) => `<button data-p="${lbl}" style="background:transparent;border:1px solid var(--b2);border-radius:6px;color:var(--t1b);font-size:0.78rem;font-weight:600;padding:0.3rem 0.6rem;cursor:pointer;font-family:inherit;">${lbl}</button>`).join("")}
            </div>
          </div>
        </div>
@@ -57,19 +57,19 @@
            <g class="ch-grid"></g>
            <path class="ch-area" fill="url(#ch-grad-${uid})"/>
            <path class="ch-line" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-           <line class="ch-vline" x1="0" y1="${PLOT.y0}" x2="0" y2="${PLOT.y1}" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+           <line class="ch-vline" x1="0" y1="${PLOT.y0}" x2="0" y2="${PLOT.y1}" stroke="var(--t2)" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
            <rect class="ch-hit" x="0" y="0" width="${PLOT.W}" height="${PLOT.H}" fill="transparent"/>
          </svg>
-         <div class="ch-sel" style="position:absolute;top:0;bottom:0;background:rgba(139,92,246,0.16);border-left:1px solid #8b5cf6;border-right:1px solid #8b5cf6;pointer-events:none;display:none;"></div>
-         <div class="ch-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:${color};border:2px solid #12141d;transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
-         <div class="ch-tip" style="position:absolute;background:#000;color:#fff;font-size:0.72rem;font-weight:600;padding:0.3rem 0.55rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;white-space:nowrap;display:none;z-index:5;"></div>
+         <div class="ch-sel" style="position:absolute;top:0;bottom:0;background:rgba(139,92,246,0.16);border-left:1px solid var(--violeta);border-right:1px solid var(--violeta);pointer-events:none;display:none;"></div>
+         <div class="ch-dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:${color};border:2px solid var(--f1);transform:translate(-50%,-50%);pointer-events:none;display:none;"></div>
+         <div class="ch-tip" style="position:absolute;background:var(--tip-bg);color:var(--tip-t);font-size:0.72rem;font-weight:600;padding:0.3rem 0.55rem;border-radius:6px;border:1px solid var(--b2);pointer-events:none;white-space:nowrap;display:none;z-index:5;"></div>
        </div>
        <div class="ch-axis" title="Arrastra sobre las fechas para ampliar ese periodo"
-            style="position:relative;height:26px;margin-top:0.35rem;cursor:ew-resize;user-select:none;touch-action:pan-y;border-top:1px solid #2a2d3a;">
+            style="position:relative;height:26px;margin-top:0.35rem;cursor:ew-resize;user-select:none;touch-action:pan-y;border-top:1px solid var(--b2);">
          <div class="ch-axis-sel" style="position:absolute;top:0;bottom:0;background:rgba(139,92,246,0.25);pointer-events:none;display:none;"></div>
-         <div class="ch-ticks" style="position:absolute;inset:0;font-size:0.72rem;color:#4b5563;font-weight:500;"></div>
+         <div class="ch-ticks" style="position:absolute;inset:0;font-size:0.72rem;color:var(--t3);font-weight:500;"></div>
        </div>
-       <div class="ch-hint" style="font-size:0.68rem;color:#374151;margin-top:0.3rem;">Arrastra sobre el eje de fechas para ampliar un periodo</div>`;
+       <div class="ch-hint" style="font-size:0.68rem;color:var(--t4);margin-top:0.3rem;">Arrastra sobre el eje de fechas para ampliar un periodo</div>`;
 
     const svg = container.querySelector("svg");
     const areaEl = container.querySelector(".ch-area");
@@ -127,15 +127,15 @@
       let g = "";
       for (let k = 0; k < 5; k++) {
         const f = k / 4, yy = PLOT.y1 - f * (PLOT.y1 - PLOT.y0), vv = vmin + f * (vmax - vmin);
-        g += `<line x1="${PLOT.x0}" y1="${yy.toFixed(1)}" x2="${PLOT.x1}" y2="${yy.toFixed(1)}" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="3 3"/>`;
-        g += `<text x="${PLOT.x1 + 6}" y="${(yy + 4).toFixed(1)}" font-size="10" fill="#6b7280">${fmtK(vv)}</text>`;
+        g += `<line x1="${PLOT.x0}" y1="${yy.toFixed(1)}" x2="${PLOT.x1}" y2="${yy.toFixed(1)}" stroke="var(--b2)" stroke-width="1" stroke-dasharray="3 3"/>`;
+        g += `<text x="${PLOT.x1 + 6}" y="${(yy + 4).toFixed(1)}" font-size="10" fill="var(--t2)">${fmtK(vv)}</text>`;
       }
       gridEl.innerHTML = g;
       drawTicks();
       const first = view[0][1], last = view[view.length - 1][1];
       const diff = last - first, pct = first !== 0 ? diff / Math.abs(first) * 100 : 0;
       const up = diff >= 0;
-      badge.style.color = up ? "#10b981" : "#ef4444";
+      badge.style.color = up ? "var(--verde)" : "var(--rojo)";
       badge.style.background = up ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)";
       badge.textContent = `${up ? "+" : ""}${fmtEur(diff)} (${up ? "+" : ""}${pct.toFixed(2).replace(".", ",")}%)`;
       valEl.textContent = fmtEur(last);
@@ -144,9 +144,9 @@
       if (state.custom) chipLbl.textContent = `${fmtDate(view[0][0])} – ${fmtDate(view[view.length - 1][0])}`;
       container.querySelectorAll(".ch-periods button").forEach((b) => {
         const on = !state.custom && b.dataset.p === state.period;
-        b.style.color = on ? "#fff" : "#9ca3af";
-        b.style.borderColor = on ? "#4b5563" : "#2a2d3a";
-        b.style.background = on ? "#1e2130" : "transparent";
+        b.style.color = on ? "var(--t0)" : "var(--t1b)";
+        b.style.borderColor = on ? "var(--t3)" : "var(--b2)";
+        b.style.background = on ? "var(--f4)" : "transparent";
       });
     }
 
@@ -257,11 +257,11 @@
     opts = opts || {};
     series = (series || []).filter((s) => s.puntos && s.puntos.length);
     if (!series.length) {
-      container.innerHTML = '<div style="color:#6b7280;padding:2rem;text-align:center;font-size:0.85rem;">Sin datos suficientes para comparar</div>';
+      container.innerHTML = '<div style="color:var(--t2);padding:2rem;text-align:center;font-size:0.85rem;">Sin datos suficientes para comparar</div>';
       return;
     }
     const pal = CFG.SERIE_COLORES;
-    series.forEach((s, i) => { s.color = s.destacada ? "#ffffff" : pal[i % pal.length]; });
+    series.forEach((s, i) => { s.color = s.destacada ? "var(--t0)" : pal[i % pal.length]; });
     const n = series[0].puntos.length;
     const hidden = new Set();
     // Ventana de meses visible. Arrastrando se estrecha; el ✕ la devuelve entera.
@@ -282,25 +282,25 @@
          <svg viewBox="0 0 ${P.W} ${P.H}" width="100%" height="260" preserveAspectRatio="none" style="overflow:visible;display:block;">
            <g class="cm-grid"></g>
            <g class="cm-lines"></g>
-           <line class="cm-vline" x1="0" y1="${P.y0}" x2="0" y2="${P.y1}" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+           <line class="cm-vline" x1="0" y1="${P.y0}" x2="0" y2="${P.y1}" stroke="var(--t2)" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
            <rect class="cm-hit" x="0" y="0" width="${P.W}" height="${P.H}" fill="transparent"/>
          </svg>
          <div class="cm-sel" style="position:absolute;top:0;bottom:0;background:rgba(139,92,246,0.18);border-left:1px solid rgba(139,92,246,0.6);border-right:1px solid rgba(139,92,246,0.6);pointer-events:none;display:none;"></div>
-         <div class="cm-tip" style="position:absolute;background:#000;color:#fff;font-size:0.72rem;padding:0.45rem 0.6rem;border-radius:8px;border:1px solid #2a2d3a;pointer-events:none;white-space:nowrap;display:none;z-index:6;line-height:1.5;"></div>
+         <div class="cm-tip" style="position:absolute;background:var(--tip-bg);color:var(--tip-t);font-size:0.72rem;padding:0.45rem 0.6rem;border-radius:8px;border:1px solid var(--b2);pointer-events:none;white-space:nowrap;display:none;z-index:6;line-height:1.5;"></div>
        </div>
        <div class="cm-xwrap" title="Arrastra sobre las fechas para ampliar ese periodo"
             style="position:relative;margin-top:0.4rem;padding:0.15rem 0;cursor:ew-resize;touch-action:pan-y;">
-         <div class="cm-x" style="display:flex;justify-content:space-between;font-size:0.72rem;color:#4b5563;font-weight:500;"></div>
+         <div class="cm-x" style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--t3);font-weight:500;"></div>
          <div class="cm-x-sel" style="position:absolute;top:0;bottom:0;background:rgba(139,92,246,0.25);pointer-events:none;display:none;"></div>
        </div>
        <div class="cm-leg" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:1rem;"></div>
        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.7rem;">
-         <span class="cm-zoom" style="display:none;align-items:center;gap:0.4rem;background:#1e2130;border:1px solid #4b5563;border-radius:6px;padding:0.22rem 0.3rem 0.22rem 0.6rem;font-size:0.7rem;color:#e5e7eb;font-weight:600;white-space:nowrap;">
+         <span class="cm-zoom" style="display:none;align-items:center;gap:0.4rem;background:var(--f4);border:1px solid var(--t3);border-radius:6px;padding:0.22rem 0.3rem 0.22rem 0.6rem;font-size:0.7rem;color:var(--t1);font-weight:600;white-space:nowrap;">
            <span class="cm-zoom-lbl"></span>
-           <button class="cm-zoom-x" title="Quitar el zoom" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:0.78rem;padding:0 0.15rem;line-height:1;font-family:inherit;">✕</button>
+           <button class="cm-zoom-x" title="Quitar el zoom" style="background:none;border:none;color:var(--t1b);cursor:pointer;font-size:0.78rem;padding:0 0.15rem;line-height:1;font-family:inherit;">✕</button>
          </span>
-         <button class="cm-todos" style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#9ca3af;font-size:0.7rem;font-weight:600;padding:0.22rem 0.6rem;cursor:pointer;font-family:inherit;">Ver todos</button>
-         <span style="font-size:0.68rem;color:#374151;">Clic para ocultar · doble clic para ver solo uno · arrastra para ampliar</span>
+         <button class="cm-todos" style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t1b);font-size:0.7rem;font-weight:600;padding:0.22rem 0.6rem;cursor:pointer;font-family:inherit;">Ver todos</button>
+         <span style="font-size:0.68rem;color:var(--t4);">Clic para ocultar · doble clic para ver solo uno · arrastra para ampliar</span>
        </div>`;
 
     const svg = container.querySelector("svg");
@@ -344,13 +344,13 @@
       let g = "";
       for (let k = 0; k < 5; k++) {
         const f = k / 4, yy = P.y1 - f * (P.y1 - P.y0), vv = vmin + f * (vmax - vmin);
-        g += `<line x1="${P.x0}" y1="${yy.toFixed(1)}" x2="${P.x1}" y2="${yy.toFixed(1)}" stroke="#2a2d3a" stroke-width="1" stroke-dasharray="3 3"/>`;
-        g += `<text x="${P.x1 + 6}" y="${(yy + 4).toFixed(1)}" font-size="10" fill="#6b7280">${vv.toFixed(0)}%</text>`;
+        g += `<line x1="${P.x0}" y1="${yy.toFixed(1)}" x2="${P.x1}" y2="${yy.toFixed(1)}" stroke="var(--b2)" stroke-width="1" stroke-dasharray="3 3"/>`;
+        g += `<text x="${P.x1 + 6}" y="${(yy + 4).toFixed(1)}" font-size="10" fill="var(--t2)">${vv.toFixed(0)}%</text>`;
       }
       // línea del 0% (referencia: ni ganas ni pierdes)
       if (vmin < 0 && vmax > 0) {
         const y0 = yAt(0);
-        g += `<line x1="${P.x0}" y1="${y0.toFixed(1)}" x2="${P.x1}" y2="${y0.toFixed(1)}" stroke="#6b7280" stroke-width="1"/>`;
+        g += `<line x1="${P.x0}" y1="${y0.toFixed(1)}" x2="${P.x1}" y2="${y0.toFixed(1)}" stroke="var(--t2)" stroke-width="1"/>`;
       }
       gridEl.innerHTML = g;
       // líneas (se cortan donde no hay posición)
@@ -382,11 +382,11 @@
         const v = ultimoDe(s);
         const corta = s.label.length > 24 ? s.label.slice(0, 23) + "…" : s.label;
         return `<button data-k="${esc(s.key)}" title="${esc(s.label)} · clic para ocultar, doble clic para ver solo este"
-          style="display:inline-flex;align-items:center;gap:0.4rem;background:${off ? "transparent" : "#1e2130"};
-          border:1px solid ${off ? "#2a2d3a" : "#3a3d4a"};border-radius:999px;padding:0.28rem 0.7rem;cursor:pointer;font-family:inherit;
-          font-size:0.74rem;font-weight:600;color:${off ? "#4b5563" : "#e5e7eb"};${off ? "text-decoration:line-through;" : ""}">
+          style="display:inline-flex;align-items:center;gap:0.4rem;background:${off ? "transparent" : "var(--f4)"};
+          border:1px solid ${off ? "var(--b2)" : "var(--b3)"};border-radius:999px;padding:0.28rem 0.7rem;cursor:pointer;font-family:inherit;
+          font-size:0.74rem;font-weight:600;color:${off ? "var(--t3)" : "var(--t1)"};${off ? "text-decoration:line-through;" : ""}">
           <span style="width:9px;height:9px;border-radius:50%;background:${s.color};flex-shrink:0;opacity:${off ? 0.35 : 1};"></span>${esc(corta)}
-          ${v != null && !off ? `<b style="color:${v >= 0 ? "#10b981" : "#ef4444"};font-weight:700;">${fmtPct(v)}</b>` : ""}</button>`;
+          ${v != null && !off ? `<b style="color:${v >= 0 ? "var(--verde)" : "var(--rojo)"};font-weight:700;">${fmtPct(v)}</b>` : ""}</button>`;
       }).join("");
       legEl.querySelectorAll("button").forEach((b) => {
         const k = b.dataset.k;
@@ -431,8 +431,8 @@
         .map((x) => `<div style="display:flex;gap:0.5rem;justify-content:space-between;">
             <span style="color:${x.s.color};">■</span>
             <span style="flex:1;">${esc(x.s.label.length > 26 ? x.s.label.slice(0, 25) + "…" : x.s.label)}</span>
-            <b style="color:${x.v >= 0 ? "#10b981" : "#ef4444"};">${fmtPct(x.v)}</b></div>`).join("");
-      tip.innerHTML = `<div style="color:#9ca3af;margin-bottom:0.3rem;">${ms[i] ? fmtDia(ms[i]) : ""}</div>${filas || '<div style="color:#6b7280;">sin datos</div>'}`;
+            <b style="color:${x.v >= 0 ? "var(--verde)" : "var(--rojo)"};">${fmtPct(x.v)}</b></div>`).join("");
+      tip.innerHTML = `<div style="color:var(--t1b);margin-bottom:0.3rem;">${ms[i] ? fmtDia(ms[i]) : ""}</div>${filas || '<div style="color:var(--t2);">sin datos</div>'}`;
       tip.style.display = "block";
       const p = Math.max(4, Math.min(96, cx / P.W * 100));
       tip.style.left = p + "%";

@@ -15,17 +15,17 @@
   const fmtPct = (x) => (isFinite(x) ? (x >= 0 ? "+" : "") + x.toFixed(2).replace(".", ",") + "%" : "—");
   const pct1 = (x) => (isFinite(x) ? x.toFixed(1) : "0");
   const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const GREEN = "#10b981", RED = "#ef4444";
+  const GREEN = "var(--verde)", RED = "var(--rojo)";
   // El azul es el del dinero que se mueve sin ser ni ingreso ni gasto.
-  const AZUL = "#60a5fa", AMBAR = "#f59e0b";
+  const AZUL = "var(--azul-2)", AMBAR = "var(--ambar)";
   const rc = (x) => (isFinite(x) && x < 0 ? RED : GREEN);
   const parseFechaES = (s) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || "")); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(0); };
   // Los botones de «＋ algo» son los de crear: en modo lectura se esconden (ver
   // .modo-lectura en components.css). Los demás usos de addBtn son navegación
   // —«Ver reporte mensual»— y esos se quedan.
-  const addBtn = (label, onclick) => `<button class="${String(label).indexOf("＋") === 0 ? "solo-editor" : ""}" onclick="${onclick}" style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">${label}</button>`;
-  const delBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Borrar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">✕</button>`;
-  const editBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Editar" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button>`;
+  const addBtn = (label, onclick) => `<button class="${String(label).indexOf("＋") === 0 ? "solo-editor" : ""}" onclick="${onclick}" style="background:var(--f4);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">${label}</button>`;
+  const delBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Borrar" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">✕</button>`;
+  const editBtn = (onclick) => `<button class="fila-acc" onclick="event.stopPropagation();${onclick}" title="Editar" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button>`;
   const rowActions = (edit, del) => `<td style="text-align:right;width:1%;white-space:nowrap;">${editBtn(edit)}${delBtn(del)}</td>`;
 
   // El icono de una cuenta: su logo si está, y si el archivo todavía no existe,
@@ -39,8 +39,8 @@
       if (cta.emoji) return `<span style="font-size:${t * 0.9}px;">${cta.emoji}</span>`;
       const inicial = esc(String(cta.cuenta || "?").trim().charAt(0).toUpperCase());
       return `<span style="width:${t}px;height:${t}px;border-radius:4px;flex-shrink:0;display:inline-flex;
-        align-items:center;justify-content:center;background:${esc(cta.accent || "#2a2d3a")};
-        color:#fff;font-weight:800;font-size:${t * 0.55}px;">${inicial}</span>`;
+        align-items:center;justify-content:center;background:${esc(cta.accent || "var(--b2)")};
+        color:var(--blanco);font-weight:800;font-size:${t * 0.55}px;">${inicial}</span>`;
     }
     return `<img src="${esc(cta.logo)}" alt="" style="width:${t}px;height:${t}px;object-fit:contain;
       border-radius:4px;flex-shrink:0;">`;
@@ -72,8 +72,8 @@
     return `<div class="chart-wrapper rep" id="rep-${id}" data-tipo="circular" onmouseleave="v2Reparto('${id}',null)">
         <svg class="donut" viewBox="0 0 42 42">${sectors}</svg>
         <div class="donut-center">
-          <span style="font-size:1rem;font-weight:700;color:#fff;">${centerValue}</span>
-          <span style="font-size:0.55rem;color:#6b7280;text-transform:uppercase;margin-top:0.2rem;">${esc(centerLabel)}</span>
+          <span style="font-size:1rem;font-weight:700;color:var(--t0);">${centerValue}</span>
+          <span style="font-size:0.55rem;color:var(--t2);text-transform:uppercase;margin-top:0.2rem;">${esc(centerLabel)}</span>
         </div>
         <div class="rep-tip" hidden></div>
       </div>`;
@@ -91,10 +91,10 @@
       if (targets && targets[it.label] != null) {
         const dev = p - targets[it.label];
         const dc = dev >= 0 ? GREEN : RED;
-        badge = `<span style="font-size:0.68rem;color:${dc};background:${dc}22;padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;margin-left:0.3rem;" title="Objetivo: ${targets[it.label].toFixed(0)}%">${dev >= 0 ? "+" : ""}${dev.toFixed(1)}pp</span>`;
+        badge = `<span style="font-size:0.68rem;color:${dc};background:color-mix(in srgb, ${dc} 13%, transparent);padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;margin-left:0.3rem;" title="Objetivo: ${targets[it.label].toFixed(0)}%">${dev >= 0 ? "+" : ""}${dev.toFixed(1)}pp</span>`;
       }
       const punto = `<span style="width:9px;height:9px;background:${it.accent};border-radius:50%;flex-shrink:0;"></span>`;
-      const nombre = `<span style="color:#9ca3af;font-weight:500;">${esc(it.label)}</span>`;
+      const nombre = `<span style="color:var(--t1b);font-weight:500;">${esc(it.label)}</span>`;
       return `<div class="leg-it" style="${estiloItem}"
         onmouseenter="v2Reparto('${idPanel}',${i})" onmouseleave="v2Reparto('${idPanel}',null)">${punto}${nombre}${badge}</div>`;
     }).join("");
@@ -145,8 +145,8 @@
     const v = vistaDe(id);
     const btn = (modo, txt) => `<button onclick="v2Vista('${id}','${modo}')" title="Ver en ${txt.toLowerCase()}"
       aria-label="Ver en ${txt.toLowerCase()}" aria-pressed="${v === modo}"
-      style="background:${v === modo ? "#2a2d3a" : "transparent"};border:1px solid ${v === modo ? "#4b5563" : "#2a2d3a"};
-      color:${v === modo ? "#fff" : "#9ca3af"};border-radius:6px;
+      style="background:${v === modo ? "var(--b2)" : "transparent"};border:1px solid ${v === modo ? "var(--t3)" : "var(--b2)"};
+      color:${v === modo ? "var(--t0)" : "var(--t1b)"};border-radius:6px;
       display:inline-flex;align-items:center;justify-content:center;line-height:0;
       padding:0.32rem 0.55rem;cursor:pointer;font-family:inherit;">${ICONO_VISTA[modo]}</button>`;
     return `<div style="display:flex;gap:0.25rem;">${btn("barra", "Barra")}${btn("circular", "Circular")}</div>`;
@@ -155,10 +155,10 @@
   function cuerpoVista(id, items, centroValor, centroEtiqueta, targets, sinLeyenda) {
     const { positivos, negativos, total } = repartoValido(items);
     if (!positivos.length) {
-      return `<div style="color:#6b7280;text-align:center;padding:2rem;font-size:0.85rem;">Nada que repartir todavía</div>`;
+      return `<div style="color:var(--t2);text-align:center;padding:2rem;font-size:0.85rem;">Nada que repartir todavía</div>`;
     }
     const aviso = negativos.length
-      ? `<div style="font-size:0.75rem;color:#fbbf24;margin-top:0.9rem;">
+      ? `<div style="font-size:0.75rem;color:var(--ambar-2);margin-top:0.9rem;">
            ${negativos.map((n) => esc(n.label) + " está en negativo (" + fmtEur(n.value) + ")").join(" · ")}, así que no entra en el reparto.</div>`
       : "";
     // Donde el color ya está explicado fuera (las tarjetas del patrimonio, el
@@ -189,7 +189,7 @@
     }
     return `<div class="v2-wrap"><div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.1rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
         ${selectorVista(id)}
       </div>
       ${cuerpo}
@@ -233,7 +233,7 @@
     return result;
   }
   function colorTreemap(rentPct) {
-    if (!isFinite(rentPct)) return "#3a3d4a";
+    if (!isFinite(rentPct)) return "var(--b3)";
     const capped = Math.max(-15, Math.min(15, rentPct));
     const t = Math.abs(capped) / 15;
     const [c0, c1] = capped >= 0 ? [[134, 239, 172], [22, 163, 74]] : [[252, 165, 165], [220, 38, 38]];
@@ -247,20 +247,20 @@
     const tiles = vis.map((a, i) => {
       const [tx, ty, tw, th] = rects[i];
       const color = colorTreemap(a.rentPct);
-      const hover = !isFinite(a.rentPct) ? "#4b5563" : (a.rentPct >= 0 ? "#16a34a" : "#dc2626");
+      const hover = !isFinite(a.rentPct) ? "var(--t3)" : (a.rentPct >= 0 ? "#16a34a" : "#dc2626");
       const rentStr = isFinite(a.rentPct) ? (a.rentPct >= 0 ? "+" : "") + a.rentPct.toFixed(1) + "%" : "—";
       return `<div class="tm-tile" data-name="${esc(a.nombre)}" data-rent="${rentStr}" data-weight="${a.pct.toFixed(2).replace(".", ",")}%"
         data-bg="${color}" data-hover-bg="${hover}"
-        style="position:absolute;left:${tx.toFixed(3)}%;top:${ty.toFixed(3)}%;width:${tw.toFixed(3)}%;height:${th.toFixed(3)}%;background:${color};border:1px solid #12141d;box-sizing:border-box;overflow:hidden;cursor:default;transition:background 0.15s;">
+        style="position:absolute;left:${tx.toFixed(3)}%;top:${ty.toFixed(3)}%;width:${tw.toFixed(3)}%;height:${th.toFixed(3)}%;background:${color};border:1px solid var(--f1);box-sizing:border-box;overflow:hidden;cursor:default;transition:background 0.15s;">
         <div class="tm-label" style="height:100%;box-sizing:border-box;padding:0.4rem 0.55rem;display:flex;flex-direction:column;justify-content:flex-end;">
           <div class="tm-name" style="font-weight:700;color:#0f1115;"></div>
           <div class="tm-rent" style="font-weight:700;color:#0f1115cc;margin-top:0.1rem;"></div>
         </div></div>`;
     }).join("");
     return `<div class="v2-wrap"><div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1rem;">Mapa de la cartera · tamaño = peso, color = rentabilidad</div>
+      <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1rem;">Mapa de la cartera · tamaño = peso, color = rentabilidad</div>
       <div class="tm-container" style="position:relative;width:100%;height:clamp(200px,42vw,320px);border-radius:10px;overflow:hidden;">${tiles}
-        <div class="tm-tooltip" style="position:absolute;display:none;background:#000;color:#fff;font-size:0.78rem;font-weight:600;padding:0.45rem 0.7rem;border-radius:6px;border:1px solid #2a2d3a;pointer-events:none;white-space:nowrap;z-index:20;box-shadow:0 4px 14px rgba(0,0,0,0.4);"></div>
+        <div class="tm-tooltip" style="position:absolute;display:none;background:var(--tip-bg);color:var(--tip-t);font-size:0.78rem;font-weight:600;padding:0.45rem 0.7rem;border-radius:6px;border:1px solid var(--b2);pointer-events:none;white-space:nowrap;z-index:20;box-shadow:0 4px 14px rgba(0,0,0,0.4);"></div>
       </div></div></div>`;
   }
 
@@ -275,29 +275,29 @@
       const labels = [], segs = [];
       for (const cat in OBJ) {
         const pct = kind === "obj" ? OBJ[cat] : (base > 0 ? (inv.porCat[cat] || 0) / base * 100 : 0);
-        const color = CATC[cat] || "#6b7280";
+        const color = CATC[cat] || "var(--t2)";
         labels.push(`<span style="color:${color};">${esc(cat)} · ${pct1(pct)}%</span>`);
         segs.push(`<div title="${esc(cat)}: ${pct1(pct)}%" style="width:${pct.toFixed(2)}%;background:${color};transition:width 0.4s;"></div>`);
       }
       return `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.3rem 1rem;font-size:0.72rem;font-weight:600;margin-bottom:0.35rem;">${labels.join("")}</div>
-        <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;background:#12141d;">${segs.join("")}</div>`;
+        <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;background:var(--f1);">${segs.join("")}</div>`;
     };
     const tiles = Object.keys(OBJ).map((cat) => {
-      const color = CATC[cat] || "#6b7280";
+      const color = CATC[cat] || "var(--t2)";
       const val = inv.porCat[cat] || 0;
       const coste = costeCat[cat] || 0;
       const rent = coste > 0 ? (val / coste - 1) * 100 : NaN;
       const gan = coste > 0 ? val - coste : NaN;
       const rentHtml = isFinite(rent)
-        ? `<div style="font-size:1.45rem;font-weight:700;color:${rc(rent)};letter-spacing:-0.02em;">${fmtPct(rent)}</div><div style="font-size:0.78rem;color:#6b7280;margin-top:0.25rem;">${gan >= 0 ? "+" : ""}${fmtEur(gan)} de ganancia · ${fmtEur(val)} actuales</div>`
-        : `<div style="font-size:1.45rem;font-weight:700;color:#6b7280;">—</div><div style="font-size:0.78rem;color:#6b7280;margin-top:0.25rem;">${fmtEur(val)} actuales</div>`;
+        ? `<div style="font-size:1.45rem;font-weight:700;color:${rc(rent)};letter-spacing:-0.02em;">${fmtPct(rent)}</div><div style="font-size:0.78rem;color:var(--t2);margin-top:0.25rem;">${gan >= 0 ? "+" : ""}${fmtEur(gan)} de ganancia · ${fmtEur(val)} actuales</div>`
+        : `<div style="font-size:1.45rem;font-weight:700;color:var(--t2);">—</div><div style="font-size:0.78rem;color:var(--t2);margin-top:0.25rem;">${fmtEur(val)} actuales</div>`;
       return `<div style="border-left:3px solid ${color};padding-left:1rem;"><div style="font-size:0.72rem;color:${color};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.35rem;">Rentabilidad ${esc(cat)}</div>${rentHtml}</div>`;
     }).join("");
     return `<div class="v2-wrap"><div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">Asignación · actual vs objetivo</div>
+      <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">Asignación · actual vs objetivo</div>
       <div style="display:grid;grid-template-columns:64px 1fr;gap:1.1rem 1.25rem;align-items:center;margin-bottom:1.75rem;">
-        <span style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Objetivo</span><div>${barra("obj")}</div>
-        <span style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Actual</span><div>${barra("pct")}</div>
+        <span style="font-size:0.72rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Objetivo</span><div>${barra("obj")}</div>
+        <span style="font-size:0.72rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Actual</span><div>${barra("pct")}</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.5rem;">${tiles}</div>
     </div></div>`;
@@ -317,7 +317,7 @@
       : "";
     const clicable = pagina
       ? ` role="link" tabindex="0" onclick="v2Tab('${pagina}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();v2Tab('${pagina}');}"`
-        + ` onmouseover="this.style.background='#1e2130'" onmouseout="this.style.background=''"`
+        + ` onmouseover="this.style.background='var(--f4)'" onmouseout="this.style.background=''"`
         + ` title="Ir a ${esc(titulo)}"`
       : "";
     const flecha = pagina
@@ -325,11 +325,11 @@
       : "";
     return `<div class="dashboard-panel" style="border-left:3px solid ${color};${pagina ? "cursor:pointer;transition:background 0.2s;" : ""}"${clicable}${enlace}>
       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:${color};margin-bottom:0.6rem;">${esc(titulo)}</div>
-      <div style="font-size:1.7rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">${valor}</div>
-      <div style="font-size:0.82rem;color:${subColor || "#9ca3af"};font-weight:600;margin-top:0.3rem;">${sub}</div>
+      <div style="font-size:1.7rem;font-weight:800;color:var(--t0);letter-spacing:-0.02em;">${valor}</div>
+      <div style="font-size:0.82rem;color:${subColor || "var(--t1b)"};font-weight:600;margin-top:0.3rem;">${sub}</div>
       ${pct == null
         ? (flecha ? `<div style="margin-top:0.15rem;">${flecha}</div>` : "")
-        : `<div style="font-size:0.78rem;color:#6b7280;margin-top:0.15rem;">${pct.toFixed(2)}% ${sufijo || "del patrimonio"}${flecha}</div>`}
+        : `<div style="font-size:0.78rem;color:var(--t2);margin-top:0.15rem;">${pct.toFixed(2)}% ${sufijo || "del patrimonio"}${flecha}</div>`}
     </div>`;
   }
 
@@ -348,7 +348,7 @@
   // categorías tiene rutas de tres niveles: en el móvil ese desplegable medía
   // 361 px en una pantalla de 375 y se salía por la derecha. Con el máximo al
   // ancho disponible se encoge y recorta el texto, que se lee entero al abrirlo.
-  const estiloFiltro = "background:#12141d;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.82rem;padding:0.4rem 0.6rem;outline:none;font-family:inherit;max-width:100%;min-width:0;";
+  const estiloFiltro = "background:var(--f1);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:0.82rem;padding:0.4rem 0.6rem;outline:none;font-family:inherit;max-width:100%;min-width:0;";
   const selFiltro = (id, opts, val, onchange) =>
     `<select id="${id}" onchange="${onchange}" style="${estiloFiltro}">` +
     opts.map((o) => `<option value="${esc(o[0])}" ${o[0] === val ? "selected" : ""}>${esc(o[1])}</option>`).join("") + `</select>`;
@@ -400,18 +400,18 @@
     const rows = visibles.map((r) => {
       const liq = esLiquidacion(r);
       const signo = liq || r.tipo === "Gasto" ? "−" : (r.tipo === "Ingreso" ? "+" : "");
-      const color = liq ? AZUL : (r.tipo === "Ingreso" ? GREEN : (r.tipo === "Gasto" ? RED : "#9ca3af"));
+      const color = liq ? AZUL : (r.tipo === "Ingreso" ? GREEN : (r.tipo === "Gasto" ? RED : "var(--t1b)"));
       const det = esc(r.detalle || r.tipo_gasto || r.tipo_ingreso || "—");
       const cta = esc([r.cuenta_origen, r.cuenta_destino].filter(Boolean).join(" → "));
       // La palabra «Gasto» o «Ingreso» delante del concepto repetía lo que ya
       // dice el color del importe. Se queda como title de la fila, para quien
       // navegue con lector de pantalla o pase el ratón por encima.
       return `<tr class="table-row" title="${esc(liq ? "Liquidación de tarjeta" : r.tipo)}">
-        <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
-        <td style="text-align:left;"><span style="color:#e5e7eb;">${det}</span>${liq
-          ? ` <span style="color:${AZUL};font-size:0.66rem;font-weight:700;background:${AZUL}22;
+        <td style="text-align:left;color:var(--t1b);font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
+        <td style="text-align:left;"><span style="color:var(--t1);">${det}</span>${liq
+          ? ` <span style="color:${AZUL};font-size:0.66rem;font-weight:700;background:color-mix(in srgb, ${AZUL} 13%, transparent);
                padding:0.1rem 0.4rem;border-radius:4px;white-space:nowrap;">Liquidación</span>` : ""}
-          ${cta ? `<div style="color:#4b5563;font-size:0.72rem;">${cta}${liq ? " · salda la tarjeta" : ""}</div>` : ""}</td>
+          ${cta ? `<div style="color:var(--t3);font-size:0.72rem;">${cta}${liq ? " · salda la tarjeta" : ""}</div>` : ""}</td>
         <td style="text-align:right;color:${color};font-weight:600;white-space:nowrap;">${signo}${fmtEur(Number(r.importe))}</td>
         ${rowActions(`v2EditMov('${r.id}')`, `v2DelMov('${r.id}')`)}</tr>`;
     }).join("");
@@ -420,14 +420,14 @@
     // lista entera sería una forma cómoda de estropearlo todo de una vez.
     const hayFiltro = MOV.q || MOV.tipo || MOV.cuenta || MOV.cat || MOV.desde || MOV.hasta || MOV.pend || MOV.sinCentro;
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin:0.35rem 0 0.5rem;">
-        <div style="font-size:0.78rem;color:#6b7280;">
+        <div style="font-size:0.78rem;color:var(--t2);">
           ${todos.length}${todos.length !== total ? " de " + total : ""} ${todos.length === 1 ? "movimiento" : "movimientos"}</div>
         ${hayFiltro && todos.length ? `<button onclick="v2MovImputar()"
-          style="background:none;border:1px solid #2a2d3a;border-radius:8px;color:#9ca3af;font-size:0.76rem;
+          style="background:none;border:1px solid var(--b2);border-radius:8px;color:var(--t1b);font-size:0.76rem;
           font-family:inherit;padding:0.25rem 0.6rem;cursor:pointer;white-space:nowrap;">
           Imputar centro a estos ${todos.length}</button>` : ""}
       </div>
-      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Ningún movimiento coincide con el filtro</td></tr>'}</tbody></table>
+      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:var(--t2);padding:1rem;">Ningún movimiento coincide con el filtro</td></tr>'}</tbody></table>
       ${quedan > 0 ? `<div style="text-align:center;margin-top:0.75rem;">${addBtn("Ver " + Math.min(quedan, PAGINA) + " más (quedan " + quedan + ")", "v2MovMas()")}</div>` : ""}`;
   }
 
@@ -440,7 +440,7 @@
     const tipos = [["", "Todos los tipos"], ["Gasto", "Gastos"], ["Ingreso", "Ingresos"], ["Traspaso", "Traspasos"], ["Préstamo", "Préstamos"]];
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Movimientos</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Movimientos</div>
         ${addBtn("＋ Movimiento", "v2AddMov()")}
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
@@ -455,8 +455,8 @@
           const p = window.SolventoModel.pendientes((CURRENT_DOC || {}).movimientos);
           if (!p.n && !MOV.pend) return "";
           return `<button onclick="v2MovPendientes()" title="Movimientos sin categoría o marcados como pendientes"
-            style="background:${MOV.pend ? "#f59e0b" : "none"};border:1px solid #f59e0b;border-radius:8px;
-            color:${MOV.pend ? "#12141d" : "#f59e0b"};font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;
+            style="background:${MOV.pend ? "var(--ambar)" : "none"};border:1px solid var(--ambar);border-radius:8px;
+            color:${MOV.pend ? "var(--blanco)" : "var(--ambar)"};font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;
             cursor:pointer;font-family:inherit;white-space:nowrap;">⚠ ${p.n} sin identificar</button>`;
         })()}
         ${(function () {
@@ -464,8 +464,8 @@
           const n = mov.filter((m) => (m.tipo === "Gasto" || m.tipo === "Ingreso") && !String(m.centro || "").trim()).length;
           if (!n && !MOV.sinCentro) return "";
           return `<button onclick="v2MovSinCentro()" title="Gastos e ingresos sin centro de coste"
-            style="background:${MOV.sinCentro ? "#3b82f6" : "none"};border:1px solid #3b82f6;border-radius:8px;
-            color:${MOV.sinCentro ? "#fff" : "#3b82f6"};font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;
+            style="background:${MOV.sinCentro ? "var(--azul)" : "none"};border:1px solid var(--azul);border-radius:8px;
+            color:${MOV.sinCentro ? "var(--blanco)" : "var(--azul)"};font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;
             cursor:pointer;font-family:inherit;white-space:nowrap;">⊘ ${n} sin centro</button>`;
         })()}
         ${addBtn("Limpiar", "v2MovLimpiar()")}
@@ -475,15 +475,15 @@
   }
 
   function filaOperacion(r) {
-    const MC = { Compra: GREEN, Venta: RED, Traspaso: "#3b82f6" };
+    const MC = { Compra: GREEN, Venta: RED, Traspaso: "var(--azul)" };
     const mov = r.tipo_movimiento || "Compra";
-    const c = MC[mov] || "#6b7280";
+    const c = MC[mov] || "var(--t2)";
     const coste = Number(r.coste);
     return `<tr class="table-row">
-      <td style="text-align:left;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
-      <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.5rem;">${logoImg(r.nombre, r.isin, 18)}<span style="color:#fff;font-weight:600;font-size:0.85rem;">${esc(r.nombre)}</span><span style="color:${c};font-size:0.7rem;font-weight:700;background:${c}22;padding:0.1rem 0.4rem;border-radius:4px;">${esc(mov)}</span></div></td>
-      <td style="text-align:right;color:${coste < 0 ? RED : "#e5e7eb"};font-weight:600;white-space:nowrap;">${fmtEur(coste)}</td>
-      <td style="text-align:right;color:#9ca3af;font-size:0.82rem;white-space:nowrap;">${r.unidades !== "" && r.unidades != null ? Number(r.unidades).toLocaleString("es-ES", { maximumFractionDigits: 6 }) : "—"}</td>
+      <td style="text-align:left;color:var(--t1b);font-size:0.82rem;white-space:nowrap;">${esc(r.fecha)}</td>
+      <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.5rem;">${logoImg(r.nombre, r.isin, 18)}<span style="color:var(--t0);font-weight:600;font-size:0.85rem;">${esc(r.nombre)}</span><span style="color:${c};font-size:0.7rem;font-weight:700;background:color-mix(in srgb, ${c} 13%, transparent);padding:0.1rem 0.4rem;border-radius:4px;">${esc(mov)}</span></div></td>
+      <td style="text-align:right;color:${coste < 0 ? RED : "var(--t1)"};font-weight:600;white-space:nowrap;">${fmtEur(coste)}</td>
+      <td style="text-align:right;color:var(--t1b);font-size:0.82rem;white-space:nowrap;">${r.unidades !== "" && r.unidades != null ? Number(r.unidades).toLocaleString("es-ES", { maximumFractionDigits: 6 }) : "—"}</td>
       ${rowActions(`v2EditInv('${r.id}')`, `v2DelInv('${r.id}')`)}</tr>`;
   }
 
@@ -499,15 +499,15 @@
   }
 
   function operacionesTabla(banco) {
-    const MC = { Compra: GREEN, Venta: RED, Traspaso: "#3b82f6" };
+    const MC = { Compra: GREEN, Venta: RED, Traspaso: "var(--azul)" };
     const todas = operacionesFiltradas(banco);
     const visibles = todas.slice(0, OPS.limite);
     const rows = visibles.map((r) => filaOperacion(r)).join("");
     const quedan = todas.length - visibles.length;
     const invertido = todas.reduce((s, r) => s + (Number(r.coste) || 0), 0);
-    return `<div style="font-size:0.78rem;color:#6b7280;margin:0.35rem 0 0.5rem;">
-        ${todas.length} ${todas.length === 1 ? "operación" : "operaciones"} · neto invertido <b style="color:#e5e7eb;">${fmtEur(invertido)}</b></div>
-      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Ninguna operación coincide con el filtro</td></tr>'}</tbody></table>
+    return `<div style="font-size:0.78rem;color:var(--t2);margin:0.35rem 0 0.5rem;">
+        ${todas.length} ${todas.length === 1 ? "operación" : "operaciones"} · neto invertido <b style="color:var(--t1);">${fmtEur(invertido)}</b></div>
+      <table class="minimal-table"><tbody>${rows || '<tr><td style="color:var(--t2);padding:1rem;">Ninguna operación coincide con el filtro</td></tr>'}</tbody></table>
       ${quedan > 0 ? `<div style="text-align:center;margin-top:0.75rem;">${addBtn("Ver 40 más (quedan " + quedan + ")", "v2OpsMas()")}</div>` : ""}`;
   }
 
@@ -521,17 +521,17 @@
       const filas = recientes.map((r) => filaOperacion(r)).join("");
       return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Últimas operaciones</div>
+          <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Últimas operaciones</div>
           <div style="display:flex;gap:0.5rem;">${addBtn("＋ NAV", "v2AddNav()")}${addBtn("＋ Operación", "v2AddInv()")}</div>
         </div>
-        <table class="minimal-table"><tbody>${filas || '<tr><td style="color:#6b7280;padding:1rem;">Sin operaciones</td></tr>'}</tbody></table>
+        <table class="minimal-table"><tbody>${filas || '<tr><td style="color:var(--t2);padding:1rem;">Sin operaciones</td></tr>'}</tbody></table>
         <div style="margin-top:1rem;">${addBtn("Ver todas las operaciones (" + todas.length + ") →", "v2Tab('operaciones')")}</div>
       </div></div>`;
     }
     const tipos = [["", "Todos los tipos"], ["Compra", "Compras"], ["Venta", "Ventas"], ["Traspaso", "Traspasos"]];
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Historial de operaciones</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Historial de operaciones</div>
         <div style="display:flex;gap:0.5rem;">${addBtn("＋ NAV", "v2AddNav()")}${addBtn("＋ Operación", "v2AddInv()")}</div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
@@ -548,7 +548,7 @@
 
   function chartPanel(titulo, containerId) {
     return `<div class="v2-wrap"><div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">${esc(titulo)}</div>
+      <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">${esc(titulo)}</div>
       <div id="${containerId}"></div>
     </div></div>`;
   }
@@ -558,10 +558,10 @@
   // usan los dos bloques de Patrimonio para que se lean como pareja.
   function cabeceraBloque(titulo, importe, color, nota, primero) {
     return `<div class="v2-wrap" style="margin-top:${primero ? "2rem" : "3rem"};">
-      <div style="display:flex;align-items:baseline;gap:0.75rem;flex-wrap:wrap;${primero ? "" : "border-top:1px solid #2a2d3a;padding-top:1.75rem;"}">
-        <div style="font-size:1.15rem;font-weight:800;color:#fff;letter-spacing:-0.01em;">${esc(titulo)}</div>
+      <div style="display:flex;align-items:baseline;gap:0.75rem;flex-wrap:wrap;${primero ? "" : "border-top:1px solid var(--b2);padding-top:1.75rem;"}">
+        <div style="font-size:1.15rem;font-weight:800;color:var(--t0);letter-spacing:-0.01em;">${esc(titulo)}</div>
         <div style="font-size:1.15rem;font-weight:800;color:${color};letter-spacing:-0.01em;">${importe}</div>
-        ${nota ? `<div style="font-size:0.8rem;color:#6b7280;">${nota}</div>` : ""}
+        ${nota ? `<div style="font-size:0.8rem;color:var(--t2);">${nota}</div>` : ""}
       </div>
     </div>`;
   }
@@ -574,7 +574,7 @@
     // hay: una tarjeta a cero es ruido en un panel que se lee de un vistazo.
     const cob = m.cobrar || { total: 0, n: 0, cobros: 0, prestamos: 0 };
     const hayCobrar = cob.total > 0.005;
-    const COBRAR_COLOR = "#a78bfa";
+    const COBRAR_COLOR = "var(--violeta-2)";
     // Si el dinero viene de los dos sitios, se dice de cuánto es cada uno; si
     // viene de uno solo, repetir la cifra que ya está arriba no informa de nada.
     const detalleCobrar = (cob.cobros > 0.005 && cob.prestamos > 0.005)
@@ -584,14 +584,14 @@
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
       cabeceraBloque("Activos", fmtEur(m.patrimonioBruto), GREEN, "", true) +
       vistaPanel("patrimonio", "Distribución de los activos",
-        [{ label: "Caja", value: m.patrimonioLiquido, accent: "#3b82f6" },
-         { label: "Cartera", value: m.carteraTotal, accent: "#10b981" },
+        [{ label: "Caja", value: m.patrimonioLiquido, accent: "var(--azul)" },
+         { label: "Cartera", value: m.carteraTotal, accent: "var(--verde)" },
          { label: "Propiedades", value: m.inm.total, accent: "#a16207" }]
           .concat(hayCobrar ? [{ label: "Por cobrar", value: cob.total, accent: COBRAR_COLOR }] : []),
         fmtEur(m.patrimonioBruto), "Activos", null, { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-hub-grid" style="margin-top:1.5rem;">
-        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "#3b82f6", m.saldosCaja.length + " cuentas", null, "caja", "patrimonio", "de tus activos")}
-        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "#10b981", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera", "patrimonio", "de tus activos")}
+        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "var(--azul)", m.saldosCaja.length + " cuentas", null, "caja", "patrimonio", "de tus activos")}
+        ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "var(--verde)", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera", "patrimonio", "de tus activos")}
         ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades", "patrimonio", "de tus activos")}
         ${hayCobrar ? hubCard("Por cobrar", fmtEur(cob.total), m.ratioCobrar, COBRAR_COLOR, detalleCobrar, null, "pasivos", "patrimonio", "de tus activos") : ""}
       </div>` +
@@ -605,13 +605,13 @@
   function panelDeuda(m) {
     const pas = m.pas || { items: [], n: 0, total: 0 };
     if (!pas.n) {
-      return cabeceraBloque("Pasivos", fmtEur(0), "#6b7280", "", false) +
+      return cabeceraBloque("Pasivos", fmtEur(0), "var(--t2)", "", false) +
         `<div class="v2-wrap" style="margin-top:1rem;">
         <div class="dashboard-panel" style="text-align:center;padding:1.5rem;">
-          <div style="color:#9ca3af;font-weight:600;font-size:0.9rem;">Sin deudas registradas</div>
-          <div style="color:#4b5563;font-size:0.82rem;margin-top:0.3rem;">
+          <div style="color:var(--t1b);font-weight:600;font-size:0.9rem;">Sin deudas registradas</div>
+          <div style="color:var(--t3);font-size:0.82rem;margin-top:0.3rem;">
             Tu patrimonio neto es todo lo que tienes.
-            <button onclick="v2Tab('pasivos')" style="background:none;border:none;padding:0;color:#3b82f6;font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Registrar una deuda</button>
+            <button onclick="v2Tab('pasivos')" style="background:none;border:none;padding:0;color:var(--azul);font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Registrar una deuda</button>
           </div></div></div>`;
     }
     const color = (t) => CFG.TIPO_COLORES_PASIVO[t] || CFG.PASIVO_ACCENT_DEFAULT;
@@ -652,24 +652,24 @@
       if (esCerrada(a)) {
         const realizado = -a.coste;   // coste neto negativo = dinero recuperado de más
         return `<tr class="table-row" style="opacity:0.55;">
-          <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:#9ca3af;font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(a.tipo)} · <span style="color:#6b7280;font-weight:600;">Cerrada</span></div></div></div></td>
-          <td style="text-align:right;color:#6b7280;white-space:nowrap;">—</td>
-          <td style="text-align:right;color:#6b7280;white-space:nowrap;">—</td>
-          <td style="text-align:right;white-space:nowrap;"><div style="color:${realizado >= 0 ? GREEN : RED};font-weight:600;">${realizado >= 0 ? "+" : ""}${fmtEur(realizado)}</div><div style="color:#6b7280;font-size:0.74rem;">realizado</div></td>
-          <td style="text-align:right;color:#4b5563;">—</td></tr>`;
+          <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:var(--t1b);font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:var(--t2);">${esc(a.tipo)} · <span style="color:var(--t2);font-weight:600;">Cerrada</span></div></div></div></td>
+          <td style="text-align:right;color:var(--t2);white-space:nowrap;">—</td>
+          <td style="text-align:right;color:var(--t2);white-space:nowrap;">—</td>
+          <td style="text-align:right;white-space:nowrap;"><div style="color:${realizado >= 0 ? GREEN : RED};font-weight:600;">${realizado >= 0 ? "+" : ""}${fmtEur(realizado)}</div><div style="color:var(--t2);font-size:0.74rem;">realizado</div></td>
+          <td style="text-align:right;color:var(--t3);">—</td></tr>`;
       }
       const rentCell = (a.coste > 0 && isFinite(a.importe))
         ? `<div style="color:${rc(a.ganancia)};font-weight:600;">${a.ganancia >= 0 ? "+" : ""}${fmtEur(a.ganancia)}</div><div style="color:${rc(a.rentPct)};font-size:0.78rem;">${fmtPct(a.rentPct)}${isFinite(a.cagr) && a.coste >= 100 ? '<span class="col-secundaria"> · CAGR ' + a.cagr.toFixed(1) + "%</span>" : ""}</div>`
-        : `<span style="color:#4b5563;">—</span>`;
+        : `<span style="color:var(--t3);">—</span>`;
       return `<tr class="table-row">
-        <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:#fff;font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:#6b7280;">${esc(a.tipo)}${a.isin && a.isin !== "-" ? ' · <span style="font-family:ui-monospace,monospace;">' + esc(a.isin) + "</span>" : ""}</div></div></div></td>
-        <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(a.importe)}</td>
-        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${a.coste ? fmtEur(a.coste) : "—"}</td>
+        <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:var(--t0);font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:var(--t2);">${esc(a.tipo)}${a.isin && a.isin !== "-" ? ' · <span style="font-family:ui-monospace,monospace;">' + esc(a.isin) + "</span>" : ""}</div></div></div></td>
+        <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${fmtEur(a.importe)}</td>
+        <td style="text-align:right;color:var(--t1b);white-space:nowrap;">${a.coste ? fmtEur(a.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${rentCell}</td>
-        <td class="col-secundaria" style="text-align:right;color:#3b82f6;font-weight:600;">${a.pct.toFixed(2)}%</td></tr>`;
+        <td class="col-secundaria" style="text-align:right;color:var(--azul);font-weight:600;">${a.pct.toFixed(2)}%</td></tr>`;
     }).join("");
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cartera</div>
+      <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cartera</div>
       <table class="minimal-table"><thead><tr><th style="text-align:left;">Activo</th><th style="text-align:right;">Valor actual</th><th style="text-align:right;">Invertido</th><th style="text-align:right;">Rentabilidad</th><th class="col-secundaria" style="text-align:right;">Peso</th></tr></thead><tbody>${rows}</tbody></table>
       <div style="margin-top:1rem;">${addBtn("Ver reporte mensual de activos →", "v2Tab('reporte')")}</div>
     </div></div>`;
@@ -686,33 +686,33 @@
     const cab = meses.map((t, k) => {
       const esUlt = desde + k === an.meses.length - 1;
       const lbl = new Date(t).toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
-      return `<th style="text-align:right;white-space:nowrap;${esUlt ? "color:#fff;" : ""}">${esc(esUlt ? "Hoy" : lbl)}</th>`;
+      return `<th style="text-align:right;white-space:nowrap;${esUlt ? "color:var(--t0);" : ""}">${esc(esUlt ? "Hoy" : lbl)}</th>`;
     }).join("");
 
     const celda = (c) => {
-      if (!c) return `<td style="text-align:right;color:#374151;">—</td>`;
+      if (!c) return `<td style="text-align:right;color:var(--t4);">—</td>`;
       const col = c.rentPct >= 0 ? GREEN : RED;
       return `<td style="text-align:right;color:${col};font-weight:600;white-space:nowrap;" title="Valor ${fmtEur(c.valor)} · Invertido ${fmtEur(c.coste)}">${fmtPct(c.rentPct)}</td>`;
     };
 
     const filas = an.filas.map((f) => {
       const cs = f.celdas.slice(desde);
-      return `<tr class="table-row"><td style="text-align:left;position:sticky;left:0;background:#12141d;z-index:1;">
+      return `<tr class="table-row"><td style="text-align:left;position:sticky;left:0;background:var(--f1);z-index:1;">
         <div style="display:flex;align-items:center;gap:0.5rem;min-width:200px;">${logoImg(f.nombre, f.isin, 20)}
-          <span style="color:#e5e7eb;font-weight:600;font-size:0.82rem;">${esc(f.nombre.length > 32 ? f.nombre.slice(0, 31) + "…" : f.nombre)}</span></div></td>
+          <span style="color:var(--t1);font-weight:600;font-size:0.82rem;">${esc(f.nombre.length > 32 ? f.nombre.slice(0, 31) + "…" : f.nombre)}</span></div></td>
         ${cs.map(celda).join("")}</tr>`;
     }).join("");
 
     const tot = an.total.slice(desde);
-    const filaTotal = `<tr style="border-top:2px solid #2a2d3a;"><td style="text-align:left;position:sticky;left:0;background:#12141d;z-index:1;">
-      <span style="color:#fff;font-weight:800;font-size:0.82rem;">Total cartera</span></td>
-      ${tot.map((c) => (c ? `<td style="text-align:right;color:${c.rentPct >= 0 ? GREEN : RED};font-weight:800;white-space:nowrap;" title="Valor ${fmtEur(c.valor)} · Invertido ${fmtEur(c.coste)}">${fmtPct(c.rentPct)}</td>` : `<td style="text-align:right;color:#374151;">—</td>`)).join("")}</tr>`;
+    const filaTotal = `<tr style="border-top:2px solid var(--b2);"><td style="text-align:left;position:sticky;left:0;background:var(--f1);z-index:1;">
+      <span style="color:var(--t0);font-weight:800;font-size:0.82rem;">Total cartera</span></td>
+      ${tot.map((c) => (c ? `<td style="text-align:right;color:${c.rentPct >= 0 ? GREEN : RED};font-weight:800;white-space:nowrap;" title="Valor ${fmtEur(c.valor)} · Invertido ${fmtEur(c.coste)}">${fmtPct(c.rentPct)}</td>` : `<td style="text-align:right;color:var(--t4);">—</td>`)).join("")}</tr>`;
 
     return `<div class="v2-wrap"><div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.35rem;">Reporte mensual por activo</div>
-      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem;">Rentabilidad acumulada desde el inicio hasta el cierre de cada mes. Pasa el cursor por una celda para ver valor e invertido.</div>
+      <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.35rem;">Reporte mensual por activo</div>
+      <div style="font-size:0.75rem;color:var(--t3);margin-bottom:1rem;">Rentabilidad acumulada desde el inicio hasta el cierre de cada mes. Pasa el cursor por una celda para ver valor e invertido.</div>
       <div style="overflow-x:auto;"><table class="minimal-table" style="min-width:100%;">
-        <thead><tr><th style="text-align:left;position:sticky;left:0;background:#12141d;z-index:2;">Activo</th>${cab}</tr></thead>
+        <thead><tr><th style="text-align:left;position:sticky;left:0;background:var(--f1);z-index:2;">Activo</th>${cab}</tr></thead>
         <tbody>${filas}${filaTotal}</tbody></table></div>
     </div></div>`;
   }
@@ -733,8 +733,8 @@
   function comparativaPanel() {
     const btn = (modo, txt, ayuda) => `<button onclick="v2CompModo('${modo}')" title="${esc(txt)}: ${esc(ayuda)}"
       aria-label="${esc(txt)}" aria-pressed="${COMP_MODO === modo}"
-      style="background:${COMP_MODO === modo ? "#2a2d3a" : "transparent"};border:1px solid ${COMP_MODO === modo ? "#4b5563" : "#2a2d3a"};
-      color:${COMP_MODO === modo ? "#fff" : "#9ca3af"};border-radius:6px;
+      style="background:${COMP_MODO === modo ? "var(--b2)" : "transparent"};border:1px solid ${COMP_MODO === modo ? "var(--t3)" : "var(--b2)"};
+      color:${COMP_MODO === modo ? "var(--t0)" : "var(--t1b)"};border-radius:6px;
       display:inline-flex;align-items:center;justify-content:center;line-height:0;
       padding:0.32rem 0.55rem;cursor:pointer;font-family:inherit;">${ICONO_COMP[modo]}</button>`;
     const explicacion = COMP_MODO === "comportamiento"
@@ -742,13 +742,13 @@
       : "Cuánto has ganado sobre lo que pagaste por cada uno. Es tu resultado real, pero no compara: un activo comprado hace años parte de un acumulado que otro reciente no puede tener.";
     return `<div class="v2-wrap" id="v2-comparativa"><div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Comparativa de rentabilidad</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Comparativa de rentabilidad</div>
         <div style="display:flex;gap:0.25rem;">
           ${btn("comportamiento", "Comportamiento", "Compara cómo se ha movido cada activo")}
           ${btn("mia", "Mi rentabilidad", "Lo que has ganado sobre lo que pagaste")}
         </div>
       </div>
-      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem;">${esc(explicacion)}</div>
+      <div style="font-size:0.75rem;color:var(--t3);margin-bottom:1rem;">${esc(explicacion)}</div>
       <div id="v2-chart-comparativa"></div>
     </div></div>`;
   }
@@ -760,11 +760,11 @@
   function subNavCartera() {
     const tabs = [{ id: "agregado", label: "Agregado" }]
       .concat(CFG.brokers().map((b) => ({ id: b.cuenta, label: b.cuenta })));
-    return `<div class="v2-wrap" style="margin-top:0.5rem;"><div style="display:flex;gap:0.25rem;border-bottom:1px solid #2a2d3a;overflow-x:auto;">` +
+    return `<div class="v2-wrap" style="margin-top:0.5rem;"><div style="display:flex;gap:0.25rem;border-bottom:1px solid var(--b2);overflow-x:auto;">` +
       tabs.map((t) => {
         const on = CARTERA_TAB === t.id;
         const idJs = String(t.id).replace(/'/g, "\\'");
-        return `<button onclick="v2CarteraTab('${idJs}')" style="background:none;border:none;border-bottom:2px solid ${on ? "#fff" : "transparent"};color:${on ? "#fff" : "#6b7280"};font-weight:${on ? 700 : 500};font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;font-family:inherit;white-space:nowrap;margin-bottom:-1px;">${esc(t.label)}</button>`;
+        return `<button onclick="v2CarteraTab('${idJs}')" style="background:none;border:none;border-bottom:2px solid ${on ? "var(--t0)" : "transparent"};color:${on ? "var(--t0)" : "var(--t2)"};font-weight:${on ? 700 : 500};font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;font-family:inherit;white-space:nowrap;margin-bottom:-1px;">${esc(t.label)}</button>`;
       }).join("") + `</div></div>`;
   }
 
@@ -781,11 +781,11 @@
     const cta = CFG.cuentas().find((c) => c.cuenta === cuenta) || {};
     const ef = efectivoBroker(m, cuenta);
     const icon = iconoCuenta(cta);
-    return `<div class="dashboard-panel" style="border-left:3px solid ${cta.accent || "#6b7280"};">
+    return `<div class="dashboard-panel" style="border-left:3px solid ${cta.accent || "var(--t2)"};">
       <div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.6rem;">${icon}
-        <span style="font-size:0.72rem;color:${cta.accent || "#9ca3af"};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">${esc(cuenta)}</span></div>
-      <div style="font-size:1.4rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">${fmtEur(ef.valor)}</div>
-      <div style="font-size:0.76rem;color:#6b7280;margin-top:0.25rem;">${esc(ef.etiqueta)}${ef.fijo ? " · sin efectivo propio" : ""}</div>
+        <span style="font-size:0.72rem;color:${cta.accent || "var(--t1b)"};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">${esc(cuenta)}</span></div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--t0);letter-spacing:-0.02em;">${fmtEur(ef.valor)}</div>
+      <div style="font-size:0.76rem;color:var(--t2);margin-top:0.25rem;">${esc(ef.etiqueta)}${ef.fijo ? " · sin efectivo propio" : ""}</div>
     </div>`;
   }
 
@@ -801,25 +801,25 @@
       <div class="hero-breakdown">
         <div class="hero-item"><span class="hero-item-label">Invertido</span><span class="hero-item-value">${inv.totalCoste ? fmtEur(inv.totalCoste) : "—"}</span></div>
         <div class="hero-item"><span class="hero-item-label">Ganancia</span><span class="hero-item-value" style="color:${rc(inv.totalGanancia)};">${inv.totalCoste ? (inv.totalGanancia >= 0 ? "+" : "") + fmtEur(inv.totalGanancia) : "—"}</span></div>
-        <div class="hero-item"><span class="hero-item-label">Rentabilidad</span><span class="hero-item-value" style="color:${rc(inv.rentPct)};">${inv.totalCoste ? fmtPct(inv.rentPct) : "—"}${isFinite(inv.portfolioCagr) ? '<span style="display:block;font-size:0.65rem;color:#9ca3af;font-weight:500;margin-top:0.15rem;">CAGR ' + (inv.portfolioCagr >= 0 ? "+" : "") + inv.portfolioCagr.toFixed(1) + '% p.a.</span>' : ""}</span></div>
+        <div class="hero-item"><span class="hero-item-label">Rentabilidad</span><span class="hero-item-value" style="color:${rc(inv.rentPct)};">${inv.totalCoste ? fmtPct(inv.rentPct) : "—"}${isFinite(inv.portfolioCagr) ? '<span style="display:block;font-size:0.65rem;color:var(--t1b);font-weight:500;margin-top:0.15rem;">CAGR ' + (inv.portfolioCagr >= 0 ? "+" : "") + inv.portfolioCagr.toFixed(1) + '% p.a.</span>' : ""}</span></div>
       </div></div></div>`;
   }
 
   function donutTipos(assets, total) {
     const porTipo = {};
     assets.forEach((a) => { if (isFinite(a.importe)) porTipo[a.tipo] = (porTipo[a.tipo] || 0) + a.importe; });
-    const items = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES[t] || "#6b7280" })).sort((a, b) => b.value - a.value);
+    const items = Object.keys(porTipo).map((t) => ({ label: t, value: porTipo[t], accent: CFG.TIPO_COLORES[t] || "var(--t2)" })).sort((a, b) => b.value - a.value);
     return items.length ? vistaPanel("activos", "Distribución por activos", items, fmtEur(total), "Activos") : "";
   }
 
   // Contenido de la pestaña activa (se re-renderiza al cambiar de bróker)
   function carteraInner(m, prices) {
     const inv = m.inv;
-    const aviso = prices ? "" : `<div class="v2-wrap"><div style="padding:0.6rem 1rem;background:#3f2d0a;border:1px solid #a16207;border-radius:10px;font-size:0.82rem;color:#fbbf24;">⏳ Cargando precios de mercado…</div></div>`;
+    const aviso = prices ? "" : `<div class="v2-wrap"><div style="padding:0.6rem 1rem;background:var(--ambar-fondo);border:1px solid #a16207;border-radius:10px;font-size:0.82rem;color:var(--ambar-2);">⏳ Cargando precios de mercado…</div></div>`;
 
     if (CARTERA_TAB === "agregado") {
-      const tarjetas = `<div class="v2-wrap"><div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.3rem;">Efectivo disponible para invertir</div>
-        <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1rem;">Dinero que tienes en cada bróker sin invertir. Cuenta como Caja, no como Cartera: puedes sacarlo cuando quieras.</div>
+      const tarjetas = `<div class="v2-wrap"><div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.3rem;">Efectivo disponible para invertir</div>
+        <div style="font-size:0.75rem;color:var(--t3);margin-bottom:1rem;">Dinero que tienes en cada bróker sin invertir. Cuenta como Caja, no como Cartera: puedes sacarlo cuando quieras.</div>
         <div class="v2-hub-grid">${CFG.brokers().map((b) => tarjetaEfectivo(m, b.cuenta)).join("")}</div></div>`;
       return aviso + heroCartera(m.carteraTotal, inv, "Valor invertido") + tarjetas +
         chartPanel("Evolución de la cartera", "v2-chart-cartera") +
@@ -843,7 +843,7 @@
       rentPct: coste > 0 ? (posiciones / coste - 1) * 100 : NaN, portfolioCagr: NaN, hayRentabilidad: coste > 0,
     };
     const sinDatos = !assets.length
-      ? `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:2.5rem;">Sin posiciones en ${esc(banco)}</div></div>` : "";
+      ? `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:var(--t2);padding:2.5rem;">Sin posiciones en ${esc(banco)}</div></div>` : "";
     return aviso + heroCartera(posiciones, invBanco, "Invertido en " + banco) +
       `<div class="v2-wrap"><div class="v2-hub-grid">${tarjetaEfectivo(m, banco)}</div></div>` +
       sinDatos + donutTipos(assets, posiciones) + treemapPanel(assets) +
@@ -870,27 +870,27 @@
       const enero = x.ym.slice(5) === "01";
       return `<div title="${esc(x.label)} · entra ${fmtEur(x.entradas)} · sale ${fmtEur(x.salidas)} · neto ${x.neto >= 0 ? "+" : "−"}${fmtEur(Math.abs(x.neto))}"
         style="flex:1 0 auto;min-width:34px;display:flex;flex-direction:column;align-items:center;gap:0.35rem;
-        ${enero && varios ? "border-left:1px solid #2a2d3a;" : ""}">
+        ${enero && varios ? "border-left:1px solid var(--b2);" : ""}">
         <div style="display:flex;align-items:flex-end;gap:2px;height:96px;width:100%;justify-content:center;">
           <div style="width:42%;max-width:15px;height:${he}%;background:${GREEN};border-radius:2px 2px 0 0;opacity:0.75;"></div>
           <div style="width:42%;max-width:15px;height:${hs}%;background:${RED};border-radius:2px 2px 0 0;opacity:0.75;"></div>
         </div>
         <div style="font-size:0.6rem;color:${x.neto >= 0 ? GREEN : RED};font-weight:600;white-space:nowrap;">
           ${x.neto >= 0 ? "+" : "−"}${Math.abs(Math.round(x.neto))}</div>
-        <div style="font-size:0.62rem;color:#4b5563;white-space:nowrap;">${esc(x.label.split(" ")[0])}${varios ? `<span style="display:block;font-size:0.56rem;color:#374151;">${x.ym.slice(2, 4)}</span>` : ""}</div>
+        <div style="font-size:0.62rem;color:var(--t3);white-space:nowrap;">${esc(x.label.split(" ")[0])}${varios ? `<span style="display:block;font-size:0.56rem;color:var(--t4);">${x.ym.slice(2, 4)}</span>` : ""}</div>
       </div>`;
     }).join("");
     const med = f.media;
     return `<div class="v2-wrap"><div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Entra y sale por mes</div>
-        <div style="font-size:0.78rem;color:#9ca3af;">
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Entra y sale por mes</div>
+        <div style="font-size:0.78rem;color:var(--t1b);">
           Media de ${med.n} meses · entra <b style="color:${GREEN};">${esc(fmtEur(med.entradas))}</b>
           · sale <b style="color:${RED};">${esc(fmtEur(med.salidas))}</b>
           · queda <b style="color:${rc(med.neto)};">${med.neto >= 0 ? "+" : "−"}${esc(fmtEur(Math.abs(med.neto)))}</b></div>
       </div>
       <div style="display:flex;gap:0.3rem;align-items:flex-end;overflow-x:auto;padding-bottom:0.25rem;">${cols}</div>
-      <div style="font-size:0.72rem;color:#4b5563;margin-top:0.75rem;">
+      <div style="font-size:0.72rem;color:var(--t3);margin-top:0.75rem;">
         Sin traspasos entre tus cuentas, que no son ni entrada ni salida. Sí cuentan las compras de inversión y los
         recibos de la tarjeta: ese dinero sale de la caja. Por eso la suma de los ${f.meses.length} netos es
         exactamente tu caja de hoy, ${esc(fmtEur(m.patrimonioLiquido))}.</div>
@@ -907,21 +907,21 @@
       // crédito no es una cuenta, pero se paga desde una y conviene verla ahí.
       const deudas = ((m.pas && m.pas.items) || []).filter((d) => d.cuenta === s.cuenta);
       const colgando = deudas.length
-        ? `<div style="font-size:0.74rem;color:#6b7280;margin-top:0.2rem;padding-left:1.55rem;">
+        ? `<div style="font-size:0.74rem;color:var(--t2);margin-top:0.2rem;padding-left:1.55rem;">
              pasivos → <button onclick="v2Tab('pasivos')" title="Ver en Pasivos"
-               style="background:none;border:none;padding:0;color:#9ca3af;font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">
+               style="background:none;border:none;padding:0;color:var(--t1b);font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">
                ${deudas.length} ${deudas.length === 1 ? "deuda" : "deudas"}</button>
-             · <span style="color:#ef4444;font-weight:600;">−${esc(fmtEur(deudas.reduce((t, d) => t + d.importe, 0)).replace("-", ""))}</span></div>`
+             · <span style="color:var(--rojo);font-weight:600;">−${esc(fmtEur(deudas.reduce((t, d) => t + d.importe, 0)).replace("-", ""))}</span></div>`
         : "";
-      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:#fff;font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:#9ca3af;">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button class="solo-editor fila-acc" onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
+      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:var(--t0);font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:var(--t1b);">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button class="solo-editor fila-acc" onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
     }).join("");
     // Una cuenta recién creada no tiene bancos: enseñarle una tabla vacía es
     // dejarla mirando el hueco donde debería estar lo que aún no ha hecho.
     if (!m.saldosCaja.length) {
       return header("Caja", fmtEur(0)) +
         `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;padding:3rem 1.5rem;">
-          <div style="color:#e5e7eb;font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Empieza por tus cuentas</div>
-          <div style="color:#6b7280;font-size:0.88rem;max-width:460px;margin:0 auto 1.5rem;">
+          <div style="color:var(--t1);font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Empieza por tus cuentas</div>
+          <div style="color:var(--t2);font-size:0.88rem;max-width:460px;margin:0 auto 1.5rem;">
             Da de alta el banco o los bancos donde tienes el dinero —y el efectivo, si lo llevas encima—.
             A partir de ahí puedes registrar movimientos y todo lo demás se calcula solo.</div>
           ${addBtn("＋ Añadir una cuenta", "v2Tab('ajustes');v2AjSec('cuentas')")}
@@ -931,7 +931,7 @@
       vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", null,
                  { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-        <div class="solo-editor solo-edicion" style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
+        <div class="solo-editor solo-edicion" style="font-size:0.75rem;color:var(--t3);margin-top:0.75rem;">⚖️ Cuadra el saldo con el de tu banco: Solvento crea el movimiento de ajuste exacto.</div>
       </div></div>` +
       chartPanel("Evolución de la caja", "v2-chart-caja") +
       panelFlujo(m) +
@@ -953,7 +953,7 @@
       const alquiler = r.alquilada
         ? `<div style="font-size:0.74rem;color:${GREEN};margin-top:0.15rem;">
              Alquilada · ${fmtEur(r.renta)}/mes${r.fuenteRenta === "real" ? " de media" : ""}${isFinite(r.yieldNeto) ? " · " + (r.yieldNeto < 0 ? "−" : "") + Math.abs(r.yieldNeto).toFixed(1).replace(".", ",") + "% neto anual" : ""}
-             <span style="color:#6b7280;">${r.fuenteRenta === "real" ? "· últimos 12 meses" : "· previsión escrita a mano"}</span></div>`
+             <span style="color:var(--t2);">${r.fuenteRenta === "real" ? "· últimos 12 meses" : "· previsión escrita a mano"}</span></div>`
         : "";
       // Lo que de verdad ha costado y rentado, contado de los movimientos que
       // llevan su centro. La renta mensual de la ficha es una previsión; esto es
@@ -962,24 +962,24 @@
       // Cobrar por un inmueble que no consta alquilado es una contradicción, y
       // callarla dejaría la renta fuera del panel de alquileres sin explicación.
       const sinMarcar = !r.alquilada && real && real.ingreso > 0
-        ? `<div style="font-size:0.72rem;color:#f59e0b;margin-top:0.2rem;">
+        ? `<div style="font-size:0.72rem;color:var(--ambar);margin-top:0.2rem;">
              Cobras ${esc(fmtEur(real.ingreso))} por él y no está marcado como alquilado.
              <button onclick="v2EditProp('${String(r.id).replace(/'/g, "\\'")}')" style="background:none;border:none;padding:0;color:inherit;font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Marcarlo</button></div>`
         : "";
       const realLinea = real && (real.gasto || real.ingreso)
-        ? `<div style="font-size:0.74rem;color:#6b7280;margin-top:0.25rem;">
+        ? `<div style="font-size:0.74rem;color:var(--t2);margin-top:0.25rem;">
              Real acumulado ${real.gasto ? `· <span style="color:${RED};">−${esc(fmtEur(real.gasto))}</span>` : ""}
              ${real.ingreso ? ` · <span style="color:${GREEN};">+${esc(fmtEur(real.ingreso))}</span>` : ""}
              ${real.ingreso && real.gasto ? ` · <b style="color:${rc(real.neto)};">${real.neto >= 0 ? "+" : "−"}${esc(fmtEur(Math.abs(real.neto)))}</b>` : ""}
              ${isFinite(r.importe) && r.importe > 0 && real.ingreso
                ? ` · ${(real.neto < 0 ? "−" : "")}${Math.abs(real.neto / r.importe * 100).toFixed(1).replace(".", ",")}% sobre su valor` : ""}
            </div>`
-        : (r.centro ? "" : `<div style="font-size:0.72rem;color:#4b5563;margin-top:0.25rem;">
+        : (r.centro ? "" : `<div style="font-size:0.72rem;color:var(--t3);margin-top:0.25rem;">
              Sin centro de coste: sus gastos no se le imputan.
-             <button onclick="v2EditProp('${String(r.id).replace(/'/g, "\\'")}')" style="background:none;border:none;padding:0;color:#3b82f6;font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Asignarlo</button></div>`);
+             <button onclick="v2EditProp('${String(r.id).replace(/'/g, "\\'")}')" style="background:none;border:none;padding:0;color:var(--azul);font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Asignarlo</button></div>`);
       const revalorizacion = (r.coste > 0 && isFinite(r.ganancia))
         ? `<div style="color:${rc(r.ganancia)};font-weight:600;">${r.ganancia >= 0 ? "+" : ""}${fmtEur(r.ganancia)}</div><div style="color:${rc(r.rentPct)};font-size:0.76rem;">${fmtPct(r.rentPct)}</div>`
-        : `<span style="color:#4b5563;">—</span>`;
+        : `<span style="color:var(--t3);">—</span>`;
       // El reparto es por tipo, así que la fila resalta el tramo del suyo: varias
       // propiedades del mismo tipo encienden el mismo tramo, que es lo correcto.
       const tipoJs = String(r.tipo).replace(/'/g, "\\'");
@@ -990,14 +990,14 @@
       // una: el CSS enseña la que toca según el ancho.
       // Con la descripción dentro también, a la celda del nombre solo le queda el
       // nombre: deja de partirse por la mitad y las cifras recuperan su sitio.
-      const contexto = `<div style="font-size:0.74rem;color:#6b7280;">${detalle}</div>${alquiler}${realLinea}${sinMarcar}`;
+      const contexto = `<div style="font-size:0.74rem;color:var(--t2);">${detalle}</div>${alquiler}${realLinea}${sinMarcar}`;
       return `<tr class="table-row" onmouseenter="v2Reparto('propiedades','${tipoJs}',true)" onmouseleave="v2Reparto('propiedades',null)">
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
           <span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span>
-          <div><div style="color:#fff;font-weight:600;">${esc(r.nombre)}</div>
+          <div><div style="color:var(--t0);font-weight:600;">${esc(r.nombre)}</div>
             <div class="solo-ancho">${contexto}</div></div></div></td>
-        <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>
-        <td class="col-secundaria" style="text-align:right;color:#9ca3af;white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
+        <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>
+        <td class="col-secundaria" style="text-align:right;color:var(--t1b);white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${revalorizacion}</td>
         ${rowActions(`v2EditProp('${r.id}')`, `v2DelProp('${r.id}')`)}</tr>` +
         `<tr class="fila-detalle"><td colspan="5">${contexto}</td></tr>`;
@@ -1005,10 +1005,10 @@
 
     const rentaPanel = inm.alquiladas
       ? `<div class="v2-wrap"><div class="dashboard-panel">
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.75rem;">Alquileres</div>
+          <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.75rem;">Alquileres</div>
           <div style="display:flex;gap:2rem;flex-wrap:wrap;">
-            <div><div style="font-size:0.75rem;color:#6b7280;">En alquiler</div><div style="font-size:1.3rem;font-weight:800;color:#fff;">${inm.alquiladas}</div></div>
-            <div><div style="font-size:0.75rem;color:#6b7280;">Renta neta al año</div><div style="font-size:1.3rem;font-weight:800;color:${rc(inm.rentaAnualTotal)};">${fmtEur(inm.rentaAnualTotal)}</div></div>
+            <div><div style="font-size:0.75rem;color:var(--t2);">En alquiler</div><div style="font-size:1.3rem;font-weight:800;color:var(--t0);">${inm.alquiladas}</div></div>
+            <div><div style="font-size:0.75rem;color:var(--t2);">Renta neta al año</div><div style="font-size:1.3rem;font-weight:800;color:${rc(inm.rentaAnualTotal)};">${fmtEur(inm.rentaAnualTotal)}</div></div>
           </div></div></div>`
       : "";
 
@@ -1018,11 +1018,11 @@
       rentaPanel +
       `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Propiedades</div>
+          <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Propiedades</div>
           ${addBtn("＋ Propiedad", "v2AddProp()")}
         </div>
         <table class="minimal-table"><thead><tr><th style="text-align:left;">Propiedad</th><th style="text-align:right;">Valor actual</th><th class="col-secundaria" style="text-align:right;">Compra</th><th style="text-align:right;">Revalorización</th><th></th></tr></thead>
-        <tbody>${rows || '<tr><td style="color:#6b7280;padding:1rem;">Sin propiedades</td></tr>'}</tbody></table>
+        <tbody>${rows || '<tr><td style="color:var(--t2);padding:1rem;">Sin propiedades</td></tr>'}</tbody></table>
       </div></div>`;
   }
 
@@ -1036,12 +1036,12 @@
       const abierta = PRESTAMOS[p.nombre];
       const saldoTxt = p.saldo > 0.005
         ? `<span style="color:${GREEN};font-weight:700;">${esc(fmtEur(p.saldo))}</span>`
-        : (p.huerfano ? `<span style="color:#f59e0b;font-weight:600;">sin registrar</span>`
-                      : `<span style="color:#6b7280;">saldado</span>`);
+        : (p.huerfano ? `<span style="color:var(--ambar);font-weight:600;">sin registrar</span>`
+                      : `<span style="color:var(--t2);">saldado</span>`);
       const detalle = abierta ? p.movimientos.map((m) => {
         const presta = m.tipo_prestamo !== "Devolución";
-        return `<tr class="table-row" style="background:#14171f;">
-          <td style="text-align:left;padding-left:2.2rem;color:#9ca3af;font-size:0.82rem;">
+        return `<tr class="table-row" style="background:var(--f1b);">
+          <td style="text-align:left;padding-left:2.2rem;color:var(--t1b);font-size:0.82rem;">
             ${esc(m.fecha)} · ${esc(String(m.detalle || "").slice(0, 60))}</td>
           <td style="text-align:right;color:${presta ? RED : GREEN};white-space:nowrap;font-size:0.85rem;">
             ${presta ? "prestado " : "devuelto "}${esc(fmtEur(Math.abs(Number(String(m.importe).replace(",", ".")) || 0)))}</td>
@@ -1050,36 +1050,36 @@
       return `<tr class="table-row">
         <td style="text-align:left;">
           <button onclick="v2PrestamoToggle('${jsN}')" title="Ver los movimientos de esta persona"
-            style="display:flex;align-items:center;gap:0.5rem;background:none;border:none;color:#e5e7eb;font-weight:600;
+            style="display:flex;align-items:center;gap:0.5rem;background:none;border:none;color:var(--t1);font-weight:600;
             font-family:inherit;font-size:0.9rem;cursor:pointer;padding:0;text-align:left;">
             <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
-              border:1px solid ${abierta ? "#3b82f6" : "#2a2d3a"};border-radius:6px;color:${abierta ? "#3b82f6" : "#9ca3af"};
+              border:1px solid ${abierta ? "var(--azul)" : "var(--b2)"};border-radius:6px;color:${abierta ? "var(--azul)" : "var(--t1b)"};
               font-size:0.7rem;flex-shrink:0;">${abierta ? "▾" : "▸"}</span>
             <span>${esc(p.nombre)}</span></button>
-          ${p.huerfano ? `<div style="color:#6b7280;font-size:0.72rem;padding-left:0.9rem;">
+          ${p.huerfano ? `<div style="color:var(--t2);font-size:0.72rem;padding-left:0.9rem;">
              te devolvió ${esc(fmtEur(p.devuelto))} de un adelanto que no está registrado como préstamo</div>` : ""}
-          ${p.perdido > 0.005 ? `<div style="color:#6b7280;font-size:0.72rem;padding-left:0.9rem;">
+          ${p.perdido > 0.005 ? `<div style="color:var(--t2);font-size:0.72rem;padding-left:0.9rem;">
              ${esc(fmtEur(p.perdido))} dados por incobrables</div>` : ""}</td>
-        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${p.prestado ? esc(fmtEur(p.prestado)) : "—"}</td>
-        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${p.devuelto ? esc(fmtEur(p.devuelto)) : "—"}</td>
+        <td style="text-align:right;color:var(--t1b);white-space:nowrap;">${p.prestado ? esc(fmtEur(p.prestado)) : "—"}</td>
+        <td style="text-align:right;color:var(--t1b);white-space:nowrap;">${p.devuelto ? esc(fmtEur(p.devuelto)) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${saldoTxt}</td>
         <td style="text-align:right;width:1%;white-space:nowrap;">${p.saldo > 0.005
           ? `<button class="fila-acc" onclick="v2PrestamoIncobrable('${jsN}',${p.saldo})"
                title="No te lo va a devolver: deja de contar como tuyo"
-               style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">⊘</button>`
+               style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">⊘</button>`
           : ""}</td></tr>` + detalle;
     };
     const aviso = r.huerfanos
-      ? `<div style="font-size:0.75rem;color:#6b7280;margin-top:0.6rem;">
+      ? `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.6rem;">
            ${r.huerfanos} persona${r.huerfanos === 1 ? "" : "s"} te ${r.huerfanos === 1 ? "ha" : "han"} devuelto dinero
            sin que conste el adelanto: se pagó con la tarjeta y quedó como un gasto normal, así que Solvento no puede
            decir cuánto queda pendiente. Para que lo sepa, el adelanto hay que registrarlo como
-           <b style="color:#9ca3af;">Préstamo · Dinero prestado</b>.</div>`
+           <b style="color:var(--t1b);">Préstamo · Dinero prestado</b>.</div>`
       : "";
     return `<div class="v2-wrap"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Préstamos entre personas</div>
-        <div style="font-size:0.8rem;color:#9ca3af;">Te deben <b style="color:${r.teDeben ? GREEN : "#6b7280"};">${esc(fmtEur(r.teDeben))}</b></div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Préstamos entre personas</div>
+        <div style="font-size:0.8rem;color:var(--t1b);">Te deben <b style="color:${r.teDeben ? GREEN : "var(--t2)"};">${esc(fmtEur(r.teDeben))}</b></div>
       </div>
       <table class="minimal-table">
         <thead><tr><th style="text-align:left;">Persona</th><th style="text-align:right;">Prestado</th>
@@ -1097,16 +1097,16 @@
     const filas = c.items.map((x) => {
       const jsId = String(x.id).replace(/'/g, "\\'");
       return `<tr class="table-row">
-        <td style="text-align:left;"><div style="color:#fff;font-weight:600;">${esc(x.persona)}</div>
-          ${x.concepto ? `<div style="color:#6b7280;font-size:0.78rem;">${esc(x.concepto)}</div>` : ""}</td>
-        <td style="text-align:left;color:#9ca3af;white-space:nowrap;">${esc(x.fecha)}</td>
+        <td style="text-align:left;"><div style="color:var(--t0);font-weight:600;">${esc(x.persona)}</div>
+          ${x.concepto ? `<div style="color:var(--t2);font-size:0.78rem;">${esc(x.concepto)}</div>` : ""}</td>
+        <td style="text-align:left;color:var(--t1b);white-space:nowrap;">${esc(x.fecha)}</td>
         <td style="text-align:right;color:${GREEN};font-weight:700;white-space:nowrap;">${esc(fmtEur(x.importe))}</td>
         <td style="text-align:right;width:1%;white-space:nowrap;">
           <button class="solo-editor" onclick="v2Cobrar('${jsId}')" title="Ya te lo ha pagado: crea el ingreso y cierra la línea"
-            style="background:#1e2130;border:1px solid #2a2d3a;border-radius:8px;color:#e5e7eb;font-size:0.75rem;
+            style="background:var(--f4);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:0.75rem;
             font-weight:600;padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;white-space:nowrap;">Cobrado</button>
           <button class="fila-acc" onclick="v2Incobrable('${jsId}')" title="No lo vas a cobrar: deja de contar como tuyo"
-            style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">⊘</button></td>
+            style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">⊘</button></td>
         ${rowActions(`v2EditCobro('${jsId}')`, `v2DelCobro('${jsId}')`)}</tr>`;
     }).join("");
 
@@ -1114,15 +1114,15 @@
     // puede deshacer. Un patrimonio que suma derechos de cobro necesita esta
     // salida; sin ella, lo que nunca va a entrar seguiría contando para siempre.
     const perdidos = c.perdidos && c.perdidos.length
-      ? `<div style="margin-top:1rem;border-top:1px solid #23262f;padding-top:0.75rem;">
-          <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.4rem;">
-            Dados por incobrables · <b style="color:#6b7280;">${esc(fmtEur(c.totalPerdido))}</b> que ya no cuentan en tu patrimonio</div>
+      ? `<div style="margin-top:1rem;border-top:1px solid var(--b1);padding-top:0.75rem;">
+          <div style="font-size:0.75rem;color:var(--t3);margin-bottom:0.4rem;">
+            Dados por incobrables · <b style="color:var(--t2);">${esc(fmtEur(c.totalPerdido))}</b> que ya no cuentan en tu patrimonio</div>
           ${c.perdidos.map((x) => {
             const jsId = String(x.id).replace(/'/g, "\\'");
-            return `<div style="font-size:0.78rem;color:#4b5563;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin:0.15rem 0;">
+            return `<div style="font-size:0.78rem;color:var(--t3);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin:0.15rem 0;">
               <span style="text-decoration:line-through;">${esc(x.persona)}${x.concepto ? " · " + esc(x.concepto) : ""} · ${esc(fmtEur(x.importe))}</span>
               <button class="fila-acc" onclick="v2CobroVuelve('${jsId}')" title="Volver a contarlo como pendiente"
-                style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#6b7280;font-family:inherit;
+                style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);font-family:inherit;
                 font-size:0.68rem;padding:0 0.35rem;cursor:pointer;">deshacer</button></div>`;
           }).join("")}
         </div>`
@@ -1130,9 +1130,9 @@
 
     return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cobros pendientes</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Cobros pendientes</div>
         <div style="display:flex;align-items:baseline;gap:0.9rem;flex-wrap:wrap;">
-          <div style="font-size:0.8rem;color:#9ca3af;">Te deben <b style="color:${c.total ? GREEN : "#6b7280"};">${esc(fmtEur(c.total))}</b></div>
+          <div style="font-size:0.8rem;color:var(--t1b);">Te deben <b style="color:${c.total ? GREEN : "var(--t2)"};">${esc(fmtEur(c.total))}</b></div>
           ${addBtn("＋ Cobro pendiente", "v2AddCobro()")}
         </div>
       </div>
@@ -1141,11 +1141,11 @@
              <thead><tr><th style="text-align:left;">Quién</th><th style="text-align:left;">Desde</th>
                <th style="text-align:right;">Importe</th><th></th><th></th></tr></thead>
              <tbody>${filas}</tbody></table>
-           <div style="font-size:0.75rem;color:#4b5563;margin-top:0.75rem;">
+           <div style="font-size:0.75rem;color:var(--t3);margin-top:0.75rem;">
              Cuenta en tu patrimonio como un activo —te lo deben—, pero no en tu caja: el dinero todavía
-             no se ha movido. Al pulsar <b style="color:#6b7280;">Cobrado</b> se crea el ingreso de verdad, con su
-             categoría y su centro. Con <b style="color:#6b7280;">⊘</b> lo das por perdido y deja de contar.</div>`
-        : `<div style="color:#4b5563;font-size:0.85rem;padding:0.75rem 0;">
+             no se ha movido. Al pulsar <b style="color:var(--t2);">Cobrado</b> se crea el ingreso de verdad, con su
+             categoría y su centro. Con <b style="color:var(--t2);">⊘</b> lo das por perdido y deja de contar.</div>`
+        : `<div style="color:var(--t3);font-size:0.85rem;padding:0.75rem 0;">
              Nada pendiente de cobrar. Aquí se apunta lo que te deben y aún no ha entrado —media cuota de
              alquiler, un trabajo facturado—: cuenta como activo en tu patrimonio, pero no en tu caja hasta
              que el dinero llegue de verdad.</div>`}
@@ -1157,9 +1157,9 @@
   // a mirarlos, porque un «está bien» de hace seis meses puede haber dejado de
   // serlo y esconder cosas para siempre es como no revisar.
   const pieRevisados = (r) => (r.descartados
-    ? `<div style="font-size:0.78rem;color:#4b5563;margin-top:0.75rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+    ? `<div style="font-size:0.78rem;color:var(--t3);margin-top:0.75rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
          ${r.descartados} ${r.descartados === 1 ? "aviso marcado como revisado" : "avisos marcados como revisados"}
-         <button onclick="v2RevRestaurar()" style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#6b7280;
+         <button onclick="v2RevRestaurar()" style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);
            font-family:inherit;font-size:0.72rem;padding:0.15rem 0.45rem;cursor:pointer;">Volver a mirarlos</button></div>`
     : "");
 
@@ -1168,38 +1168,38 @@
   function panelRevision() {
     let r;
     try { r = window.SolventoModel.revision(CURRENT_DOC, window.__PRICES || {}); }
-    catch (e) { return `<div style="color:#ef4444;font-size:0.85rem;">No se ha podido revisar: ${esc(e.message)}</div>`; }
+    catch (e) { return `<div style="color:var(--rojo);font-size:0.85rem;">No se ha podido revisar: ${esc(e.message)}</div>`; }
     if (!r.total) {
-      return `<div style="background:#0f2a1c;border:1px solid #10b981;border-radius:12px;padding:1rem 1.15rem;">
+      return `<div style="background:var(--verde-fondo);border:1px solid var(--verde);border-radius:12px;padding:1rem 1.15rem;">
         <div style="color:${GREEN};font-weight:700;font-size:0.95rem;">Todo en orden</div>
-        <div style="color:#6b7280;font-size:0.82rem;margin-top:0.25rem;">
+        <div style="color:var(--t2);font-size:0.82rem;margin-top:0.25rem;">
           Ninguna cuenta en negativo, ningún apunte huérfano, ninguna deuda imposible y ningún duplicado a la vista.</div></div>`
         + pieRevisados(r);
     }
     const bloque = (a) => {
       const err = a.nivel === "error";
-      const col = err ? RED : "#f59e0b";
+      const col = err ? RED : "var(--ambar)";
       const muestra = a.items.slice(0, 8).map((x) => {
         const boton = x.clave
           ? `<button onclick="v2RevOk('${String(x.clave).replace(/'/g, "\\'")}')" title="Marcarlo como revisado: no volverá a salir"
-               style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#6b7280;font-family:inherit;
+               style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);font-family:inherit;
                font-size:0.68rem;padding:0 0.35rem;margin-left:0.4rem;cursor:pointer;white-space:nowrap;">está bien</button>`
           : "";
         return `<li style="margin:0.15rem 0;">${esc(x.texto)}${boton}</li>`;
       }).join("");
-      return `<div style="background:${err ? "#2b1414" : "#2a2109"};border:1px solid ${col};border-radius:12px;
+      return `<div style="background:${err ? "var(--rojo-fondo)" : "var(--ambar-fondo)"};border:1px solid ${col};border-radius:12px;
              padding:0.85rem 1rem;margin-bottom:0.75rem;">
         <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:baseline;flex-wrap:wrap;">
           <div style="color:${col};font-weight:700;font-size:0.9rem;">${esc(a.titulo)}</div>
           <div style="color:${col};font-size:0.78rem;font-weight:600;">${a.n}</div>
         </div>
-        <div style="color:#9ca3af;font-size:0.8rem;margin-top:0.2rem;">${esc(a.detalle)}</div>
-        <ul style="color:#6b7280;font-size:0.78rem;margin:0.5rem 0 0;padding-left:1.1rem;">${muestra}</ul>
+        <div style="color:var(--t1b);font-size:0.8rem;margin-top:0.2rem;">${esc(a.detalle)}</div>
+        <ul style="color:var(--t2);font-size:0.78rem;margin:0.5rem 0 0;padding-left:1.1rem;">${muestra}</ul>
         ${a.accion ? `<div style="margin-top:0.6rem;">${addBtn(esc(a.accion.texto), a.accion.fn)}</div>` : ""}
-        ${a.items.length > 8 ? `<div style="color:#4b5563;font-size:0.75rem;margin-top:0.3rem;">…y ${a.items.length - 8} más</div>` : ""}
+        ${a.items.length > 8 ? `<div style="color:var(--t3);font-size:0.75rem;margin-top:0.3rem;">…y ${a.items.length - 8} más</div>` : ""}
       </div>`;
     };
-    const resumen = `<div style="font-size:0.85rem;color:#9ca3af;margin-bottom:0.75rem;">
+    const resumen = `<div style="font-size:0.85rem;color:var(--t1b);margin-bottom:0.75rem;">
       ${r.errores ? `<b style="color:${RED};">${r.errores} ${r.errores === 1 ? "cosa" : "cosas"} que hay que arreglar</b> · ` : ""}
       ${r.total - r.errores} ${r.total - r.errores === 1 ? "aviso" : "avisos"} para mirar cuando puedas.</div>`;
     return resumen + r.avisos.sort((a, b) => (a.nivel === "error" ? 0 : 1) - (b.nivel === "error" ? 0 : 1)).map(bloque).join("") + pieRevisados(r);
@@ -1220,7 +1220,7 @@
 
     const barra = (pct, color) => {
       const ancho = Math.max(0, Math.min(100, isFinite(pct) ? pct : 100));
-      return `<div style="height:5px;border-radius:3px;background:#232733;overflow:hidden;margin-top:0.3rem;">
+      return `<div style="height:5px;border-radius:3px;background:var(--b1);overflow:hidden;margin-top:0.3rem;">
         <div style="height:100%;width:${ancho}%;background:${color};"></div></div>`;
     };
     const fila = (x) => {
@@ -1228,21 +1228,21 @@
       // Pasarse de lo previsto es rojo en un gasto y verde en un ingreso: la
       // misma cifra significa lo contrario según de qué lado esté.
       const bien = x.tipo === "ingreso" ? x.ejecutado >= x.previsto : x.ejecutado <= x.previsto;
-      const color = x.previsto ? (bien ? GREEN : RED) : "#6b7280";
+      const color = x.previsto ? (bien ? GREEN : RED) : "var(--t2)";
       return `<tr class="table-row">
-        <td style="text-align:left;"><div style="color:#fff;font-weight:600;">${esc(x.nombre)}</div>
-          ${x.previsto ? barra(x.pct, color) : `<div style="font-size:0.72rem;color:#4b5563;margin-top:0.2rem;">sin partida aprobada</div>`}</td>
-        <td style="text-align:right;color:#9ca3af;white-space:nowrap;">${x.previsto ? esc(fmtEur(x.previsto)) : "—"}</td>
-        <td style="text-align:right;color:#fff;font-weight:600;white-space:nowrap;">${esc(fmtEur(x.ejecutado))}</td>
+        <td style="text-align:left;"><div style="color:var(--t0);font-weight:600;">${esc(x.nombre)}</div>
+          ${x.previsto ? barra(x.pct, color) : `<div style="font-size:0.72rem;color:var(--t3);margin-top:0.2rem;">sin partida aprobada</div>`}</td>
+        <td style="text-align:right;color:var(--t1b);white-space:nowrap;">${x.previsto ? esc(fmtEur(x.previsto)) : "—"}</td>
+        <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${esc(fmtEur(x.ejecutado))}</td>
         <td style="text-align:right;white-space:nowrap;color:${color};font-weight:600;">
           ${x.previsto ? (x.resto >= 0 ? "quedan " : "de más ") + esc(fmtEur(Math.abs(x.resto))) : "—"}</td>
         <td class="celda-acc" style="text-align:right;width:1%;white-space:nowrap;">
           <button class="fila-acc" onclick="v2Partida(${p.anio},'${x.tipo}','${jsN}')" title="Poner o cambiar lo aprobado"
-            style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button></td></tr>`;
+            style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button></td></tr>`;
     };
     const tabla = (titulo, filas, tipo) => `<div class="v2-wrap"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
         ${addBtn("＋ Partida", `v2Partida(${p.anio},'${tipo}','')`)}
       </div>
       ${filas.length
@@ -1250,14 +1250,14 @@
              <th style="text-align:right;">Aprobado</th><th style="text-align:right;">Ejecutado</th>
              <th style="text-align:right;">Diferencia</th><th></th></tr></thead>
            <tbody>${filas.map(fila).join("")}</tbody></table>`
-        : `<div style="color:#4b5563;font-size:0.85rem;padding:0.5rem 0;">Nada todavía en ${p.anio}.</div>`}
+        : `<div style="color:var(--t3);font-size:0.85rem;padding:0.5rem 0;">Nada todavía en ${p.anio}.</div>`}
     </div></div>`;
 
     const resultadoPrevisto = t.previstoIngreso - t.previstoGasto;
     const resultadoReal = t.ejecutadoIngreso - t.ejecutadoGasto;
     const selector = anios.map((a) =>
-      `<button onclick="v2PresAnio(${a})" style="background:${a === p.anio ? "#232733" : "none"};border:1px solid #2a2d3a;
-        border-radius:8px;color:${a === p.anio ? "#fff" : "#9ca3af"};font-size:0.75rem;font-family:inherit;
+      `<button onclick="v2PresAnio(${a})" style="background:${a === p.anio ? "var(--b1)" : "none"};border:1px solid var(--b2);
+        border-radius:8px;color:${a === p.anio ? "var(--t0)" : "var(--t1b)"};font-size:0.75rem;font-family:inherit;
         padding:0.2rem 0.6rem;cursor:pointer;">${a}</button>`).join("");
 
     return header("Presupuesto", String(p.anio)) +
@@ -1266,7 +1266,7 @@
         ${hubCard("Ingresos", fmtEur(t.ejecutadoIngreso), t.previstoIngreso ? t.ejecutadoIngreso / t.previstoIngreso * 100 : 0,
                   GREEN, t.previstoIngreso ? "de " + fmtEur(t.previstoIngreso) + " aprobados" : "sin presupuesto aprobado", null, null, null, "de lo aprobado")}
         ${hubCard("Gastos", fmtEur(t.ejecutadoGasto), t.previstoGasto ? t.ejecutadoGasto / t.previstoGasto * 100 : 0,
-                  "#f59e0b", t.previstoGasto ? "de " + fmtEur(t.previstoGasto) + " aprobados" : "sin presupuesto aprobado", null, null, null, "de lo aprobado")}
+                  "var(--ambar)", t.previstoGasto ? "de " + fmtEur(t.previstoGasto) + " aprobados" : "sin presupuesto aprobado", null, null, null, "de lo aprobado")}
         ${hubCard("Resultado", (resultadoReal >= 0 ? "+" : "−") + fmtEur(Math.abs(resultadoReal)), null, rc(resultadoReal),
                   "previsto " + (resultadoPrevisto >= 0 ? "+" : "−") + fmtEur(Math.abs(resultadoPrevisto)), null, null, null)}
       </div>` +
@@ -1279,8 +1279,8 @@
     if (!pas.items.length) {   // ninguna registrada; una saldada sí se enseña
       return header("Pasivos", fmtEur(0)) +
         `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;padding:3rem;">
-          <div style="color:#6b7280;font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Sin deudas registradas</div>
-          <div style="color:#374151;font-size:0.85rem;max-width:420px;margin:0 auto 1.25rem;">Hipotecas, préstamos, tarjetas… Lo que registres aquí se descuenta de tu patrimonio neto.</div>
+          <div style="color:var(--t2);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Sin deudas registradas</div>
+          <div style="color:var(--t4);font-size:0.85rem;max-width:420px;margin:0 auto 1.25rem;">Hipotecas, préstamos, tarjetas… Lo que registres aquí se descuenta de tu patrimonio neto.</div>
           ${addBtn("＋ Deuda", "v2AddPas()")}
         </div></div>` + panelPrestamos() + panelCobros();
     }
@@ -1299,8 +1299,8 @@
     const detalleDeuda = (d) => {
       const lista = movsDe(d.nombre);
       if (!lista.length) {
-        return `<tr class="table-row" style="background:#14171f;"><td colspan="5"
-          style="color:#6b7280;font-size:0.8rem;padding-left:2.2rem;">
+        return `<tr class="table-row" style="background:var(--f1b);"><td colspan="5"
+          style="color:var(--t2);font-size:0.8rem;padding-left:2.2rem;">
           Ningún movimiento menciona esta deuda: su importe es el que escribiste a mano.</td></tr>`;
       }
       /*
@@ -1355,22 +1355,22 @@
       };
       const flecha = (destino, signo) => destino
         ? `<button onclick="v2PasivoMes('${jsNombre(d.nombre)}','${destino}')" title="${esc(nombreMes(destino))}"
-             style="background:none;border:1px solid #2a2d3a;border-radius:6px;color:#9ca3af;
+             style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t1b);
              font-family:inherit;font-size:0.8rem;line-height:1;padding:0.2rem 0.45rem;cursor:pointer;">${signo}</button>`
-        : `<span style="border:1px solid transparent;color:#232733;font-size:0.8rem;
+        : `<span style="border:1px solid transparent;color:var(--b1);font-size:0.8rem;
              padding:0.2rem 0.45rem;">${signo}</span>`;
 
-      const cabecera = `<tr class="table-row" style="background:#14171f;">
+      const cabecera = `<tr class="table-row" style="background:var(--f1b);">
         <td colspan="2" style="text-align:left;padding-left:2.2rem;">
           <div style="display:flex;align-items:center;gap:0.5rem;white-space:nowrap;">
             ${flecha(i > 0 ? meses[i - 1] : null, "‹")}
-            <span style="color:#e5e7eb;font-size:0.8rem;font-weight:700;text-transform:uppercase;
+            <span style="color:var(--t1);font-size:0.8rem;font-weight:700;text-transform:uppercase;
               letter-spacing:0.04em;min-width:9.5rem;text-align:center;">${esc(nombreMes(elegido))}</span>
             ${flecha(i < meses.length - 1 ? meses[i + 1] : null, "›")}
-            <span class="col-secundaria" style="color:#4b5563;font-size:0.72rem;">${i + 1} de ${meses.length}</span>
+            <span class="col-secundaria" style="color:var(--t3);font-size:0.72rem;">${i + 1} de ${meses.length}</span>
           </div></td>
-        <td style="text-align:right;color:#4b5563;font-size:0.72rem;white-space:nowrap;">venía de</td>
-        <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:#6b7280;">${esc(fmtEur(saldoAntes))}</td>
+        <td style="text-align:right;color:var(--t3);font-size:0.72rem;white-space:nowrap;">venía de</td>
+        <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:var(--t2);">${esc(fmtEur(saldoAntes))}</td>
         <td></td></tr>`;
 
       return cabecera + delMes.map((f) => {
@@ -1378,14 +1378,14 @@
         // de lo que debía: casi siempre, un recibo con el importe equivocado.
         // Es la pista que hay que ver, no una cifra más en gris.
         const rojoAbajo = f.acumulado < -0.005;
-        return `<tr class="table-row" style="background:#14171f;">
-          <td style="text-align:left;padding-left:2.2rem;color:#9ca3af;font-size:0.82rem;">
+        return `<tr class="table-row" style="background:var(--f1b);">
+          <td style="text-align:left;padding-left:2.2rem;color:var(--t1b);font-size:0.82rem;">
             ${esc(f.m.fecha)} · ${esc(String(f.m.detalle || f.m.tipo_gasto || f.m.tipo).slice(0, 46))}</td>
-          <td style="text-align:left;color:${f.liq ? AZUL : "#4b5563"};font-size:0.78rem;">
+          <td style="text-align:left;color:${f.liq ? AZUL : "var(--t3)"};font-size:0.78rem;">
             ${f.liq ? "Liquidación" : esc(f.m.tipo)}${f.contra ? " · " + esc(f.contra) : ""}</td>
           <td style="text-align:right;white-space:nowrap;font-size:0.85rem;color:${f.suma ? RED : GREEN};">
             ${f.suma ? "+" : "−"}${esc(fmtEur(f.imp))}</td>
-          <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:${rojoAbajo ? AMBAR : "#6b7280"};"
+          <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:${rojoAbajo ? AMBAR : "var(--t2)"};"
               ${rojoAbajo ? 'title="Se ha pagado más de lo que debía: revisa el importe del recibo"' : ""}>
             ${esc(fmtEur(f.acumulado))}${rojoAbajo ? " ⚠" : ""}</td>
           <td></td></tr>`;
@@ -1399,33 +1399,33 @@
       return `<tr class="table-row">
       <td style="text-align:left;">
         <button onclick="v2PasivoToggle('${jsN}')" title="Ver de dónde sale este saldo"
-          style="display:flex;align-items:center;gap:0.5rem;background:none;border:none;color:#fff;font-weight:600;
+          style="display:flex;align-items:center;gap:0.5rem;background:none;border:none;color:var(--t0);font-weight:600;
           font-family:inherit;font-size:inherit;cursor:pointer;padding:0;text-align:left;">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
-            border:1px solid ${abierta ? "#3b82f6" : "#2a2d3a"};border-radius:6px;color:${abierta ? "#3b82f6" : "#9ca3af"};
+            border:1px solid ${abierta ? "var(--azul)" : "var(--b2)"};border-radius:6px;color:${abierta ? "var(--azul)" : "var(--t1b)"};
             font-size:0.7rem;flex-shrink:0;">${abierta ? "▾" : "▸"}</span>
           <span>${esc(d.nombre)}</span>
-          <span style="color:#4b5563;font-size:0.72rem;font-weight:500;white-space:nowrap;">
+          <span style="color:var(--t3);font-size:0.72rem;font-weight:500;white-space:nowrap;">
             ${abierta ? "" : "ver movimientos"}</span></button>
-        ${d.entidad ? `<div style="color:#6b7280;font-size:0.78rem;padding-left:0.9rem;">${esc(d.entidad)}</div>` : ""}
+        ${d.entidad ? `<div style="color:var(--t2);font-size:0.78rem;padding-left:0.9rem;">${esc(d.entidad)}</div>` : ""}
         ${d.tipo === "Tarjeta de crédito" && d.importe > 0.005
           ? `<button class="solo-editor solo-edicion" onclick="v2Liquidar('${jsN}')"
                title="Registrar el recibo del banco: salda la tarjeta y saca el dinero de la cuenta"
-               style="margin:0.35rem 0 0 0.9rem;background:none;border:1px solid ${AZUL}66;border-radius:8px;
+               style="margin:0.35rem 0 0 0.9rem;background:none;border:1px solid color-mix(in srgb, ${AZUL} 40%, transparent);border-radius:8px;
                color:${AZUL};font-size:0.72rem;font-weight:600;font-family:inherit;padding:0.2rem 0.55rem;
                cursor:pointer;white-space:nowrap;">Liquidar ${esc(fmtEur(d.importe))}</button>`
           : ""}</td>
-      <td style="text-align:left;color:#9ca3af;">${esc(d.tipo)}</td>
-      <td style="text-align:right;font-weight:600;white-space:nowrap;color:${d.importe > 0.005 ? "#fff" : "#6b7280"};">
+      <td style="text-align:left;color:var(--t1b);">${esc(d.tipo)}</td>
+      <td style="text-align:right;font-weight:600;white-space:nowrap;color:${d.importe > 0.005 ? "var(--t0)" : "var(--t2)"};">
         ${d.importe > 0.005 ? fmtEur(d.importe) : "saldada"}</td>
-      <td class="col-secundaria" style="text-align:right;color:#9ca3af;">${(pas.total ? d.importe / pas.total * 100 : 0).toFixed(2)}%</td>
+      <td class="col-secundaria" style="text-align:right;color:var(--t1b);">${(pas.total ? d.importe / pas.total * 100 : 0).toFixed(2)}%</td>
       ${rowActions(`v2EditPas('${d.id}')`, `v2DelPas('${d.id}')`)}</tr>` +
       (abierta ? detalleDeuda(d) : "");
     }).join("");
     return header("Pasivos", fmtEur(pas.total)) +
       `<div class="v2-wrap"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
-          <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Deudas</div>
+          <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Deudas</div>
           ${addBtn("＋ Deuda", "v2AddPas()")}
         </div>
         <table class="minimal-table">
@@ -1454,24 +1454,24 @@
       const enero = m.ym.slice(5) === "01";
       return `<button onclick="v2GastoMes('${m.ym}')" title="${esc(m.label)} · ingresos ${fmtEur(m.ingresos)} · gastos ${fmtEur(m.gastos)}"
         style="flex:1 0 auto;min-width:34px;background:none;border:none;cursor:pointer;font-family:inherit;padding:0;display:flex;flex-direction:column;align-items:center;gap:0.35rem;
-        ${enero && varios ? "border-left:1px solid #2a2d3a;" : ""}">
+        ${enero && varios ? "border-left:1px solid var(--b2);" : ""}">
         <div style="display:flex;align-items:flex-end;gap:2px;height:110px;width:100%;justify-content:center;">
           <div style="width:42%;max-width:16px;height:${hi}%;background:${GREEN};border-radius:2px 2px 0 0;opacity:${activo ? 1 : 0.55};"></div>
           <div style="width:42%;max-width:16px;height:${hg}%;background:${RED};border-radius:2px 2px 0 0;opacity:${activo ? 1 : 0.55};"></div>
         </div>
-        <div style="font-size:0.62rem;color:${activo ? "#fff" : "#4b5563"};font-weight:${activo ? 700 : 500};white-space:nowrap;">${esc(m.label.split(" ")[0])}${varios ? `<span style="display:block;font-size:0.56rem;color:${activo ? "#9ca3af" : "#374151"};">${m.ym.slice(2, 4)}</span>` : ""}</div>
+        <div style="font-size:0.62rem;color:${activo ? "var(--t0)" : "var(--t3)"};font-weight:${activo ? 700 : 500};white-space:nowrap;">${esc(m.label.split(" ")[0])}${varios ? `<span style="display:block;font-size:0.56rem;color:${activo ? "var(--t1b)" : "var(--t4)"};">${m.ym.slice(2, 4)}</span>` : ""}</div>
       </button>`;
     }).join("");
     return `<div class="v2-wrap"><div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Ingresos y gastos por mes</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Ingresos y gastos por mes</div>
         <div style="display:flex;gap:0.9rem;font-size:0.75rem;">
-          <span style="color:#9ca3af;"><span style="display:inline-block;width:9px;height:9px;background:${GREEN};border-radius:2px;margin-right:0.3rem;"></span>Ingresos</span>
-          <span style="color:#9ca3af;"><span style="display:inline-block;width:9px;height:9px;background:${RED};border-radius:2px;margin-right:0.3rem;"></span>Gastos</span>
+          <span style="color:var(--t1b);"><span style="display:inline-block;width:9px;height:9px;background:${GREEN};border-radius:2px;margin-right:0.3rem;"></span>Ingresos</span>
+          <span style="color:var(--t1b);"><span style="display:inline-block;width:9px;height:9px;background:${RED};border-radius:2px;margin-right:0.3rem;"></span>Gastos</span>
         </div>
       </div>
       <div style="display:flex;gap:0.3rem;align-items:flex-end;overflow-x:auto;padding-bottom:0.25rem;">${cols}</div>
-      <div style="font-size:0.72rem;color:#4b5563;margin-top:0.75rem;">Pulsa un mes para verlo en detalle${ult.length > 14 ? " · desplaza para ver los más antiguos" : ""}. ${ult.length} meses con actividad.</div>
+      <div style="font-size:0.72rem;color:var(--t3);margin-top:0.75rem;">Pulsa un mes para verlo en detalle${ult.length > 14 ? " · desplaza para ver los más antiguos" : ""}. ${ult.length} meses con actividad.</div>
     </div></div>`;
   }
 
@@ -1481,13 +1481,13 @@
   };
 
   // ── Panel 50/30/20 ───────────────────────────────────────────────────
-  const COL_REGLA = { necesario: "#3b82f6", deseo: "#a855f7", ahorro: "#10b981", sin: "#4b5563" };
+  const COL_REGLA = { necesario: "var(--azul)", deseo: "#a855f7", ahorro: "var(--verde)", sin: "var(--t3)" };
   function panelRegla(mes) {
     const cls = (CURRENT_DOC && CURRENT_DOC.config && CURRENT_DOC.config.clasificacion) || {};
     const meta = (CURRENT_DOC && CURRENT_DOC.config && CURRENT_DOC.config.regla) || window.SolventoModel.REGLA_DEFECTO;
     const r = window.SolventoModel.repartoRegla(mes, cls);
     if (!(r.base > 0)) {
-      return `<div class="v2-wrap"><div class="dashboard-panel" style="color:#6b7280;font-size:0.85rem;">
+      return `<div class="v2-wrap"><div class="dashboard-panel" style="color:var(--t2);font-size:0.85rem;">
         Sin ingresos registrados en ${esc(mes.label)}, así que no se puede repartir el 50/30/20.</div></div>`;
     }
     const fila = (clave, etiqueta, real, objetivo, importe) => {
@@ -1496,32 +1496,32 @@
       const bien = clave === "ahorro" ? desvio >= -1 : desvio <= 1;
       return `<div style="margin-bottom:1rem;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;margin-bottom:0.3rem;">
-          <div style="font-size:0.85rem;color:#e5e7eb;font-weight:600;">${esc(etiqueta)}
-            <span style="color:#6b7280;font-weight:500;">· objetivo ${objetivo}%</span></div>
+          <div style="font-size:0.85rem;color:var(--t1);font-weight:600;">${esc(etiqueta)}
+            <span style="color:var(--t2);font-weight:500;">· objetivo ${objetivo}%</span></div>
           <div style="text-align:right;white-space:nowrap;">
-            <b style="color:${bien ? GREEN : "#fbbf24"};font-size:0.95rem;">${isFinite(real) ? real.toFixed(0) : "—"}%</b>
-            <span style="color:#6b7280;font-size:0.78rem;"> · ${fmtEur(importe)}</span></div>
+            <b style="color:${bien ? GREEN : "var(--ambar-2)"};font-size:0.95rem;">${isFinite(real) ? real.toFixed(0) : "—"}%</b>
+            <span style="color:var(--t2);font-size:0.78rem;"> · ${fmtEur(importe)}</span></div>
         </div>
-        <div style="position:relative;height:9px;background:#232733;border-radius:5px;overflow:hidden;">
+        <div style="position:relative;height:9px;background:var(--b1);border-radius:5px;overflow:hidden;">
           <div style="width:${Math.max(0, Math.min(100, real)).toFixed(1)}%;height:100%;background:${COL_REGLA[clave]};"></div>
-          <div style="position:absolute;left:${objetivo}%;top:-3px;bottom:-3px;width:2px;background:#e5e7eb;opacity:0.7;" title="Objetivo ${objetivo}%"></div>
+          <div style="position:absolute;left:${objetivo}%;top:-3px;bottom:-3px;width:2px;background:var(--t1);opacity:0.7;" title="Objetivo ${objetivo}%"></div>
         </div>
-        <div style="font-size:0.72rem;color:${bien ? "#6b7280" : "#fbbf24"};margin-top:0.25rem;">
+        <div style="font-size:0.72rem;color:${bien ? "var(--t2)" : "var(--ambar-2)"};margin-top:0.25rem;">
           ${!isFinite(real) ? "" : bien ? "Dentro de objetivo"
             : (clave === "ahorro" ? `Te faltan ${Math.abs(desvio).toFixed(0)} puntos para llegar`
                                   : `Te pasas ${desvio.toFixed(0)} puntos del objetivo`)}</div>
       </div>`;
     };
     const aviso = r.sinClasificar > 0
-      ? `<div style="font-size:0.78rem;color:#fbbf24;margin-top:0.25rem;">
+      ? `<div style="font-size:0.78rem;color:var(--ambar-2);margin-top:0.25rem;">
            ${fmtEur(r.sinClasificar)} sin clasificar (${r.pctSinClasificar.toFixed(0)}%). Marca cada categoría como necesaria o deseo en la tabla de abajo para que el reparto cuadre.</div>`
       : "";
     return `<div class="v2-wrap"><div class="dashboard-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Regla 50/30/20 · ${esc(mes.label)}</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Regla 50/30/20 · ${esc(mes.label)}</div>
         ${addBtn("Ajustar objetivos", "v2Regla()")}
       </div>
-      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:1.1rem;">Sobre tus ingresos del mes (${fmtEur(r.base)}). Lo que va a inversión cuenta como ahorro.</div>
+      <div style="font-size:0.75rem;color:var(--t3);margin-bottom:1.1rem;">Sobre tus ingresos del mes (${fmtEur(r.base)}). Lo que va a inversión cuenta como ahorro.</div>
       ${fila("necesario", "Necesario", r.pctNecesario, meta.necesario, r.necesario)}
       ${fila("deseo", "Deseos", r.pctDeseo, meta.deseo, r.deseo)}
       ${fila("ahorro", "Ahorro e inversión", r.pctAhorro, meta.ahorro, r.ahorro)}
@@ -1538,7 +1538,7 @@
     const col = efectiva === "necesario" ? COL_REGLA.necesario : (efectiva === "deseo" ? COL_REGLA.deseo : COL_REGLA.sin);
     const js = String(cat).replace(/'/g, "\\'");
     return `<button onclick="v2Clase('${js}')" title="Clic para cambiar entre necesario, deseo y sin clasificar"
-      style="background:${col}22;border:1px solid ${col}55;color:${col};border-radius:999px;font-size:0.66rem;font-weight:700;
+      style="background:color-mix(in srgb, ${col} 13%, transparent);border:1px solid color-mix(in srgb, ${col} 33%, transparent);color:${col};border-radius:999px;font-size:0.66rem;font-weight:700;
       padding:0.1rem 0.45rem;cursor:pointer;font-family:inherit;white-space:nowrap;${!propia && heredada ? "opacity:0.6;" : ""}">${txt}</button>`;
   }
 
@@ -1560,7 +1560,7 @@
     // despliega hasta donde llegue. Cada nodo lleva su total (con las hijas
     // dentro) y lo suyo propio, que es lo imputado a ese nivel exacto.
     const arbol = window.SolventoModel.arbolCategorias(mes.catGasto);
-    if (!arbol.length) return `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:2.5rem;">Sin gastos registrados en ${esc(mes.label)}</div></div>`;
+    if (!arbol.length) return `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:var(--t2);padding:2.5rem;">Sin gastos registrados en ${esc(mes.label)}</div></div>`;
     const cls = (CURRENT_DOC && CURRENT_DOC.config && CURRENT_DOC.config.clasificacion) || {};
     const previos = g.meses.filter((m) => m.ym < mes.ym).slice(-6);
     // La media de una rama suma todo lo que cuelga de ella, a cualquier
@@ -1579,19 +1579,19 @@
     const barraPresupuesto = (v, pres) => {
       if (!(isFinite(pres) && pres > 0)) return "";
       const pct = Math.min(100, v / pres * 100);
-      const col = v > pres ? RED : (v > pres * 0.85 ? "#f59e0b" : GREEN);
-      return `<div style="margin-top:0.35rem;height:5px;background:#232733;border-radius:3px;overflow:hidden;max-width:16rem;">
+      const col = v > pres ? RED : (v > pres * 0.85 ? "var(--ambar)" : GREEN);
+      return `<div style="margin-top:0.35rem;height:5px;background:var(--b1);border-radius:3px;overflow:hidden;max-width:16rem;">
           <div style="width:${pct.toFixed(1)}%;height:100%;background:${col};"></div></div>
-        <div style="font-size:0.7rem;color:${v > pres ? RED : "#6b7280"};margin-top:0.2rem;">
+        <div style="font-size:0.7rem;color:${v > pres ? RED : "var(--t2)"};margin-top:0.2rem;">
           ${v > pres ? `Te has pasado ${fmtEur(v - pres)} del presupuesto` : `Te quedan ${fmtEur(pres - v)} de ${fmtEur(pres)}`}</div>`;
     };
     const comparativa = (v, media) => (isFinite(media) && media > 0
-      ? `<span style="color:${v > media * 1.15 ? RED : (v < media * 0.85 ? GREEN : "#6b7280")};font-size:0.72rem;">
+      ? `<span style="color:${v > media * 1.15 ? RED : (v < media * 0.85 ? GREEN : "var(--t2)")};font-size:0.72rem;">
            ${v > media ? "+" : ""}${((v / media - 1) * 100).toFixed(0)}% vs media</span>` : "");
 
     // Cada nivel se hunde un poco y baja de tono: la jerarquía se ve sin leer.
-    const TONO = ["#e5e7eb", "#c3c8d2", "#9ca3af", "#8b93a1"];
-    const FONDO = ["", "#14171f", "#12151c", "#111318"];
+    const TONO = ["var(--t1)", "var(--t1)", "var(--t1b)", "var(--t1b)"];
+    const FONDO = ["", "var(--f1b)", "var(--f1)", "var(--f0)"];
     const tono = (p) => TONO[Math.min(p, TONO.length - 1)];
     const fondo = (p) => FONDO[Math.min(p, FONDO.length - 1)];
 
@@ -1604,7 +1604,7 @@
       const heredada = padre ? window.SolventoModel.clasificarCategoria(padre.completa, cls) : null;
       const flecha = hijas.length
         ? `<button onclick="v2CatToggle('${jsC}')" aria-expanded="${abierta ? "true" : "false"}"
-             style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>`
+             style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>`
         : '<span style="width:1rem;display:inline-block;"></span>';
       let html = `<tr class="table-row"${fondo(prof) ? ` style="background:${fondo(prof)};"` : ""}>
         <td style="text-align:left;padding-left:${(0.75 + prof * 1.35).toFixed(2)}rem;">
@@ -1614,19 +1614,19 @@
                 ${esc(n.nombre)} ${chipClase(n.completa, heredada)}</div>
               ${barraPresupuesto(n.total, Number(presupuesto[n.completa]))}</div>
           </div></td>
-        <td style="text-align:right;color:${prof ? tono(prof) : "#fff"};font-weight:600;white-space:nowrap;">${fmtEur(n.total)}
+        <td style="text-align:right;color:${prof ? tono(prof) : "var(--t0)"};font-weight:600;white-space:nowrap;">${fmtEur(n.total)}
           ${prof === 0 ? `<div>${comparativa(n.total, mediaDe(n.completa))}</div>` : ""}</td>
-        <td style="text-align:right;color:#6b7280;white-space:nowrap;">${pct.toFixed(1)}%</td>
+        <td style="text-align:right;color:var(--t2);white-space:nowrap;">${pct.toFixed(1)}%</td>
         <td style="text-align:right;width:1%;"><button onclick="v2Presupuesto('${jsC}')" title="Poner presupuesto"
-          style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">🎯</button></td></tr>`;
+          style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">🎯</button></td></tr>`;
       if (!hijas.length || !abierta) return html;
       // Lo imputado a la rama misma, sin bajar más: sin esta línea, la suma de
       // las hijas no cuadraría con el total de arriba y parecería un error.
       if (n.propio > 0.005) {
         html += `<tr class="table-row" style="background:${fondo(prof + 1)};">
-          <td style="text-align:left;padding-left:${(0.75 + (prof + 1) * 1.35 + 1.5).toFixed(2)}rem;color:#6b7280;font-size:0.82rem;font-style:italic;">directamente en ${esc(n.nombre)}</td>
+          <td style="text-align:left;padding-left:${(0.75 + (prof + 1) * 1.35 + 1.5).toFixed(2)}rem;color:var(--t2);font-size:0.82rem;font-style:italic;">directamente en ${esc(n.nombre)}</td>
           <td style="text-align:right;color:${tono(prof + 1)};white-space:nowrap;">${fmtEur(n.propio)}</td>
-          <td style="text-align:right;color:#6b7280;white-space:nowrap;">${(n.total ? n.propio / n.total * 100 : 0).toFixed(1)}%</td>
+          <td style="text-align:right;color:var(--t2);white-space:nowrap;">${(n.total ? n.propio / n.total * 100 : 0).toFixed(1)}%</td>
           <td></td></tr>`;
       }
       return html + hijas.map((h) => fila(h, n, prof + 1)).join("");
@@ -1639,10 +1639,10 @@
 
     return `<div class="v2-wrap"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Gasto por categoría · ${esc(mes.label)}</div>
-        ${hondura > 1 ? `<button onclick="v2CatTodas()" style="background:none;border:1px solid #2a2d3a;border-radius:8px;color:#9ca3af;font-size:0.75rem;font-family:inherit;padding:0.25rem 0.6rem;cursor:pointer;">Desplegar todo</button>` : ""}
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Gasto por categoría · ${esc(mes.label)}</div>
+        ${hondura > 1 ? `<button onclick="v2CatTodas()" style="background:none;border:1px solid var(--b2);border-radius:8px;color:var(--t1b);font-size:0.75rem;font-family:inherit;padding:0.25rem 0.6rem;cursor:pointer;">Desplegar todo</button>` : ""}
       </div>
-      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.5rem;">▸ despliega los ${hondura} niveles · 🎯 pon un presupuesto y te aviso cuando te pases.</div>
+      <div style="font-size:0.75rem;color:var(--t3);margin-bottom:0.5rem;">▸ despliega los ${hondura} niveles · 🎯 pon un presupuesto y te aviso cuando te pases.</div>
       <table class="minimal-table"><tbody>${filas}</tbody></table>
     </div></div>`;
   }
@@ -1673,8 +1673,8 @@
 
     const totalGasto = Object.keys(gasto).reduce((t, c) => t + gasto[c], 0);
     const totalIngreso = Object.keys(ingreso).reduce((t, c) => t + ingreso[c], 0);
-    const TONO = ["#e5e7eb", "#c3c8d2", "#9ca3af", "#8b93a1"];
-    const FONDO = ["", "#14171f", "#12151c", "#111318"];
+    const TONO = ["var(--t1)", "var(--t1)", "var(--t1b)", "var(--t1b)"];
+    const FONDO = ["", "var(--f1b)", "var(--f1)", "var(--f0)"];
     const tono = (p) => TONO[Math.min(p, TONO.length - 1)];
 
     function fila(n, padre, prof) {
@@ -1686,20 +1686,20 @@
       const base = padre ? padre.total : totalGasto;
       const flecha = hijas.length
         ? `<button onclick="v2CentroToggle('${jsC}')" aria-expanded="${abierta ? "true" : "false"}"
-             style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>`
+             style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.7rem;padding:0;width:1rem;font-family:inherit;">${abierta ? "▾" : "▸"}</button>`
         : '<span style="width:1rem;display:inline-block;"></span>';
       let html = `<tr class="table-row"${FONDO[Math.min(prof, 3)] ? ` style="background:${FONDO[Math.min(prof, 3)]};"` : ""}>
         <td style="text-align:left;padding-left:${(0.75 + prof * 1.35).toFixed(2)}rem;">
           <div style="display:flex;align-items:center;gap:0.5rem;">${flecha}
             <span style="color:${tono(prof)};font-weight:${prof ? 500 : 600};font-size:${prof ? "0.85rem" : "0.92rem"};">${esc(n.nombre)}</span></div></td>
         <td style="text-align:right;color:${tono(prof)};white-space:nowrap;">${n.total ? fmtEur(n.total) : "—"}</td>
-        <td style="text-align:right;color:${ing ? GREEN : "#4b5563"};white-space:nowrap;">${ing ? fmtEur(ing) : "—"}</td>
+        <td style="text-align:right;color:${ing ? GREEN : "var(--t3)"};white-space:nowrap;">${ing ? fmtEur(ing) : "—"}</td>
         <td style="text-align:right;color:${ing ? rc(neto) : tono(prof)};font-weight:600;white-space:nowrap;">${ing ? (neto >= 0 ? "+" : "−") + fmtEur(Math.abs(neto)) : "−" + fmtEur(n.total)}</td>
-        <td class="col-secundaria" style="text-align:right;color:#6b7280;white-space:nowrap;">${(base ? n.total / base * 100 : 0).toFixed(1)}%</td></tr>`;
+        <td class="col-secundaria" style="text-align:right;color:var(--t2);white-space:nowrap;">${(base ? n.total / base * 100 : 0).toFixed(1)}%</td></tr>`;
       if (!hijas.length || !abierta) return html;
       if (n.propio > 0.005) {
         html += `<tr class="table-row" style="background:${FONDO[Math.min(prof + 1, 3)]};">
-          <td style="text-align:left;padding-left:${(0.75 + (prof + 1) * 1.35 + 1.5).toFixed(2)}rem;color:#6b7280;font-size:0.82rem;font-style:italic;">directamente en ${esc(n.nombre)}</td>
+          <td style="text-align:left;padding-left:${(0.75 + (prof + 1) * 1.35 + 1.5).toFixed(2)}rem;color:var(--t2);font-size:0.82rem;font-style:italic;">directamente en ${esc(n.nombre)}</td>
           <td style="text-align:right;color:${tono(prof + 1)};white-space:nowrap;">${fmtEur(n.propio)}</td>
           <td colspan="3"></td></tr>`;
       }
@@ -1710,14 +1710,14 @@
     const netoTotal = totalIngreso - totalGasto;
     return `<div class="v2-wrap"><div class="table-container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.35rem;">
-        <div style="font-size:0.82rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Por centro de coste</div>
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Por centro de coste</div>
         <div style="display:flex;gap:0.3rem;">
           ${rangos.map(([v, t]) => `<button onclick="v2CentroRango('${v}')"
-             style="background:${CENTROS.rango === v ? "#232733" : "none"};border:1px solid #2a2d3a;border-radius:8px;
-             color:${CENTROS.rango === v ? "#fff" : "#9ca3af"};font-size:0.72rem;font-family:inherit;padding:0.2rem 0.55rem;cursor:pointer;">${t}</button>`).join("")}
+             style="background:${CENTROS.rango === v ? "var(--b1)" : "none"};border:1px solid var(--b2);border-radius:8px;
+             color:${CENTROS.rango === v ? "var(--t0)" : "var(--t1b)"};font-size:0.72rem;font-family:inherit;padding:0.2rem 0.55rem;cursor:pointer;">${t}</button>`).join("")}
         </div>
       </div>
-      <div style="font-size:0.75rem;color:#4b5563;margin-bottom:0.5rem;">
+      <div style="font-size:0.75rem;color:var(--t3);margin-bottom:0.5rem;">
         Para qué o para quién, no en qué. ${totalIngreso ? `Neto del periodo: <span style="color:${rc(netoTotal)};font-weight:600;">${netoTotal >= 0 ? "+" : "−"}${fmtEur(Math.abs(netoTotal))}</span>.` : ""}</div>
       <table class="minimal-table">
         <thead><tr>
@@ -1732,7 +1732,7 @@
     const g = window.__GASTOS || { meses: [], media: { ingresos: 0, gastos: 0, meses: 0 }, categorias: [] };
     if (!g.meses.length) {
       return header("Balance", fmtEur(0)) +
-        `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:3rem;">
+        `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:var(--t2);padding:3rem;">
           Aún no hay gastos ni ingresos que analizar. Registra movimientos y aquí verás en qué se te va el dinero.</div></div>`;
     }
     const mes = mesElegido(g);
@@ -1757,15 +1757,15 @@
     // y conviene saberlo antes de leerlo.
     const pend = window.SolventoModel.pendientes((CURRENT_DOC || {}).movimientos);
     const avisoPend = pend.n
-      ? `<div class="v2-wrap"><div style="background:#3f2d0a;border:1px solid #a16207;border-radius:12px;
+      ? `<div class="v2-wrap"><div style="background:var(--ambar-fondo);border:1px solid #a16207;border-radius:12px;
              padding:0.85rem 1rem;display:flex;align-items:center;gap:0.85rem;flex-wrap:wrap;">
           <div style="flex:1;min-width:14rem;">
-            <div style="color:#fbbf24;font-weight:700;font-size:0.9rem;">
+            <div style="color:var(--ambar-2);font-weight:700;font-size:0.9rem;">
               ${pend.n} movimiento${pend.n === 1 ? "" : "s"} sin identificar · ${esc(fmtEur(pend.importe))}</div>
-            <div style="color:#d9a441;font-size:0.78rem;margin-top:0.15rem;">
+            <div style="color:var(--ambar-2);font-size:0.78rem;margin-top:0.15rem;">
               Sin categoría no entran en el reparto ni en el árbol: ese dinero se gastó, pero no se sabe en qué.</div>
           </div>
-          <button onclick="v2MovPendientes()" style="background:#fbbf24;border:none;border-radius:8px;color:#12141d;
+          <button onclick="v2MovPendientes()" style="background:var(--ambar-2);border:none;border-radius:8px;color:var(--f1);
             font-size:0.82rem;font-weight:700;padding:0.45rem 0.8rem;cursor:pointer;font-family:inherit;white-space:nowrap;">
             Verlos</button>
         </div></div>`
@@ -1785,7 +1785,7 @@
   // página principal pero siguen a un clic.
   const volverA = (pagina, texto) =>
     `<div class="v2-wrap" style="margin-bottom:0.5rem;">
-       <button onclick="v2Tab('${pagina}')" style="background:none;border:none;color:#3b82f6;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;padding:0;">← ${esc(texto)}</button>
+       <button onclick="v2Tab('${pagina}')" style="background:none;border:none;color:var(--azul);font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;padding:0;">← ${esc(texto)}</button>
      </div>`;
 
   function pageOperaciones(m) {
@@ -1798,7 +1798,7 @@
     return volverA("cartera", "Volver a Cartera") +
       header("Reporte mensual por activo", "") +
       (tablaMensual(window.__ANALITICA) ||
-        `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:#6b7280;padding:3rem;">Todavía no hay meses que reportar.</div></div>`);
+        `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:var(--t2);padding:3rem;">Todavía no hay meses que reportar.</div></div>`);
   }
 
   // ── Menú de usuario ──────────────────────────────────────────────────
@@ -1886,8 +1886,8 @@
     wrap.classList.add("act");
     segs.forEach((s, k) => s.classList.toggle("on", k === i));
     if (leg) { leg.classList.add("act"); items.forEach((s, k) => s.classList.toggle("on", k === i)); }
-    tip.innerHTML = `<div style="color:#9ca3af;">${esc(seg.dataset.label)}</div>
-      <div style="margin-top:0.1rem;"><b>${esc(seg.dataset.pct)}</b> <span style="color:#6b7280;">·</span> <span style="color:#9ca3af;">${esc(seg.dataset.eur)}</span></div>`;
+    tip.innerHTML = `<div style="color:var(--t1b);">${esc(seg.dataset.label)}</div>
+      <div style="margin-top:0.1rem;"><b>${esc(seg.dataset.pct)}</b> <span style="color:var(--t2);">·</span> <span style="color:var(--t1b);">${esc(seg.dataset.eur)}</span></div>`;
     if (sinGlobo) { tip.hidden = true; return; }
     tip.hidden = false;
     if (wrap.dataset.tipo === "circular") {
@@ -1991,13 +1991,13 @@
       const series = window.SolventoModel.buildSeries(doc, prices);
       window.__SERIES = series;
       const cp = document.getElementById("v2-chart-patrimonio");
-      if (cp) window.SolventoCharts.mount(cp, series.patrimonio, { color: "#10b981", id: "patr" });
+      if (cp) window.SolventoCharts.mount(cp, series.patrimonio, { color: "var(--verde)", id: "patr" });
       const cc = document.getElementById("v2-chart-cartera");
-      if (cc) window.SolventoCharts.mount(cc, series.cartera, { color: "#8b5cf6", id: "cart" });
+      if (cc) window.SolventoCharts.mount(cc, series.cartera, { color: "var(--violeta)", id: "cart" });
       // Azul, el mismo color con el que la caja aparece en el reparto del
       // patrimonio y en su tarjeta: la gráfica se reconoce sin leer el título.
       const cj = document.getElementById("v2-chart-caja");
-      if (cj) window.SolventoCharts.mount(cj, series.caja, { color: "#3b82f6", id: "caja" });
+      if (cj) window.SolventoCharts.mount(cj, series.caja, { color: "var(--azul)", id: "caja" });
       montarComparativa();
     }
     // ajustar treemap si la pestaña Cartera está activa; y en cualquier resize
@@ -2068,6 +2068,20 @@
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
   window.v2AddPas = () => F() && F().openPasivo();
   window.v2MenuVer = (id, visible) => F() && F().verPagina(id, visible);
+  // El tema no pasa por el documento: es de este dispositivo, y tema.js ya lo
+  // ha aplicado antes de que existiera ninguna página. Aquí solo se enseña
+  // cuál está puesto y se cambia.
+  function pintarTema() {
+    const T = window.SolventoTema;
+    if (!T) return;
+    const pref = T.actual();
+    document.querySelectorAll('#aj-tema input[name="tema"]').forEach((r) => { r.checked = r.value === pref; });
+    const nota = document.getElementById("aj-tema-nota");
+    if (nota) nota.textContent = pref === "auto"
+      ? "Ahora mismo el sistema pide el tema " + T.efectivo() + "."
+      : "";
+  }
+  window.v2Tema = (v) => { if (window.SolventoTema) window.SolventoTema.poner(v); pintarTema(); };
   // El recibo del mes, ya escrito: la tarjeta sabe cuánto debe y por qué cuenta
   // se cobra, así que lo único que queda por confirmar es la fecha.
   window.v2Liquidar = (nombre) => {
@@ -2107,6 +2121,7 @@
     // El token vive cifrado y solo boot.js lo tiene en la mano: se le pide que
     // lo ponga en su campo cuando esta sección se abre, venga uno por donde venga.
     const B = window.SolventoBoot;
+    if (sec === "apariencia") pintarTema();
     if (sec === "sync" && B) {
       if (B.rellenarToken) B.rellenarToken();
       // Y el estado del guardado al día: si se abre esta pestaña media hora
@@ -2190,7 +2205,7 @@
                    : "Modo visualización · pulsa para editar y borrar";
     }
     const B = window.SolventoBoot;
-    if (B && B.toast) B.toast(on ? "Modo edición · cada fila enseña editar y borrar" : "Modo visualización · solo mirar", on ? "#3b82f6" : "#9ca3af");
+    if (B && B.toast) B.toast(on ? "Modo edición · cada fila enseña editar y borrar" : "Modo visualización · solo mirar", on ? "var(--azul)" : "var(--t1b)");
   };
   window.v2RevRestaurar = () => F() && F().restaurarRevisiones();
   window.v2CentroRango = (r) => { CENTROS.rango = r; render(CURRENT_DOC, window.__PRICES); };
@@ -2245,7 +2260,7 @@
     layoutTreemaps();
     const cc = document.getElementById("v2-chart-cartera");
     if (cc && window.__SERIES && window.SolventoCharts) {
-      window.SolventoCharts.mount(cc, window.__SERIES.cartera, { color: "#8b5cf6", id: "cart" });
+      window.SolventoCharts.mount(cc, window.__SERIES.cartera, { color: "var(--violeta)", id: "cart" });
     }
     montarComparativa();
   }

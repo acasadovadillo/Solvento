@@ -28,7 +28,7 @@
     const el = $(elId); if (!el) return;
     el.textContent = msg || "";
     el.style.display = msg ? "block" : "none";
-    el.style.color = color || "#ef4444";
+    el.style.color = color || "var(--rojo)";
   }
   function panel(name) {
     $("login-form").style.display = name === "login" ? "flex" : "none";
@@ -70,14 +70,14 @@
     if (n1.length < 6) { setError("pw-error", "La nueva debe tener al menos 6 caracteres"); return; }
     if (n1 !== n2) { setError("pw-error", "Las dos nuevas no coinciden"); return; }
     if (n1 === actual) { setError("pw-error", "La nueva es igual que la actual"); return; }
-    setError("pw-error", "Cambiando…", "#9ca3af");
+    setError("pw-error", "Cambiando…", "var(--t1b)");
     try {
       const r = await cambiarPassword(actual, n1);
       cerrarCambioPassword();
       toast(r.subido
         ? "Contraseña cambiada y subida ✓ · úsala ya en todos tus dispositivos"
         : "Contraseña cambiada en este dispositivo · pendiente de subir: los demás seguirán pidiendo la anterior",
-        r.subido ? "#10b981" : "#fbbf24");
+        r.subido ? "var(--verde)" : "var(--ambar-2)");
     } catch (e) {
       setError("pw-error", e.code === "ACTUAL" ? "La contraseña actual no es correcta" : ("No se pudo cambiar: " + e.message));
     }
@@ -117,7 +117,7 @@
       }
       delete doc.config.token;
       guardarLocal();
-      toast("El token ya no viaja con tus datos: se queda cifrado solo en este dispositivo", "#fbbf24");
+      toast("El token ya no viaja con tus datos: se queda cifrado solo en este dispositivo", "var(--ambar-2)");
       setTimeout(() => { saveDoc(); }, 1200);   // y que salga también del repositorio
     }
     updateSyncUi();
@@ -137,11 +137,11 @@
     if (!t) {
       t = document.createElement("div");
       t.id = "v2-toast";
-      t.style.cssText = "position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:#12141d;border:1px solid #2a2d3a;color:#e5e7eb;font-size:0.85rem;font-weight:600;padding:0.6rem 1.1rem;border-radius:10px;z-index:1300;box-shadow:0 6px 20px rgba(0,0,0,0.5);display:none;";
+      t.style.cssText = "position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:var(--f1);border:1px solid var(--b2);color:var(--t1);font-size:0.85rem;font-weight:600;padding:0.6rem 1.1rem;border-radius:10px;z-index:1300;box-shadow:0 6px 20px rgba(0,0,0,0.5);display:none;";
       document.body.appendChild(t);
     }
     t.textContent = msg;
-    t.style.color = color || "#e5e7eb";
+    t.style.color = color || "var(--t1)";
     t.style.display = "block";
     clearTimeout(_toastTimer);
     _toastTimer = setTimeout(() => { t.style.display = "none"; }, 3500);
@@ -163,14 +163,14 @@
     const el = $("sync-estado");
     if (!el) return;
     const mapa = {
-      guardando: ["⏳ Guardando…", "#9ca3af"],
-      ok:        ["✓ Sincronizado", "#10b981"],
-      pendiente: ["⚠ Sin subir", "#fbbf24"],
-      sintoken:  ["⚠ Sin sincronizar", "#fbbf24"],
-      dudoso:    ["⚠ Sin comprobar", "#fbbf24"],
-      roto:      ["✗ Guardado ilegible", "#ef4444"],
+      guardando: ["⏳ Guardando…", "var(--t1b)"],
+      ok:        ["✓ Sincronizado", "var(--verde)"],
+      pendiente: ["⚠ Sin subir", "var(--ambar-2)"],
+      sintoken:  ["⚠ Sin sincronizar", "var(--ambar-2)"],
+      dudoso:    ["⚠ Sin comprobar", "var(--ambar-2)"],
+      roto:      ["✗ Guardado ilegible", "var(--rojo)"],
     };
-    const [txt, col] = mapa[estado] || ["", "#6b7280"];
+    const [txt, col] = mapa[estado] || ["", "var(--t2)"];
     el.textContent = txt;
     el.style.color = col;
     el.title = detalle || "Estado del guardado";
@@ -194,22 +194,22 @@
    * compara con lo que hay en pantalla.
    */
   const COMPROBACION = {
-    ok: ["#10b981", "Comprobado",
+    ok: ["var(--verde)", "Comprobado",
          "Lo publicado en GitHub se descarga, se descifra con tu contraseña y coincide con lo que tienes aquí."],
-    dudoso: ["#fbbf24", "Sin comprobar",
+    dudoso: ["var(--ambar-2)", "Sin comprobar",
              "Se subió y GitHub lo aceptó. Lo que no se ha podido confirmar es el paso siguiente: volver a " +
              "descargarlo y descifrarlo. Casi siempre es que la copia pública de GitHub todavía servía la " +
              "versión anterior cuando se miró — tarda unos segundos en refrescarse. <b>No significa que tus " +
              "datos estén mal ni que falte nada</b>: significa que todavía no está probado que se puedan releer."],
-    roto: ["#ef4444", "Guardado ilegible",
+    roto: ["var(--rojo)", "Guardado ilegible",
            "Se subió, pero al volver a leerlo falla. No borres nada y comprueba una copia antes de seguir guardando."],
-    pendiente: ["#fbbf24", "Sin subir",
+    pendiente: ["var(--ambar-2)", "Sin subir",
                 "Hay cambios guardados en este dispositivo que no han llegado a GitHub. Se reintenta solo, " +
                 "y también puedes forzarlo con «⬆️ Guardar en GitHub»."],
-    sintoken: ["#fbbf24", "Sin sincronizar",
+    sintoken: ["var(--ambar-2)", "Sin sincronizar",
                "Sin token no se sube nada: lo que cambies vive solo en este navegador. Pega el token aquí abajo."],
-    guardando: ["#9ca3af", "Guardando…", "Subiendo el bloque cifrado a GitHub."],
-    "": ["#6b7280", "Sin guardar todavía",
+    guardando: ["var(--t1b)", "Guardando…", "Subiendo el bloque cifrado a GitHub."],
+    "": ["var(--t2)", "Sin guardar todavía",
          "En esta sesión aún no se ha guardado nada. Puedes comprobar igualmente qué hay publicado en GitHub."],
   };
   function pintarComprobacion(extra) {
@@ -217,7 +217,7 @@
     if (!caja) return;
     const [color, titulo, texto] = COMPROBACION[_estado.estado] || COMPROBACION[""];
     caja.innerHTML =
-      `<div style="border:1px solid ${color}55;background:${color}12;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;">
+      `<div style="border:1px solid color-mix(in srgb, ${color} 33%, transparent);background:color-mix(in srgb, ${color} 7%, transparent);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;">
          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
            <div style="color:${color};font-weight:700;font-size:0.88rem;">${titulo}</div>
            <button type="button" id="sync-comprobar"
@@ -225,12 +225,12 @@
              font-size:0.78rem;font-weight:600;padding:0.35rem 0.7rem;cursor:pointer;font-family:inherit;
              white-space:nowrap;">Comprobar ahora</button>
          </div>
-         <div style="color:#9ca3af;font-size:0.8rem;line-height:1.45;margin-top:0.5rem;">${texto}</div>
-         ${_estado.detalle ? `<div style="color:#4b5563;font-size:0.74rem;margin-top:0.45rem;">${esc(_estado.detalle)}</div>` : ""}
+         <div style="color:var(--t1b);font-size:0.8rem;line-height:1.45;margin-top:0.5rem;">${texto}</div>
+         ${_estado.detalle ? `<div style="color:var(--t3);font-size:0.74rem;margin-top:0.45rem;">${esc(_estado.detalle)}</div>` : ""}
          ${/* El aviso de que la comprobación no se pudo hacer va SIEMPRE en ámbar,
               no en el color del estado: en verde se leería «comprobado… no se ha
               podido comprobar», que es justo lo contrario de lo que dice. */ ""}
-         ${extra ? `<div style="color:#fbbf24;font-size:0.78rem;font-weight:600;margin-top:0.55rem;">${esc(extra)}</div>` : ""}
+         ${extra ? `<div style="color:var(--ambar-2);font-size:0.78rem;font-weight:600;margin-top:0.55rem;">${esc(extra)}</div>` : ""}
        </div>`;
     const b = $("sync-comprobar");
     if (b) b.addEventListener("click", comprobarAhora);
@@ -248,15 +248,15 @@
       if (v.ok) {
         pintarEstado("ok", "Comprobado ahora mismo: lo publicado se relee y coincide" +
                      (v.movimientos ? " (" + v.movimientos + " movimientos)" : ""));
-        toast("Comprobado: lo publicado se puede releer", "#10b981");
+        toast("Comprobado: lo publicado se puede releer", "var(--verde)");
       } else if (v.grave) {
         pintarEstado("roto", v.motivo);
-        toast("Lo publicado no se puede releer · " + v.motivo, "#ef4444");
+        toast("Lo publicado no se puede releer · " + v.motivo, "var(--rojo)");
       } else if (v.desfase) {
         // Descifra bien, pero no es lo mismo: falta subir, o subió otro sitio.
         pintarEstado("pendiente", v.motivo + ". Guarda otra vez para publicar lo de aquí, " +
                      "o trae de GitHub si lo bueno es lo de allí.");
-        toast("Lo publicado no coincide con lo de aquí · " + v.motivo, "#fbbf24");
+        toast("Lo publicado no coincide con lo de aquí · " + v.motivo, "var(--ambar-2)");
       } else {
         pintarComprobacion("No se ha podido comprobar: " + v.motivo);
       }
@@ -285,7 +285,7 @@
     localStorage.setItem(EDITAR_IGUAL, "1");
     pintarLectura();
     render();                            // los botones de editar vuelven a su sitio
-    toast("Puedes editar en este dispositivo · añade tu token para que se suba", "#fbbf24");
+    toast("Puedes editar en este dispositivo · añade tu token para que se suba", "var(--ambar-2)");
   }
   function pintarLectura() {
     const invitado = esInvitado();
@@ -300,18 +300,18 @@
     if (!b) {
       b = document.createElement("div");
       b.id = "v2-banner-lectura";
-      b.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:1200;background:#2a2109;border-top:1px solid #f59e0b;" +
-        "color:#fbbf24;font-size:0.8rem;padding:0.55rem 1rem;display:flex;gap:0.75rem;align-items:center;justify-content:center;flex-wrap:wrap;";
+      b.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:1200;background:var(--ambar-fondo);border-top:1px solid var(--ambar);" +
+        "color:var(--ambar-2);font-size:0.8rem;padding:0.55rem 1rem;display:flex;gap:0.75rem;align-items:center;justify-content:center;flex-wrap:wrap;";
       document.body.appendChild(b);
     }
     b.innerHTML = '<span>Modo lectura · estás viendo unos datos que no se guardan en este dispositivo.</span>' +
-      '<button onclick="window.SolventoBoot.editarIgualmente()" style="background:none;border:1px solid #f59e0b;border-radius:6px;' +
-      'color:#fbbf24;font-family:inherit;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;cursor:pointer;">Son míos, quiero editar aquí</button>';
+      '<button onclick="window.SolventoBoot.editarIgualmente()" style="background:none;border:1px solid var(--ambar);border-radius:6px;' +
+      'color:var(--ambar-2);font-family:inherit;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;cursor:pointer;">Son míos, quiero editar aquí</button>';
     // La barra de pestañas del móvil vive abajo: se le hace sitio.
     if (nav) nav.style.bottom = b.offsetHeight + "px";
   }
   function avisoLectura() {
-    toast("Modo lectura: aquí no se guarda nada. Si son tuyos, pulsa «Son míos» abajo.", "#fbbf24");
+    toast("Modo lectura: aquí no se guarda nada. Si son tuyos, pulsa «Son míos» abajo.", "var(--ambar-2)");
   }
 
   // Cifra y guarda en este dispositivo (siempre, pase lo que pase con la red).
@@ -337,7 +337,7 @@
         } else if (v.grave) {
           pintarEstado("roto", "Se subió, pero al releerlo falla: " + v.motivo +
                        ". No borres nada y comprueba una copia antes de seguir guardando.");
-          toast("Lo guardado no se puede releer · " + v.motivo, "#ef4444");
+          toast("Lo guardado no se puede releer · " + v.motivo, "var(--rojo)");
         } else {
           pintarEstado("dudoso", "Se subió, pero no he podido comprobarlo (" + v.motivo +
                        "). Se vuelve a intentar en el próximo guardado.");
@@ -351,7 +351,7 @@
       pintarEstado("pendiente", auth
         ? "El token no vale o ha caducado: ponlo de nuevo en ⚙ Ajustes → Sincronización"
         : "No se pudo subir (" + e.message + "). Se reintentará solo.");
-      toast(auth ? "El token no vale o ha caducado · ponlo de nuevo en ⚙ Ajustes" : "Sin conexión con GitHub · se reintentará solo", "#fbbf24");
+      toast(auth ? "El token no vale o ha caducado · ponlo de nuevo en ⚙ Ajustes" : "Sin conexión con GitHub · se reintentará solo", "var(--ambar-2)");
       return false;
     }
   }
@@ -408,17 +408,17 @@
     if (!DB.state.token) {
       marcarPendiente(true);
       pintarEstado("sintoken", "Guardado en este dispositivo. Añade tu token en ⚙ Ajustes para subirlo solo.");
-      toast("Guardado en este dispositivo · añade tu token para subirlo", "#fbbf24");
+      toast("Guardado en este dispositivo · añade tu token para subirlo", "var(--ambar-2)");
       return;
     }
-    if (await subir()) { toast("Guardado y sincronizado ✓", "#10b981"); sincronizarTickers(); }
+    if (await subir()) { toast("Guardado y sincronizado ✓", "var(--verde)"); sincronizarTickers(); }
   }
 
   // Si quedaron cambios sin subir (fallo de red, token caducado, sha obsoleto),
   // se reintenta al desbloquear, al recuperar la conexión y al volver a la pestaña.
   async function reintentarPendiente() {
     if (!hayPendiente() || !DB.state.doc || !DB.state.token) return;
-    if (await subir("Solvento: subir cambios pendientes")) toast("Cambios pendientes subidos ✓", "#10b981");
+    if (await subir("Solvento: subir cambios pendientes")) toast("Cambios pendientes subidos ✓", "var(--verde)");
   }
   function lock() {
     if (P()) P().entrar(false);
@@ -489,11 +489,11 @@
     if ($("v2-banda-copia")) return;
     const b = document.createElement("div");
     b.id = "v2-banda-copia";
-    b.style.cssText = "background:#3f2d0a;border-bottom:1px solid #a16207;color:#fbbf24;font-size:0.82rem;font-weight:600;padding:0.6rem 1rem;display:flex;align-items:center;justify-content:center;gap:0.75rem;flex-wrap:wrap;text-align:center;";
+    b.style.cssText = "background:var(--ambar-fondo);border-bottom:1px solid #a16207;color:var(--ambar-2);font-size:0.82rem;font-weight:600;padding:0.6rem 1rem;display:flex;align-items:center;justify-content:center;gap:0.75rem;flex-wrap:wrap;text-align:center;";
     b.innerHTML =
       `<span>${ultima ? `Hace ${Math.floor(dias)} días de tu última copia de seguridad.` : "Aún no has hecho ninguna copia de seguridad."}
         Sin tu contraseña no hay forma de recuperar los datos.</span>
-       <button id="v2-copia-ya" style="background:#fbbf24;color:#1a1200;border:none;border-radius:7px;font-size:0.78rem;font-weight:700;padding:0.35rem 0.8rem;cursor:pointer;font-family:inherit;">Exportar copia</button>
+       <button id="v2-copia-ya" style="background:var(--ambar-2);color:var(--f0);border:none;border-radius:7px;font-size:0.78rem;font-weight:700;padding:0.35rem 0.8rem;cursor:pointer;font-family:inherit;">Exportar copia</button>
        <button id="v2-copia-luego" style="background:none;border:none;color:#a16207;font-size:0.78rem;cursor:pointer;font-family:inherit;">Ahora no</button>`;
     const app = $("app");
     app.insertBefore(b, app.firstChild);
@@ -522,7 +522,7 @@
     if (!cuenta) { malos(); return; }
     P().usar(cuenta.id);
 
-    setError("login-error", "Entrando…", "#9ca3af");
+    setError("login-error", "Entrando…", "var(--t1b)");
     let blob = DB.getStoredBlob();
     if (!blob) {
       // Primera vez con esta cuenta en este dispositivo: su bloque se lee de su
@@ -564,7 +564,7 @@
     const p1 = $("imp-pass").value, p2 = $("imp-pass2").value;
     if (p1.length < 6) { setError("imp-error", "La contraseña debe tener al menos 6 caracteres"); return; }
     if (p1 !== p2) { setError("imp-error", "Las contraseñas no coinciden"); return; }
-    setError("imp-error", "Cifrando…", "#9ca3af");
+    setError("imp-error", "Cifrando…", "var(--t1b)");
     try {
       // Una cuenta nueva empieza VACÍA, siempre.
       //
@@ -591,7 +591,7 @@
       // lo que registre se queda aquí, y eso hay que decirlo el primer día.
       if (!DB.state.token) {
         pintarEstado("sintoken", "Tus datos están cifrados en este dispositivo. Añade tu token en ⚙ Ajustes para que se guarden también en la nube.");
-        toast("Cuenta creada · añade tu token en ⚙ Ajustes para sincronizar", "#fbbf24");
+        toast("Cuenta creada · añade tu token en ⚙ Ajustes para sincronizar", "var(--ambar-2)");
       }
     } catch (e) {
       setError("imp-error", "No se pudo importar: " + e.message);
@@ -616,7 +616,7 @@
       setError("login-error", SYNC.hasToken()
         ? "Hay cambios sin subir en este dispositivo: se abre tu copia local, no la del repositorio."
         : "Hay cambios guardados solo aquí y este dispositivo no puede subirlos, así que no se traen los del repositorio. Para volver a ver los datos actualizados, borra los datos del sitio en tu navegador.",
-        "#fbbf24");
+        "var(--ambar-2)");
       return;
     }
     let remote = null;
@@ -625,7 +625,7 @@
     const local = DB.getStoredBlob();
     if (local && JSON.stringify(local) === JSON.stringify(remote.blob)) return;
     DB.storeBlob(remote.blob);
-    setError("login-error", "Se ha traído la última versión de tus datos.", "#10b981");
+    setError("login-error", "Se ha traído la última versión de tus datos.", "var(--verde)");
   }
 
   async function startBoot() {
@@ -655,7 +655,7 @@
   function updateSyncUi() {
     const has = SYNC.hasToken();
     const st = $("sync-token-status");
-    if (st) { st.textContent = has ? "✅ Token guardado (cifrado) en este dispositivo" : "Sin token — necesario para guardar en GitHub"; st.style.color = has ? "#10b981" : "#6b7280"; }
+    if (st) { st.textContent = has ? "✅ Token guardado (cifrado) en este dispositivo" : "Sin token — necesario para guardar en GitHub"; st.style.color = has ? "var(--verde)" : "var(--t2)"; }
   }
   // Poner en el campo el token que ya está guardado en este dispositivo, para
   // que se vea que no hace falta volver a pegarlo —y para poder copiarlo con el
@@ -696,7 +696,7 @@
     const guardar = $("sync-save-token"), puesto = $("sync-token-puesto");
     if (guardar) guardar.hidden = false;
     if (puesto) puesto.style.display = "none";
-    setError("sync-status", "Pega el token nuevo y guárdalo. El de antes sigue valiendo hasta entonces.", "#9ca3af");
+    setError("sync-status", "Pega el token nuevo y guárdalo. El de antes sigue valiendo hasta entonces.", "var(--t1b)");
   }
 
   function quitarToken() {
@@ -709,7 +709,7 @@
     pintarLectura();
     render();
     pintarEstado("sintoken", "Sin token: lo que guardes se queda en este dispositivo");
-    setError("sync-status", "Token quitado de este dispositivo", "#fbbf24");
+    setError("sync-status", "Token quitado de este dispositivo", "var(--ambar-2)");
   }
   function openSync() {
     if (window.v2Tab) window.v2Tab("ajustes");
@@ -736,27 +736,27 @@
     updateSyncUi();
     pintarLectura();                     // con token ya no es un invitado
     render();                            // y vuelven los botones de editar
-    setError("sync-status", "Token guardado ✓ · a partir de ahora se guarda solo", "#10b981");
+    setError("sync-status", "Token guardado ✓ · a partir de ahora se guarda solo", "var(--verde)");
     if (hayPendiente()) await reintentarPendiente(); else pintarEstado("ok");
   }
   async function doPush() {
     if (!DB.state.token) { setError("sync-status", "Primero añade tu token"); return; }
-    setError("sync-status", "Subiendo a GitHub…", "#9ca3af");
+    setError("sync-status", "Subiendo a GitHub…", "var(--t1b)");
     try {
       await SYNC.push(DB.state.doc, DB.state.password, DB.state.token);
-      setError("sync-status", "Guardado en GitHub ✓", "#10b981");
+      setError("sync-status", "Guardado en GitHub ✓", "var(--verde)");
     } catch (e) {
       setError("sync-status", e.code === "CONFLICT" ? "El fichero cambió en el repo; usa 'Traer de GitHub' primero" : ("Error: " + e.message));
     }
   }
   async function doPull() {
-    setError("sync-status", "Trayendo de GitHub…", "#9ca3af");
+    setError("sync-status", "Trayendo de GitHub…", "var(--t1b)");
     try {
       const remote = await SYNC.fetchRemoteBlob(DB.state.token);
       if (!remote) { setError("sync-status", "No hay datos en el repo todavía"); return; }
       const doc = await C.decryptDoc(remote.blob, DB.state.password);
       DB.state.doc = doc; DB.storeBlob(remote.blob); render();
-      setError("sync-status", "Actualizado desde GitHub ✓", "#10b981");
+      setError("sync-status", "Actualizado desde GitHub ✓", "var(--verde)");
     } catch (e) {
       setError("sync-status", e.code === "BAD_PASSWORD" ? "La copia del repo usa otra contraseña" : ("Error: " + e.message));
     }
@@ -770,17 +770,17 @@
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(a.href);
     marcarCopiaHecha();
-    setError("sync-status", "Copia cifrada descargada ✓", "#10b981");
+    setError("sync-status", "Copia cifrada descargada ✓", "var(--verde)");
   }
   async function doImport(ev) {
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
-    setError("sync-status", "Importando copia…", "#9ca3af");
+    setError("sync-status", "Importando copia…", "var(--t1b)");
     try {
       const blob = JSON.parse(await file.text());
       const doc = await C.decryptDoc(blob, DB.state.password);
       DB.state.doc = doc; DB.storeBlob(blob); render();
-      setError("sync-status", "Copia importada ✓", "#10b981");
+      setError("sync-status", "Copia importada ✓", "var(--verde)");
     } catch (e) {
       setError("sync-status", e.code === "BAD_PASSWORD" ? "Esa copia usa otra contraseña" : "Archivo no válido");
     }
@@ -810,7 +810,7 @@
     a.download = "solvento-datos-EN-CLARO.json";
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(a.href);
-    setError("sync-status", "Descargado en claro · bórralo cuando acabes", "#fbbf24");
+    setError("sync-status", "Descargado en claro · bórralo cuando acabes", "var(--ambar-2)");
   }
 
   // Reemplaza el documento entero. No es la importación de la primera vez
@@ -836,9 +836,9 @@
       // cuentas, activos y objetivo no vienen de los extractos del banco.
       if (!nuevo.config && viejo.config) nuevo.config = viejo.config;
       DB.state.doc = nuevo;
-      setError("sync-status", "Reemplazado · guardando…", "#9ca3af");
+      setError("sync-status", "Reemplazado · guardando…", "var(--t1b)");
       await saveDoc();
-      setError("sync-status", "Datos reemplazados ✓", "#10b981");
+      setError("sync-status", "Datos reemplazados ✓", "var(--verde)");
     } catch (e) {
       setError("sync-status", "No se pudo reemplazar: " + (e.message || e));
     }
@@ -871,7 +871,7 @@
       if (!E) { setError("sync-status", "No se ha podido preparar la descarga"); return; }
       const r = fn();
       if (r === null) setError("sync-status", "No hay datos que exportar");
-      else if (r) setError("sync-status", ok, "#fbbf24");
+      else if (r) setError("sync-status", ok, "var(--ambar-2)");
     };
     $("export-xlsx").addEventListener("click", aHoja(() => window.SolventoExportar.aExcel(),
       "Excel descargado · sin cifrar, bórralo al acabar"));
