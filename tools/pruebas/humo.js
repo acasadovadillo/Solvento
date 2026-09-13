@@ -59,6 +59,20 @@ comprobar("inmuebles y otros bienes van cada uno a su página",
   mo.inm.n === m.inm.n && mo.otros.n === m.otros.n + 1 && cerca(mo.otros.total, m.otros.total + 2500) &&
   cerca(mo.patrimonioNeto, m.patrimonioNeto + 2500),
   "inm " + mo.inm.n + " otros " + mo.otros.n);
+// Un inmueble sin alquilar se enseña en Pasivos con lo que cuesta, pero NO
+// deja de ser un activo: el patrimonio no se mueve por marcarlo o desmarcarlo
+// como alquilado. Restarlo sería inventarse una pérdida.
+var vacio = JSON.parse(JSON.stringify(doc));
+vacio.propiedades.forEach(function (p) { p.alquilada = false; });
+var mv = M.build(vacio, precios);
+comprobar("un inmueble sin alquilar sigue siendo activo: el patrimonio no cambia",
+  mv.inm.sinAlquilar.length === mv.inm.n && mv.inm.n > 0 &&
+  cerca(mv.patrimonioBruto, m.patrimonioBruto) && cerca(mv.pas.total, m.pas.total),
+  "bruto " + mv.patrimonioBruto + " vs " + m.patrimonioBruto);
+comprobar("y lo que cuesta al año sale de sus gastos reales",
+  mv.inm.costeSinAlquilar > 0 &&
+  cerca(mv.inm.costeSinAlquilar, mv.inm.sinAlquilar.reduce(function (s, x) { return s + x.costeAnual; }, 0)),
+  "coste " + mv.inm.costeSinAlquilar);
 var todosLosTipos = Object.keys(window.SolventoConfig.TIPO_COLORES_INMUEBLE);
 comprobar("cada tipo de bien es inmueble u otro, nunca ninguno de los dos",
   todosLosTipos.every(function (t) { return typeof window.SolventoConfig.esInmueble(t) === "boolean"; }) &&

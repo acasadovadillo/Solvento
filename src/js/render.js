@@ -1102,6 +1102,51 @@
   // Lo que te deben y todavía no ha entrado. No suma en ningún saldo —el dinero
   // no se ha movido— y por eso vive aquí y no en la caja: es una lista de
   // promesas, no de hechos.
+  /* ── Inmuebles sin alquilar, vistos desde Pasivos ──────────────────────────
+   * Un piso vacío no es una deuda: vale lo que vale y sigue en Activos, y
+   * restarlo del patrimonio sería inventarse una pérdida. Pero se comporta como
+   * una: cada año saca dinero de la caja —IBI, comunidad, suministros,
+   * derramas— y no devuelve nada. Esta página es la de lo que te cuesta, así
+   * que aquí se enseñan con lo que cuestan, no con lo que valen.
+   */
+  function panelSinAlquilar(m) {
+    const inm = (m && m.inm) || { sinAlquilar: [] };
+    const lista = inm.sinAlquilar || [];
+    if (!lista.length) return "";
+    const filas = lista.map((x) => {
+      const jsId = String(x.id).replace(/'/g, "\\'");
+      const coste = x.costeAnual > 0
+        ? `<span style="color:${RED};font-weight:700;">−${esc(fmtEur(x.costeAnual))}</span>
+           <div style="color:var(--t3);font-size:0.72rem;">${x.fuenteRenta === "real" ? "últimos 12 meses" : "previsión escrita a mano"}</div>`
+        : (x.centro
+            ? `<span style="color:var(--t3);">sin gastos registrados</span>`
+            : `<span style="color:var(--t3);">sin centro de coste</span>
+               <div style="font-size:0.72rem;"><button onclick="v2EditProp('${jsId}')" style="background:none;border:none;padding:0;color:var(--azul);font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Asignarlo</button> para que se le imputen</div>`);
+      return `<tr class="table-row">
+        <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
+          <span style="width:9px;height:9px;border-radius:50%;background:${x.accent};flex-shrink:0;"></span>
+          <div><div style="color:var(--t0);font-weight:600;">${esc(x.nombre)}</div>
+            <div style="color:var(--t2);font-size:0.78rem;">${esc(x.tipo)} · vale ${esc(fmtEur(x.importe))}</div></div></div></td>
+        <td style="text-align:right;white-space:nowrap;">${coste}</td>
+        <td style="text-align:right;width:1%;white-space:nowrap;">
+          <button class="solo-editor" onclick="v2EditProp('${jsId}')" title="Marcarlo como alquilado o cambiar sus datos"
+            style="background:var(--f4);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:0.75rem;
+            font-weight:600;padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;white-space:nowrap;">Editar</button></td></tr>`;
+    }).join("");
+    return `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;flex-wrap:wrap;gap:0.5rem;">
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Inmuebles sin alquilar</div>
+        ${inm.costeSinAlquilar > 0
+          ? `<div style="font-size:0.85rem;color:var(--t1b);">Te cuestan <b style="color:${RED};">${esc(fmtEur(inm.costeSinAlquilar))}</b> al año</div>`
+          : ""}
+      </div>
+      <div style="font-size:0.78rem;color:var(--t2);margin-bottom:0.75rem;">
+        No son deuda y su valor sigue contando en Activos. Pero cada año salen de tu caja sin devolver nada,
+        y eso es lo que se mira en esta página.</div>
+      <table class="minimal-table"><thead><tr><th style="text-align:left;">Inmueble</th><th style="text-align:right;">Coste al año</th><th></th></tr></thead>
+      <tbody>${filas}</tbody></table></div></div>`;
+  }
+
   function panelCobros() {
     const c = window.SolventoModel.cobrosPendientes(CURRENT_DOC || {});
     const filas = c.items.map((x) => {
@@ -1292,7 +1337,7 @@
           <div style="color:var(--t2);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Sin deudas registradas</div>
           <div style="color:var(--t4);font-size:0.85rem;max-width:420px;margin:0 auto 1.25rem;">Hipotecas, préstamos, tarjetas… Lo que registres aquí se descuenta de tu patrimonio neto.</div>
           ${addBtn("＋ Deuda", "v2AddPas()")}
-        </div></div>` + panelPrestamos() + panelCobros();
+        </div></div>` + panelSinAlquilar(m) + panelPrestamos() + panelCobros();
     }
     // De dónde sale el saldo de una deuda calculada. Una tarjeta es la pregunta
     // que más se hace —«¿por qué sigo debiendo esto si ya me lo cobraron?»— y
@@ -1440,7 +1485,7 @@
         </div>
         <table class="minimal-table">
         <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead>
-        <tbody>${rows}</tbody></table></div></div>` + panelPrestamos() + panelCobros();
+        <tbody>${rows}</tbody></table></div></div>` + panelSinAlquilar(m) + panelPrestamos() + panelCobros();
   }
 
   // ── Página Gastos (Fase 6) ──────────────────────────────────────────

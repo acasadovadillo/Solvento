@@ -273,7 +273,15 @@
     const totalCoste = round2(arr.reduce((s, x) => s + (isFinite(x.coste) && x.coste > 0 ? x.coste : 0), 0));
     const alquiladas = arr.filter((x) => x.alquilada);
     const rentaAnualTotal = round2(alquiladas.reduce((s, x) => s + (x.netoAnual || 0), 0));
-    return { items: arr, total, totalCoste, n: arr.length, alquiladas: alquiladas.length, rentaAnualTotal };
+    // Lo que no está alquilado sigue siendo un activo —vale lo que vale—, pero
+    // cada año saca dinero de la caja sin devolver nada: IBI, comunidad,
+    // suministros, derramas. Es lo que se mira desde Pasivos.
+    const sinAlquilar = arr.filter((x) => !x.alquilada).map((x) => Object.assign({}, x, {
+      costeAnual: isFinite(x.gastos) && x.gastos > 0 ? round2(x.gastos * 12) : 0,
+    }));
+    const costeSinAlquilar = round2(sinAlquilar.reduce((s, x) => s + x.costeAnual, 0));
+    return { items: arr, total, totalCoste, n: arr.length, alquiladas: alquiladas.length, rentaAnualTotal,
+             sinAlquilar, costeSinAlquilar };
   }
 
   // ── Modelo completo ──
