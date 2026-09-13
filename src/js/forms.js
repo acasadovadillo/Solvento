@@ -726,7 +726,10 @@
     const esOrg = !!(window.SolventoPerfil && window.SolventoPerfil.esOrganizacion());
     // En el orden que cada uno haya dejado: la lista de aquí ES el menú, y se
     // reordena arrastrando por los tres puntos de la izquierda.
-    const menu = CFG.paginasOrdenadas().filter((p) => !p.org || esOrg).map((p) => {
+    const asa = (nombre) => `<span class="menu-asa" title="Arrastra para cambiar el orden" aria-label="Mover ${esc(nombre)}"
+          style="cursor:grab;color:var(--t3);font-size:1.15rem;line-height:1;user-select:none;
+          -webkit-user-select:none;touch-action:none;padding:0.1rem 0.3rem;flex-shrink:0;">⋮</span>`;
+    const filaPagina = (p) => {
       const visible = p.fijo || CFG.paginaVisible(p.id);
       const control = p.fijo
         ? `<span style="color:var(--t3);font-size:0.74rem;white-space:nowrap;">siempre visible</span>`
@@ -738,12 +741,23 @@
              ${visible ? "En el menú" : "Oculta"}</label>`;
       return `<div class="menu-fila" data-pagina="${p.id}"
         style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;border-bottom:1px solid var(--b1);">
-        <span class="menu-asa" title="Arrastra para cambiar el orden" aria-label="Mover ${esc(p.nombre)}"
-          style="cursor:grab;color:var(--t3);font-size:1.15rem;line-height:1;user-select:none;
-          -webkit-user-select:none;touch-action:none;padding:0.1rem 0.3rem;flex-shrink:0;">⋮</span>
+        ${asa(p.nombre)}
         <div style="flex:1;min-width:0;"><div style="color:var(--t1);font-weight:600;font-size:0.88rem;">${esc(p.nombre)}</div>
           <div style="color:var(--t2);font-size:0.75rem;">${esc(p.nota || "")}</div></div>${control}</div>`;
-    }).join("");
+    };
+    // Un grupo es un bloque: se arrastra entero por su asa, y dentro sus
+    // páginas se arrastran entre ellas. Sin casilla propia: un grupo se esconde
+    // solo cuando no le queda ninguna página visible.
+    const filaGrupo = (n) => `<div class="menu-fila menu-grupo" data-pagina="${n.id}" style="border-bottom:1px solid var(--b1);">
+        <div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;">
+          ${asa(n.grupo.nombre)}
+          <div style="flex:1;min-width:0;"><div style="color:var(--t1);font-weight:700;font-size:0.88rem;">${esc(n.grupo.nombre)}
+              <span style="color:var(--t3);font-weight:500;font-size:0.74rem;margin-left:0.4rem;">grupo · se pliega en el menú</span></div>
+            <div style="color:var(--t2);font-size:0.75rem;">${esc(n.grupo.nota || "")}</div></div></div>
+        <div class="menu-hijos">${n.hijos.filter((p) => !p.org || esOrg).map(filaPagina).join("")}</div></div>`;
+    const menu = CFG.menuArbol()
+      .filter((n) => n.tipo === "grupo" || !n.pagina.org || esOrg)
+      .map((n) => (n.tipo === "grupo" ? filaGrupo(n) : filaPagina(n.pagina))).join("");
 
     return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros, menu };
   }
@@ -757,18 +771,23 @@
   function wireMenuOrden() {
     const cont = document.getElementById("aj-menu");
     if (!cont) return;
-    const filas = () => Array.from(cont.querySelectorAll(".menu-fila"));
+    // Una fila se mueve entre sus hermanas: las del nivel de arriba entre
+    // ellas —y un grupo entero cuenta como una—, las de dentro de un grupo
+    // entre las del grupo. El orden que se guarda es todo aplanado.
+    const hermanas = (f) => Array.from(f.parentElement.children).filter((x) => x.classList.contains("menu-fila"));
+    const todas = () => Array.from(cont.querySelectorAll(".menu-fila")).map((f) => f.dataset.pagina);
     let fila = null;
     // Mientras dura el arrastre se escucha en el documento, no en el asa: el
     // puntero se va del asa en cuanto la fila se mueve, y el «soltar» tiene
     // que llegar igual desde donde esté.
     const mover = (ev) => {
       if (!fila) return;
-      // La fila va a parar delante de la primera cuya mitad superior ya ha
-      // pasado el puntero; si no queda ninguna, al final.
-      const destino = filas().find((f) => f !== fila && ev.clientY < f.getBoundingClientRect().top + f.offsetHeight / 2);
-      if (destino) { if (destino !== fila.nextSibling) cont.insertBefore(fila, destino); }
-      else if (cont.lastElementChild !== fila) cont.appendChild(fila);
+      const padre = fila.parentElement;
+      // La fila va a parar delante de la primera hermana cuya mitad superior
+      // ya ha pasado el puntero; si no queda ninguna, al final.
+      const destino = hermanas(fila).find((f) => f !== fila && ev.clientY < f.getBoundingClientRect().top + f.offsetHeight / 2);
+      if (destino) { if (destino !== fila.nextSibling) padre.insertBefore(fila, destino); }
+      else if (padre.lastElementChild !== fila) padre.appendChild(fila);
     };
     const soltar = () => {
       document.removeEventListener("pointermove", mover);
@@ -777,7 +796,7 @@
       if (!fila) return;
       fila.classList.remove("arrastrando");
       fila = null;
-      ordenarPaginas(filas().map((f) => f.dataset.pagina));
+      ordenarPaginas(todas());
     };
     cont.querySelectorAll(".menu-asa").forEach((asa) => {
       asa.addEventListener("pointerdown", (ev) => {

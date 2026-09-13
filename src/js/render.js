@@ -1829,10 +1829,38 @@
     const pg = document.getElementById("v2-page-" + id);
     if (pg) pg.classList.add("active");
     document.querySelectorAll('.bottom-nav-item, .sn-item').forEach((b) => b.classList.toggle("active", b.dataset.page === id));
+    // Si la página está dentro de un grupo, el grupo lo dice —y se abre, para
+    // que se vea dónde estás— aunque estuviera plegado.
+    document.querySelectorAll("#sidebar .sn-grupo").forEach((g) => {
+      const dentro = !!g.querySelector(`.sn-item.active[data-page]`);
+      g.classList.toggle("con-activa", dentro);
+      if (dentro) abrirGrupo(g, true);
+    });
     if (window.v2Sidebar) window.v2Sidebar(false);   // navegar cierra el panel lateral
     window.scrollTo({ top: 0, behavior: "auto" });
     if (id === "cartera") layoutTreemaps();
   }
+  // Plegar y desplegar un grupo del menú. Se recuerda en este dispositivo: si
+  // alguien tiene Activos siempre abierto, no tiene que abrirlo cada vez.
+  const K_GRUPO = (id) => "solvento_menu_grupo_" + id;
+  function abrirGrupo(g, abrir) {
+    g.classList.toggle("abierto", abrir);
+    const b = g.querySelector(".sn-grupo-btn");
+    if (b) b.setAttribute("aria-expanded", abrir ? "true" : "false");
+    try { localStorage.setItem(K_GRUPO(g.dataset.grupo), abrir ? "1" : "0"); } catch (e) { /* sin memoria: dura la sesión */ }
+  }
+  window.v2Grupo = (id) => {
+    const g = document.querySelector(`#sidebar .sn-grupo[data-grupo="${id}"]`);
+    if (g) abrirGrupo(g, !g.classList.contains("abierto"));
+  };
+  function restaurarGrupos() {
+    document.querySelectorAll("#sidebar .sn-grupo").forEach((g) => {
+      let v = null;
+      try { v = localStorage.getItem(K_GRUPO(g.dataset.grupo)); } catch (e) { /* nada */ }
+      if (v === "1") abrirGrupo(g, true);
+    });
+  }
+
   // Deja el menú como lo haya querido cada uno. Las entradas viven en el HTML
   // —son estáticas, y así sus manejadores no se pierden al repintar—, de modo
   // que esconderlas es ponerles una clase, no rehacer la lista.
@@ -1843,15 +1871,34 @@
     if (!CFG.PAGINAS) return;
     // Primero el orden: las entradas son elementos que ya existen, así que
     // ordenarlas es volver a colgarlas del mismo sitio en el orden nuevo.
+    // La barra del móvil es plana: no hay sitio para grupos, y ahí van todas
+    // las páginas en su orden de siempre.
     const orden = CFG.paginasOrdenadas ? CFG.paginasOrdenadas() : CFG.PAGINAS;
-    ["#sidebar .sn-list", "#v2-bottom-nav"].forEach((sel) => {
-      const cont = document.querySelector(sel);
-      if (!cont) return;
-      orden.forEach((p) => {
-        const b = cont.querySelector(`[data-page="${p.id}"]`);
-        if (b) cont.appendChild(b);
+    const barra = document.getElementById("v2-bottom-nav");
+    if (barra) orden.forEach((p) => { const b = barra.querySelector(`[data-page="${p.id}"]`); if (b) barra.appendChild(b); });
+    // El menú lateral es un árbol: arriba, páginas sueltas y grupos en su
+    // orden; dentro de cada grupo, sus páginas en el suyo. Colgar un elemento
+    // de un sitio lo quita del anterior, así que esto también coloca en su
+    // grupo una página que estuviera suelta.
+    const lista = document.querySelector("#sidebar .sn-list");
+    if (lista && CFG.menuArbol) {
+      CFG.menuArbol().forEach((n) => {
+        if (n.tipo === "pagina") {
+          const b = lista.querySelector(`[data-page="${n.id}"]`);
+          if (b) lista.appendChild(b);
+          return;
+        }
+        const g = lista.querySelector(`.sn-grupo[data-grupo="${n.id}"]`);
+        if (!g) return;
+        lista.appendChild(g);
+        const hijos = g.querySelector(".sn-hijos");
+        n.hijos.forEach((p) => { const b = lista.querySelector(`[data-page="${p.id}"]`); if (b && hijos) hijos.appendChild(b); });
+        // Un grupo sin nada visible dentro no se enseña: sería una puerta a
+        // una habitación vacía.
+        const algunaVisible = n.hijos.some((p) => p.fijo || CFG.paginaVisible(p.id));
+        g.classList.toggle("menu-oculto", !algunaVisible);
       });
-    });
+    }
     let huerfana = false;
     CFG.PAGINAS.forEach((p) => {
       const visible = p.fijo || CFG.paginaVisible(p.id);
@@ -2015,6 +2062,7 @@
     if (document.getElementById("v2-page-cartera").classList.contains("active")) layoutTreemaps();
     if (!render._resizeBound) { render._resizeBound = true; window.addEventListener("resize", layoutTreemaps); }
     aplicarMenu();
+    if (!render._gruposRestaurados) { render._gruposRestaurados = true; restaurarGrupos(); }
   }
 
   // Filtros: se repinta solo la lista para no perder el foco del buscador

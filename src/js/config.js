@@ -314,15 +314,19 @@
   // Se guarda lo OCULTO, no lo visible, y es a propósito: el día que haya una
   // página nueva aparecerá para todos, en vez de nacer invisible en las
   // configuraciones que ya existían.
+  // Las de `grupo` cuelgan de un grupo del menú que se pliega y se despliega:
+  // los activos son cuatro páginas, y cuatro entradas sueltas entre Patrimonio
+  // y Pasivos hacían el menú más largo de lo que es la idea que representan.
   const PAGINAS = [
     { id: "patrimonio",  nombre: "Patrimonio",  fijo: true, nota: "la portada" },
-    { id: "caja",        nombre: "Caja",        nota: "cuentas y movimientos" },
-    { id: "balance",     nombre: "Balance",     nota: "ingresos y gastos por categoría" },
-    { id: "cartera",     nombre: "Cartera",     nota: "inversiones y posiciones" },
-    { id: "propiedades", nombre: "Propiedades", nota: "inmuebles" },
+    { id: "caja",        nombre: "Caja",        grupo: "activos", nota: "cuentas y movimientos" },
+    { id: "balance",     nombre: "Balance",     grupo: "activos", nota: "ingresos y gastos por categoría" },
+    { id: "cartera",     nombre: "Cartera",     grupo: "activos", nota: "inversiones y posiciones" },
+    { id: "propiedades", nombre: "Propiedades", grupo: "activos", nota: "inmuebles" },
     { id: "pasivos",     nombre: "Pasivos",     nota: "deudas, hipotecas y tarjetas" },
     { id: "presupuesto", nombre: "Presupuesto", org: true, nota: "lo aprobado contra lo ejecutado" },
   ];
+  const GRUPOS = [{ id: "activos", nombre: "Activos", nota: "lo que tienes: caja, balance, cartera, propiedades" }];
   // Lo guardado se filtra contra el catálogo: una página fija no se puede
   // ocultar aunque alguien escriba su nombre a mano en el documento, y un id
   // que ya no existe no deja escondida una página que sí.
@@ -335,15 +339,35 @@
   // como se dejó, y se resuelve contra el catálogo: lo que ya no exista se
   // ignora, y lo que sea nuevo se añade al final en su orden de siempre, para
   // que una página recién estrenada no se cuele en medio ni desaparezca.
+  // El orden guardado es una lista plana de ids, páginas y grupos mezclados,
+  // tal y como quedó la lista de Ajustes. Ordenar por ella un subconjunto
+  // —las páginas de un grupo, o lo que va suelto arriba— es lo mismo cada vez:
+  // primero lo que esté en la lista, en ese orden; después lo que no, en el
+  // orden del catálogo.
   const menuOrden = () => {
     const l = cfgDoc().menu_orden;
-    return Array.isArray(l) ? l.filter((id, i) => PAGINAS.some((p) => p.id === id) && l.indexOf(id) === i) : [];
+    const existe = (id) => PAGINAS.some((p) => p.id === id) || GRUPOS.some((g) => g.id === id);
+    return Array.isArray(l) ? l.filter((id, i) => existe(id) && l.indexOf(id) === i) : [];
   };
-  const paginasOrdenadas = () => {
+  const ordenar = (lista) => {
     const orden = menuOrden();
-    const primero = orden.map((id) => PAGINAS.find((p) => p.id === id));
-    const resto = PAGINAS.filter((p) => orden.indexOf(p.id) < 0);
-    return primero.concat(resto);
+    const pos = (x) => { const i = orden.indexOf(x.id); return i < 0 ? Infinity : i; };
+    return lista.slice().sort((a, b) => pos(a) - pos(b) || lista.indexOf(a) - lista.indexOf(b));
+  };
+  const paginasOrdenadas = () => ordenar(PAGINAS);
+  // El menú como árbol: arriba, páginas sueltas y grupos en su orden; dentro de
+  // cada grupo, sus páginas en el suyo.
+  const menuArbol = () => {
+    const arriba = PAGINAS.filter((p) => !p.grupo).map((p) => ({ tipo: "pagina", pagina: p, id: p.id }))
+      .concat(GRUPOS.map((g) => ({ tipo: "grupo", grupo: g, id: g.id,
+                                    hijos: ordenar(PAGINAS.filter((p) => p.grupo === g.id)) })));
+    // Sin orden guardado, el grupo va donde estaría su primera página en el
+    // catálogo: Activos entre Patrimonio y Pasivos, no al final.
+    const posCatalogo = (n) => n.tipo === "pagina" ? PAGINAS.indexOf(n.pagina)
+      : PAGINAS.findIndex((p) => p.grupo === n.id);
+    const orden = menuOrden();
+    const pos = (n) => { const i = orden.indexOf(n.id); return i < 0 ? Infinity : i; };
+    return arriba.sort((a, b) => pos(a) - pos(b) || posCatalogo(a) - posCatalogo(b));
   };
 
   // Los miles, también por debajo de diez mil. Intl en español no agrupa hasta
@@ -357,7 +381,7 @@
   window.SolventoConfig = {
     miles,
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
-    PAGINAS, menuOculto, paginaVisible, menuOrden, paginasOrdenadas,
+    PAGINAS, GRUPOS, menuOculto, paginaVisible, menuOrden, paginasOrdenadas, menuArbol,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO, EFECTIVO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT, BANCOS, logoBanco,

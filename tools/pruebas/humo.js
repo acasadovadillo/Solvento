@@ -230,6 +230,21 @@ var ordenadas = C.paginasOrdenadas().map(function (p) { return p.id; });
 comprobar("el menú se ordena como se dejó y lo nuevo va al final",
   ordenadas.join(",") === "pasivos,caja,patrimonio,balance,cartera,propiedades,presupuesto",
   ordenadas.join(", "));
+
+// El menú lateral es un árbol: Activos agrupa sus cuatro páginas. Sin orden
+// guardado, el grupo va donde estaría su primera página en el catálogo —entre
+// Patrimonio y Pasivos—, y dentro, las páginas en su orden de siempre.
+C.usarDoc({ config: {} });
+var arbol = C.menuArbol();
+var forma = arbol.map(function (n) { return n.tipo === "grupo" ? n.id + "(" + n.hijos.map(function (p) { return p.id; }).join(",") + ")" : n.id; });
+comprobar("Activos agrupa caja, balance, cartera y propiedades, entre Patrimonio y Pasivos",
+  forma.join(" ") === "patrimonio activos(caja,balance,cartera,propiedades) pasivos presupuesto", forma.join(" "));
+// Y el orden guardado —plano, como lo deja la lista de Ajustes— manda en los
+// dos niveles: el grupo entero se mueve como una pieza.
+C.usarDoc({ config: { menu_orden: ["pasivos", "activos", "propiedades", "caja", "patrimonio"] } });
+forma = C.menuArbol().map(function (n) { return n.tipo === "grupo" ? n.id + "(" + n.hijos.map(function (p) { return p.id; }).join(",") + ")" : n.id; });
+comprobar("el grupo se mueve entero y sus páginas se ordenan dentro",
+  forma.join(" ") === "pasivos activos(propiedades,caja,balance,cartera) patrimonio presupuesto", forma.join(" "));
 C.usarDoc(doc);
 
 // ── Nada de nadie en la cuenta de nadie ─────────────────────────────────────
