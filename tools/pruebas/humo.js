@@ -221,6 +221,15 @@ var oculto = C.menuOculto();
 comprobar("del menú guardado solo sobrevive lo que se puede ocultar de verdad",
   oculto.length === 1 && oculto[0] === "cartera" && C.paginaVisible("patrimonio"),
   oculto.join(", "));
+
+// El orden también se guarda, y también se filtra: lo que ya no existe se
+// ignora, lo repetido cuenta una vez, y lo que sea nuevo —una página que no
+// existía cuando se ordenó— se añade al final en su sitio de siempre.
+C.usarDoc({ config: { menu_orden: ["pasivos", "inventada", "caja", "pasivos"] } });
+var ordenadas = C.paginasOrdenadas().map(function (p) { return p.id; });
+comprobar("el menú se ordena como se dejó y lo nuevo va al final",
+  ordenadas.join(",") === "pasivos,caja,patrimonio,balance,cartera,propiedades,presupuesto",
+  ordenadas.join(", "));
 C.usarDoc(doc);
 
 // ── Nada de nadie en la cuenta de nadie ─────────────────────────────────────

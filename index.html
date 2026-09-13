@@ -16,10 +16,10 @@
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
   <!-- El tema, antes que el CSS: si se aplicara después de pintar, quien use
        el tema claro vería un fogonazo oscuro en cada carga. -->
-  <script src="src/js/tema.js?v=p173"></script>
-  <link rel="stylesheet" href="src/css/base.css?v=p173" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p173" />
-  <link rel="stylesheet" href="src/css/components.css?v=p173" />
+  <script src="src/js/tema.js?v=p175"></script>
+  <link rel="stylesheet" href="src/css/base.css?v=p175" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p175" />
+  <link rel="stylesheet" href="src/css/components.css?v=p175" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -69,6 +69,9 @@
       border-radius: 8px; font-size: 0.85rem; font-weight: 600; padding: 0.55rem 1rem; }
     .tema-opcion input:checked + span { border-color: var(--azul); color: var(--t0); box-shadow: inset 0 0 0 1px var(--azul); }
     .tema-opcion input:focus-visible + span { outline: 2px solid var(--azul); outline-offset: 2px; }
+    /* La fila que se está arrastrando en Ajustes → Menú lateral. */
+    .menu-fila.arrastrando { background: var(--f4); opacity: 0.85; border-radius: 8px; }
+    .menu-fila.arrastrando .menu-asa { cursor: grabbing; color: var(--azul); }
     .aj-sec { display: none; }
     .aj-sec.active { display: block; }
     .aj-sec h3 { font-size: 1.05rem; font-weight: 700; color: var(--t0); margin: 0 0 0.35rem; }
@@ -376,17 +379,17 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p173"></script>
-<script src="src/js/config.js?v=p173"></script>
-<script src="src/js/model.js?v=p173"></script>
-<script src="src/js/charts.js?v=p173"></script>
-<script src="src/js/render.js?v=p173"></script>
-<script src="src/js/db.js?v=p173"></script>
-<script src="src/js/sync.js?v=p173"></script>
-<script src="src/js/forms.js?v=p173"></script>
-<script src="src/js/perfil.js?v=p173"></script>
-<script src="src/js/exportar.js?v=p173"></script>
-<script src="src/js/boot.js?v=p173"></script>
+<script src="src/js/crypto.js?v=p175"></script>
+<script src="src/js/config.js?v=p175"></script>
+<script src="src/js/model.js?v=p175"></script>
+<script src="src/js/charts.js?v=p175"></script>
+<script src="src/js/render.js?v=p175"></script>
+<script src="src/js/db.js?v=p175"></script>
+<script src="src/js/sync.js?v=p175"></script>
+<script src="src/js/forms.js?v=p175"></script>
+<script src="src/js/perfil.js?v=p175"></script>
+<script src="src/js/exportar.js?v=p175"></script>
+<script src="src/js/boot.js?v=p175"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

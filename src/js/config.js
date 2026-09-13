@@ -331,10 +331,24 @@
     return Array.isArray(l) ? l.filter((id) => PAGINAS.some((p) => p.id === id && !p.fijo)) : [];
   };
   const paginaVisible = (id) => menuOculto().indexOf(id) < 0;
+  // El orden del menú, también de cada cual. Se guarda la lista de ids tal y
+  // como se dejó, y se resuelve contra el catálogo: lo que ya no exista se
+  // ignora, y lo que sea nuevo se añade al final en su orden de siempre, para
+  // que una página recién estrenada no se cuele en medio ni desaparezca.
+  const menuOrden = () => {
+    const l = cfgDoc().menu_orden;
+    return Array.isArray(l) ? l.filter((id, i) => PAGINAS.some((p) => p.id === id) && l.indexOf(id) === i) : [];
+  };
+  const paginasOrdenadas = () => {
+    const orden = menuOrden();
+    const primero = orden.map((id) => PAGINAS.find((p) => p.id === id));
+    const resto = PAGINAS.filter((p) => orden.indexOf(p.id) < 0);
+    return primero.concat(resto);
+  };
 
   window.SolventoConfig = {
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
-    PAGINAS, menuOculto, paginaVisible,
+    PAGINAS, menuOculto, paginaVisible, menuOrden, paginasOrdenadas,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO, EFECTIVO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT, BANCOS, logoBanco,

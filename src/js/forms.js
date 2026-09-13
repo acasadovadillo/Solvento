@@ -724,7 +724,9 @@
     // una cuenta personal no existe, y una casilla para esconder algo que no
     // está sería una forma rara de contar una mentira.
     const esOrg = !!(window.SolventoPerfil && window.SolventoPerfil.esOrganizacion());
-    const menu = CFG.PAGINAS.filter((p) => !p.org || esOrg).map((p) => {
+    // En el orden que cada uno haya dejado: la lista de aquí ES el menú, y se
+    // reordena arrastrando por los tres puntos de la izquierda.
+    const menu = CFG.paginasOrdenadas().filter((p) => !p.org || esOrg).map((p) => {
       const visible = p.fijo || CFG.paginaVisible(p.id);
       const control = p.fijo
         ? `<span style="color:var(--t3);font-size:0.74rem;white-space:nowrap;">siempre visible</span>`
@@ -734,10 +736,72 @@
                     onchange="v2MenuVer('${p.id}', this.checked)"
                     style="width:15px;height:15px;accent-color:var(--azul);cursor:pointer;margin:0;">
              ${visible ? "En el menú" : "Oculta"}</label>`;
-      return filaAjuste(esc(p.nombre), esc(p.nota || ""), control);
+      return `<div class="menu-fila" data-pagina="${p.id}"
+        style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;border-bottom:1px solid var(--b1);">
+        <span class="menu-asa" title="Arrastra para cambiar el orden" aria-label="Mover ${esc(p.nombre)}"
+          style="cursor:grab;color:var(--t3);font-size:1.15rem;line-height:1;user-select:none;
+          -webkit-user-select:none;touch-action:none;padding:0.1rem 0.3rem;flex-shrink:0;">⋮</span>
+        <div style="flex:1;min-width:0;"><div style="color:var(--t1);font-weight:600;font-size:0.88rem;">${esc(p.nombre)}</div>
+          <div style="color:var(--t2);font-size:0.75rem;">${esc(p.nota || "")}</div></div>${control}</div>`;
     }).join("");
 
     return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros, menu };
+  }
+
+  /* ── Ordenar el menú arrastrando ──────────────────────────────────────────
+   * Con eventos de puntero, no con el drag & drop de HTML: ese no funciona con
+   * el dedo, y el menú se reordena tanto en el móvil como con el ratón. Se
+   * agarra por el asa, la fila se mueve en la lista mientras se arrastra —se
+   * ve dónde va a quedar— y al soltar se guarda el orden que haya quedado.
+   */
+  function wireMenuOrden() {
+    const cont = document.getElementById("aj-menu");
+    if (!cont) return;
+    const filas = () => Array.from(cont.querySelectorAll(".menu-fila"));
+    let fila = null;
+    // Mientras dura el arrastre se escucha en el documento, no en el asa: el
+    // puntero se va del asa en cuanto la fila se mueve, y el «soltar» tiene
+    // que llegar igual desde donde esté.
+    const mover = (ev) => {
+      if (!fila) return;
+      // La fila va a parar delante de la primera cuya mitad superior ya ha
+      // pasado el puntero; si no queda ninguna, al final.
+      const destino = filas().find((f) => f !== fila && ev.clientY < f.getBoundingClientRect().top + f.offsetHeight / 2);
+      if (destino) { if (destino !== fila.nextSibling) cont.insertBefore(fila, destino); }
+      else if (cont.lastElementChild !== fila) cont.appendChild(fila);
+    };
+    const soltar = () => {
+      document.removeEventListener("pointermove", mover);
+      document.removeEventListener("pointerup", soltar);
+      document.removeEventListener("pointercancel", soltar);
+      if (!fila) return;
+      fila.classList.remove("arrastrando");
+      fila = null;
+      ordenarPaginas(filas().map((f) => f.dataset.pagina));
+    };
+    cont.querySelectorAll(".menu-asa").forEach((asa) => {
+      asa.addEventListener("pointerdown", (ev) => {
+        if (soloLectura()) return;
+        ev.preventDefault();
+        fila = asa.closest(".menu-fila");
+        fila.classList.add("arrastrando");
+        document.addEventListener("pointermove", mover);
+        document.addEventListener("pointerup", soltar);
+        document.addEventListener("pointercancel", soltar);
+      });
+    });
+  }
+
+  // Guardar el orden. La lista de Ajustes ya está como la ha dejado el dedo, así
+  // que no se repinta —parpadearía—: se aplica al menú y se guarda.
+  async function ordenarPaginas(orden) {
+    if (soloLectura()) return;
+    const c = cfgEditable();
+    const antes = JSON.stringify(CFG.menuOrden());
+    c.menu_orden = orden;
+    if (JSON.stringify(CFG.menuOrden()) === antes) return;   // se soltó donde estaba
+    if (window.SolventoRender && window.SolventoRender.aplicarMenu) window.SolventoRender.aplicarMenu();
+    if (window.SolventoBoot && window.SolventoBoot.saveDoc) await window.SolventoBoot.saveDoc();
   }
 
   // Mostrar u ocultar una sección del menú. Se aplica en el acto —el menú es lo
@@ -1423,7 +1487,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, verPagina, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, verPagina, wireMenuOrden, ordenarPaginas, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, elegirBanco, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),

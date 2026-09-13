@@ -1841,6 +1841,17 @@
   // quedar mirándola sin forma de volver: se vuelve a la portada.
   function aplicarMenu() {
     if (!CFG.PAGINAS) return;
+    // Primero el orden: las entradas son elementos que ya existen, así que
+    // ordenarlas es volver a colgarlas del mismo sitio en el orden nuevo.
+    const orden = CFG.paginasOrdenadas ? CFG.paginasOrdenadas() : CFG.PAGINAS;
+    ["#sidebar .sn-list", "#v2-bottom-nav"].forEach((sel) => {
+      const cont = document.querySelector(sel);
+      if (!cont) return;
+      orden.forEach((p) => {
+        const b = cont.querySelector(`[data-page="${p.id}"]`);
+        if (b) cont.appendChild(b);
+      });
+    });
     let huerfana = false;
     CFG.PAGINAS.forEach((p) => {
       const visible = p.fijo || CFG.paginaVisible(p.id);
@@ -2110,6 +2121,7 @@
     poner("aj-categorias-ingreso", fr.categoriasIngreso);
     poner("aj-centros", fr.centros);
     poner("aj-menu", fr.menu);
+    if (F().wireMenuOrden) F().wireMenuOrden();
     poner("aj-revision", panelRevision());
     const B = window.SolventoBoot;
     if (B && B.rellenarToken) B.rellenarToken();
