@@ -12,7 +12,8 @@
  */
 (function () {
   "use strict";
-  const eurFmt = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+  const eurFmt0 = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+  const eurFmt = { format: (x) => window.SolventoConfig.miles(eurFmt0.format(x)) };
   const fmtEur = (x) => (isFinite(x) ? eurFmt.format(x) : "—");
   const fmtK = (x) => (Math.abs(x) >= 1000 ? (x / 1000).toFixed(1).replace(".", ",") + "k" : String(Math.round(x)));
   const fmtDate = (t) => new Date(t).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });

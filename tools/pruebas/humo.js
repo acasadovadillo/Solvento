@@ -269,6 +269,16 @@ comprobar("sin lista declarada, las cuentas se deducen de tus movimientos",
   ded.join(", "));
 C.usarDoc(doc);
 
+// Los miles se agrupan también por debajo de diez mil —1.203,08, no 1203,08—
+// aunque Intl en español no lo haga y Safari ignore la opción que lo pide.
+var fmt = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+// Intl pone un espacio duro antes del €: se normaliza para comparar.
+var eurTxt = function (x) { return C.miles(fmt.format(x)).replace(/\u00a0/g, " "); };
+comprobar("los miles llevan punto también entre 1.000 y 9.999",
+  eurTxt(1203.08) === "1.203,08 €" && eurTxt(-6210.41) === "-6.210,41 €" &&
+  eurTxt(999.5) === "999,50 €" && eurTxt(20931.73) === "20.931,73 €",
+  eurTxt(1203.08));
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

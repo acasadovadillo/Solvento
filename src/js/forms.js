@@ -21,8 +21,8 @@
   const fromISO = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; };
   const newId = (p) => p + Math.random().toString(16).slice(2, 12);
   // Para los avisos de confirmación: aquí no hace falta la maquinaria de render.
-  const eur = (x) => (Number(String(x).replace(",", ".")) || 0)
-    .toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  const eur = (x) => CFG.miles((Number(String(x).replace(",", ".")) || 0)
+    .toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + " €";
   const uniq = (arr) => Array.from(new Set(arr.filter((x) => x && String(x).trim())));
   const absStr = (v) => { const n = Math.abs(parseFloat(v)); return isFinite(n) ? String(n) : ""; };
 
@@ -1410,7 +1410,7 @@
       `<div style="background:var(--f1);border:1px solid var(--b1);border-radius:10px;padding:0.7rem 0.85rem;
             font-size:0.82rem;color:var(--t1b);margin:0.5rem 0 0;">
         Vas a imputar <b style="color:var(--t0);">${afectados.length}</b> movimiento${afectados.length === 1 ? "" : "s"}
-        (${esc(suma.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} €) al centro que elijas.
+        (${esc(CFG.miles(suma.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })))} €) al centro que elijas.
         ${conCentro ? `<div style="color:var(--ambar);margin-top:0.4rem;">${conCentro} ya tiene${conCentro === 1 ? "" : "n"} centro y se sobrescribirá${conCentro === 1 ? "" : "n"}.</div>` : ""}
       </div>` +
       field("ic-centro", "Centro de coste", selectorArbol("ic-centro", ""));

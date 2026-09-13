@@ -11,7 +11,7 @@
   const R_DONUT = 15.91549430918954;
 
   const eurFmt = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
-  const fmtEur = (x) => (isFinite(x) ? eurFmt.format(x) : "—");
+  const fmtEur = (x) => (isFinite(x) ? CFG.miles(eurFmt.format(x)) : "—");
   const fmtPct = (x) => (isFinite(x) ? (x >= 0 ? "+" : "") + x.toFixed(2).replace(".", ",") + "%" : "—");
   const pct1 = (x) => (isFinite(x) ? x.toFixed(1) : "0");
   const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

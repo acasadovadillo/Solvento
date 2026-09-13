@@ -346,7 +346,16 @@
     return primero.concat(resto);
   };
 
+  // Los miles, también por debajo de diez mil. Intl en español no agrupa hasta
+  // cinco cifras —«1203,08 €» pero «20.931,73 €»— porque así lo dice el CLDR.
+  // En una aplicación de finanzas chirría: el banco escribe 1.203,08. La opción
+  // que lo arregla (minimumGroupingDigits) la ignora Safari, así que se hace a
+  // mano sobre el texto ya formateado: cuatro cifras seguidas de coma, espacio
+  // o fin de número, y se les pone el punto.
+  const miles = (s) => String(s).replace(/(^|[^\d.])(-?\d)(\d{3})(?=[,\s€%]|$)/g, "$1$2.$3");
+
   window.SolventoConfig = {
+    miles,
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
     PAGINAS, menuOculto, paginaVisible, menuOrden, paginasOrdenadas,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO, EFECTIVO,
