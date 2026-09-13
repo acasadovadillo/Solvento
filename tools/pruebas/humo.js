@@ -47,7 +47,22 @@ print("Prueba de humo · documento de ejemplo\n");
 var m = M.build(doc, precios);
 comprobar("el modelo se construye", m && isFinite(m.patrimonioNeto), "patrimonio=" + (m && m.patrimonioNeto));
 comprobar("el patrimonio es la suma de sus partes",
-  cerca(m.patrimonioNeto, m.patrimonioLiquido + m.carteraTotal + m.inm.total + m.cobrar.total - m.pas.total));
+  cerca(m.patrimonioNeto, m.patrimonioLiquido + m.carteraTotal + m.inm.total + m.otros.total + m.cobrar.total - m.pas.total));
+
+// Un piso es un inmueble; un reloj o el oro, no. Cada uno cuenta en su cubo y
+// ninguno en los dos: si un tipo nuevo cayera en medio, el patrimonio seguiría
+// cuadrando pero una de las dos páginas mentiría.
+var conReloj = JSON.parse(JSON.stringify(doc));
+conReloj.propiedades.push({ id: "p-prueba", nombre: "Reloj", tipo: "Reloj", valor: "2500", valor_compra: "2000" });
+var mo = M.build(conReloj, precios);
+comprobar("inmuebles y otros bienes van cada uno a su página",
+  mo.inm.n === m.inm.n && mo.otros.n === m.otros.n + 1 && cerca(mo.otros.total, m.otros.total + 2500) &&
+  cerca(mo.patrimonioNeto, m.patrimonioNeto + 2500),
+  "inm " + mo.inm.n + " otros " + mo.otros.n);
+var todosLosTipos = Object.keys(window.SolventoConfig.TIPO_COLORES_INMUEBLE);
+comprobar("cada tipo de bien es inmueble u otro, nunca ninguno de los dos",
+  todosLosTipos.every(function (t) { return typeof window.SolventoConfig.esInmueble(t) === "boolean"; }) &&
+  window.SolventoConfig.esInmueble("Apartamento") && !window.SolventoConfig.esInmueble("Metal precioso"));
 comprobar("ninguna cuenta sale con saldo no numérico",
   m.saldos.every(function (c) { return isFinite(c.saldo); }));
 
@@ -228,7 +243,7 @@ comprobar("del menú guardado solo sobrevive lo que se puede ocultar de verdad",
 C.usarDoc({ config: { menu_orden: ["pasivos", "inventada", "caja", "pasivos"] } });
 var ordenadas = C.paginasOrdenadas().map(function (p) { return p.id; });
 comprobar("el menú se ordena como se dejó y lo nuevo va al final",
-  ordenadas.join(",") === "pasivos,caja,patrimonio,balance,cartera,propiedades,presupuesto",
+  ordenadas.join(",") === "pasivos,caja,patrimonio,balance,cartera,propiedades,otros,presupuesto",
   ordenadas.join(", "));
 
 // El menú lateral es un árbol: Activos agrupa sus cuatro páginas. Sin orden
@@ -238,13 +253,13 @@ C.usarDoc({ config: {} });
 var arbol = C.menuArbol();
 var forma = arbol.map(function (n) { return n.tipo === "grupo" ? n.id + "(" + n.hijos.map(function (p) { return p.id; }).join(",") + ")" : n.id; });
 comprobar("Activos agrupa caja, balance, cartera y propiedades, entre Patrimonio y Pasivos",
-  forma.join(" ") === "patrimonio activos(caja,balance,cartera,propiedades) pasivos presupuesto", forma.join(" "));
+  forma.join(" ") === "patrimonio activos(caja,balance,cartera,propiedades,otros) pasivos presupuesto", forma.join(" "));
 // Y el orden guardado —plano, como lo deja la lista de Ajustes— manda en los
 // dos niveles: el grupo entero se mueve como una pieza.
 C.usarDoc({ config: { menu_orden: ["pasivos", "activos", "propiedades", "caja", "patrimonio"] } });
 forma = C.menuArbol().map(function (n) { return n.tipo === "grupo" ? n.id + "(" + n.hijos.map(function (p) { return p.id; }).join(",") + ")" : n.id; });
 comprobar("el grupo se mueve entero y sus páginas se ordenan dentro",
-  forma.join(" ") === "pasivos activos(propiedades,caja,balance,cartera) patrimonio presupuesto", forma.join(" "));
+  forma.join(" ") === "pasivos activos(propiedades,caja,balance,cartera,otros) patrimonio presupuesto", forma.join(" "));
 C.usarDoc(doc);
 
 // ── Nada de nadie en la cuenta de nadie ─────────────────────────────────────

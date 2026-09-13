@@ -281,29 +281,34 @@
     const { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker } =
       computeSaldos(db.movimientos, db.inversiones);
     const inv = valuate(db, prices);
-    const inm = valuatePropiedades(db.propiedades || db.inmuebles, prices, db.movimientos);
+    // Los inmuebles y el resto de bienes se valoran igual, pero son dos clases
+    // de activo y cada una tiene su página y su tarjeta.
+    const bienes = db.propiedades || db.inmuebles || [];
+    const inm = valuatePropiedades(bienes.filter((r) => CFG.esInmueble(r.tipo)), prices, db.movimientos);
+    const otros = valuatePropiedades(bienes.filter((r) => !CFG.esInmueble(r.tipo)), prices, db.movimientos);
     // La Cartera incluye el efectivo sin invertir de los brókers.
     // La Cartera es solo lo invertido; el efectivo de bróker ya cuenta en Caja.
     const carteraTotal = inv.total;
     const pas = valuatePasivos(db.pasivos, db.movimientos);
     // Patrimonio NETO = lo que tienes menos lo que debes.
     const cobrar = porCobrar(db);
-    const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total + cobrar.total - pas.total);
+    const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total + otros.total + cobrar.total - pas.total);
     // El BRUTO es lo que tienes, sin descontar lo que debes. Los pesos de caja,
     // cartera y propiedades se miden sobre él y no sobre el neto: son la leyenda
     // del reparto de los activos, y unas partes que no suman 100 % en un reparto
     // no son un matiz, son un error de lectura.
-    const patrimonioBruto = round2(patrimonioLiquido + carteraTotal + inm.total + cobrar.total);
+    const patrimonioBruto = round2(patrimonioLiquido + carteraTotal + inm.total + otros.total + cobrar.total);
     const ratioInv = patrimonioBruto ? carteraTotal / patrimonioBruto * 100 : 0;
     const ratioInm = patrimonioBruto ? inm.total / patrimonioBruto * 100 : 0;
+    const ratioOtros = patrimonioBruto ? otros.total / patrimonioBruto * 100 : 0;
     const ratioCobrar = patrimonioBruto ? cobrar.total / patrimonioBruto * 100 : 0;
     // Este no es una parte del reparto: dice cuánto pesa la deuda sobre lo que
     // tienes, que es la cifra que importa de una deuda.
     const ratioPas = patrimonioBruto ? pas.total / patrimonioBruto * 100 : 0;
-    const pctLiquidez = 100 - ratioInv - ratioInm - ratioCobrar;
+    const pctLiquidez = 100 - ratioInv - ratioInm - ratioOtros - ratioCobrar;
     return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker,
-             inv, inm, pas, cobrar, carteraTotal, patrimonioNeto, patrimonioBruto,
-             ratioInv, ratioInm, ratioPas, ratioCobrar, pctLiquidez };
+             inv, inm, otros, pas, cobrar, carteraTotal, patrimonioNeto, patrimonioBruto,
+             ratioInv, ratioInm, ratioOtros, ratioPas, ratioCobrar, pctLiquidez };
   }
 
 

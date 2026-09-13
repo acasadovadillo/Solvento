@@ -1293,13 +1293,20 @@
   }
 
   // ── Cambiar la contraseña ──
-  function openPropiedad(existing) {
+  // Un mismo formulario para inmuebles y para el resto de bienes: se guardan
+  // en la misma lista y se valoran igual. Lo que cambia es la lista de tipos
+  // que se ofrece —desde Inmuebles, los de inmueble; desde Otros, el resto— y
+  // así cada cosa nace en la página que le toca.
+  function openPropiedad(existing, opts) {
     if (soloLectura()) return;
     const doc = DB.state.doc, e = existing || {};
     if (!Array.isArray(doc.propiedades)) doc.propiedades = doc.inmuebles || [];
-    const tipos = Object.keys(CFG.TIPO_COLORES_INMUEBLE);
+    const todos = Object.keys(CFG.TIPO_COLORES_INMUEBLE);
+    const deOtros = existing ? !CFG.esInmueble(e.tipo) : !!(opts && opts.otros);
+    const tipos = todos.filter((t) => CFG.esInmueble(t) !== deOtros);
     const body =
-      field("p-nombre", "Nombre o dirección", input("p-nombre", "text", e.nombre || e.direccion, 'placeholder="Reloj Omega Seamaster"')) +
+      field("p-nombre", deOtros ? "Nombre" : "Nombre o dirección",
+            input("p-nombre", "text", e.nombre || e.direccion, deOtros ? 'placeholder="Reloj Omega Seamaster"' : 'placeholder="Piso de la calle Mayor"')) +
       field("p-tipo", "Tipo", select("p-tipo", tipos, e.tipo || tipos[0])) +
       `<div id="p-porpeso" style="display:none;">
         ${field("p-metal", "Metal", selectKV("p-metal", [["oro", "Oro"], ["plata", "Plata"]], String(e.metal || "oro")))}
@@ -1327,7 +1334,7 @@
         se suman los ingresos y los gastos de los últimos doce meses imputados a su centro de coste.
         <div id="p-alquiler-aviso" style="color:var(--ambar);margin-top:0.4rem;"></div>
       </div>`;
-    shell(existing ? "Editar propiedad" : "Nueva propiedad", body, () => {
+    shell(existing ? (deOtros ? "Editar activo" : "Editar inmueble") : (deOtros ? "Nuevo activo" : "Nuevo inmueble"), body, () => {
       const nombre = G("p-nombre");
       if (!nombre) return "Indica el nombre o la dirección";
       const tipo = G("p-tipo");

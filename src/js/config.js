@@ -149,6 +149,12 @@
 
   // Los que se valoran por peso piden gramos y metal en vez de tasación
   const TIPOS_POR_PESO = ["Metal precioso"];
+  // Lo que es un inmueble y lo que no. Antes todo vivía en una página que se
+  // llamaba «Propiedades» y mezclaba un piso con un reloj y con el oro: cosas
+  // que valen dinero pero no se parecen en nada. Ahora los inmuebles tienen su
+  // página y el resto —vehículos, arte, metales, colecciones— la suya.
+  const TIPOS_INMUEBLE = ["Apartamento", "Casa", "Local", "Plaza de garaje", "Terreno rústico"];
+  const esInmueble = (tipo) => TIPOS_INMUEBLE.indexOf(String(tipo || "").trim()) >= 0;
   const INMUEBLE_ACCENT_DEFAULT = "#a16207";
 
   // Paleta para la comparativa de rentabilidad (una línea por activo).
@@ -322,11 +328,12 @@
     { id: "caja",        nombre: "Caja",        grupo: "activos", nota: "cuentas y movimientos" },
     { id: "balance",     nombre: "Balance",     grupo: "activos", nota: "ingresos y gastos por categoría" },
     { id: "cartera",     nombre: "Cartera",     grupo: "activos", nota: "inversiones y posiciones" },
-    { id: "propiedades", nombre: "Propiedades", grupo: "activos", nota: "inmuebles" },
+    { id: "propiedades", nombre: "Inmuebles",   grupo: "activos", nota: "pisos, casas, locales, garajes, terrenos" },
+    { id: "otros",       nombre: "Otros",       grupo: "activos", nota: "vehículos, arte, metales, colecciones" },
     { id: "pasivos",     nombre: "Pasivos",     nota: "deudas, hipotecas y tarjetas" },
     { id: "presupuesto", nombre: "Presupuesto", org: true, nota: "lo aprobado contra lo ejecutado" },
   ];
-  const GRUPOS = [{ id: "activos", nombre: "Activos", nota: "lo que tienes: caja, balance, cartera, propiedades" }];
+  const GRUPOS = [{ id: "activos", nombre: "Activos", nota: "lo que tienes: caja, balance, cartera, inmuebles y otros" }];
   // Lo guardado se filtra contra el catálogo: una página fija no se puede
   // ocultar aunque alguien escriba su nombre a mano en el documento, y un id
   // que ya no existe no deja escondida una página que sí.
@@ -383,7 +390,7 @@
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
     PAGINAS, GRUPOS, menuOculto, paginaVisible, menuOrden, paginasOrdenadas, menuArbol,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO, EFECTIVO,
-    CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
+    CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, TIPOS_INMUEBLE, esInmueble, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT, BANCOS, logoBanco,
     assetLogo, SYNC,
   };

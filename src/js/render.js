@@ -1,6 +1,6 @@
 /*
  * Solvento — Render (Fase 2): navegación por pestañas + páginas
- * (Patrimonio, Caja, Balance, Cartera, Propiedades, Pasivos) con donuts, treemap
+ * (Patrimonio, Caja, Balance, Cartera, Inmuebles, Otros, Pasivos) con donuts, treemap
  * de asignación, pintado desde el modelo (datos descifrados + prices.json).
  * Las gráficas de EVOLUCIÓN temporal llegan en el siguiente incremento (necesitan
  * histórico de precios).
@@ -574,7 +574,8 @@
     // hay: una tarjeta a cero es ruido en un panel que se lee de un vistazo.
     const cob = m.cobrar || { total: 0, n: 0, cobros: 0, prestamos: 0 };
     const hayCobrar = cob.total > 0.005;
-    const COBRAR_COLOR = "var(--violeta-2)";
+    const OTROS_COLOR = "#0ea5e9";
+  const COBRAR_COLOR = "var(--violeta-2)";
     // Si el dinero viene de los dos sitios, se dice de cuánto es cada uno; si
     // viene de uno solo, repetir la cifra que ya está arriba no informa de nada.
     const detalleCobrar = (cob.cobros > 0.005 && cob.prestamos > 0.005)
@@ -586,13 +587,15 @@
       vistaPanel("patrimonio", "Distribución de los activos",
         [{ label: "Caja", value: m.patrimonioLiquido, accent: "var(--azul)" },
          { label: "Cartera", value: m.carteraTotal, accent: "var(--verde)" },
-         { label: "Propiedades", value: m.inm.total, accent: "#a16207" }]
+         { label: "Inmuebles", value: m.inm.total, accent: "#a16207" }]
+          .concat(m.otros.n ? [{ label: "Otros", value: m.otros.total, accent: OTROS_COLOR }] : [])
           .concat(hayCobrar ? [{ label: "Por cobrar", value: cob.total, accent: COBRAR_COLOR }] : []),
         fmtEur(m.patrimonioBruto), "Activos", null, { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-hub-grid" style="margin-top:1.5rem;">
         ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "var(--azul)", m.saldosCaja.length + " cuentas", null, "caja", "patrimonio", "de tus activos")}
         ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "var(--verde)", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera", "patrimonio", "de tus activos")}
-        ${hubCard("Propiedades", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " propiedad" : " propiedades"), null, "propiedades", "patrimonio", "de tus activos")}
+        ${hubCard("Inmuebles", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " inmueble" : " inmuebles"), null, "propiedades", "patrimonio", "de tus activos")}
+        ${m.otros.n ? hubCard("Otros", fmtEur(m.otros.total), m.ratioOtros, OTROS_COLOR, m.otros.n + (m.otros.n === 1 ? " bien" : " bienes"), null, "otros", "patrimonio", "de tus activos") : ""}
         ${hayCobrar ? hubCard("Por cobrar", fmtEur(cob.total), m.ratioCobrar, COBRAR_COLOR, detalleCobrar, null, "pasivos", "patrimonio", "de tus activos") : ""}
       </div>` +
       panelDeuda(m) +
@@ -938,8 +941,15 @@
       movimientosList();
   }
 
-  function pagePropiedades(m) {
-    const inm = m.inm;
+  // Inmuebles y Otros son la misma página con distinto contenido: la tabla, el
+  // reparto por tipo y, solo donde tiene sentido, el panel de alquileres.
+  //   clave   "inm" u "otros", el cubo del modelo
+  //   id      el de la página y del reparto ("propiedades" u "otros")
+  const pagePropiedades = (m) => pageBienes(m, "inm", "propiedades", "Inmuebles", "＋ Inmueble", "v2AddProp()", "Sin inmuebles");
+  const pageOtros = (m) => pageBienes(m, "otros", "otros", "Otros", "＋ Otro activo", "v2AddOtro()",
+    "Nada por aquí: vehículos, obras de arte, relojes, metales, colecciones…");
+  function pageBienes(m, clave, id, titulo, botonNuevo, accionNuevo, vacio) {
+    const inm = m[clave];
     // Los costes reales se calculan una vez para toda la página, no por fila.
     const CENTROS_REAL = window.SolventoModel.resumenCentros((CURRENT_DOC || {}).movimientos);
     const items = {};
@@ -991,7 +1001,7 @@
       // Con la descripción dentro también, a la celda del nombre solo le queda el
       // nombre: deja de partirse por la mitad y las cifras recuperan su sitio.
       const contexto = `<div style="font-size:0.74rem;color:var(--t2);">${detalle}</div>${alquiler}${realLinea}${sinMarcar}`;
-      return `<tr class="table-row" onmouseenter="v2Reparto('propiedades','${tipoJs}',true)" onmouseleave="v2Reparto('propiedades',null)">
+      return `<tr class="table-row" onmouseenter="v2Reparto('${id}','${tipoJs}',true)" onmouseleave="v2Reparto('${id}',null)">
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
           <span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span>
           <div><div style="color:var(--t0);font-weight:600;">${esc(r.nombre)}</div>
@@ -1012,17 +1022,17 @@
           </div></div></div>`
       : "";
 
-    return header("Propiedades", fmtEur(inm.total)) +
-      (donutItems.length ? vistaPanel("propiedades", "Distribución por tipo", donutItems, fmtEur(inm.total), "Total", null,
+    return header(titulo, fmtEur(inm.total)) +
+      (donutItems.length ? vistaPanel(id, "Distribución por tipo", donutItems, fmtEur(inm.total), "Total", null,
                                       { sinLeyenda: true, desnudo: true }) : "") +
       rentaPanel +
       `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
-          <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Propiedades</div>
-          ${addBtn("＋ Propiedad", "v2AddProp()")}
+          <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
+          ${addBtn(botonNuevo, accionNuevo)}
         </div>
-        <table class="minimal-table"><thead><tr><th style="text-align:left;">Propiedad</th><th style="text-align:right;">Valor actual</th><th class="col-secundaria" style="text-align:right;">Compra</th><th style="text-align:right;">Revalorización</th><th></th></tr></thead>
-        <tbody>${rows || '<tr><td style="color:var(--t2);padding:1rem;">Sin propiedades</td></tr>'}</tbody></table>
+        <table class="minimal-table"><thead><tr><th style="text-align:left;">Nombre</th><th style="text-align:right;">Valor actual</th><th class="col-secundaria" style="text-align:right;">Compra</th><th style="text-align:right;">Revalorización</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td style="color:var(--t2);padding:1rem;">${esc(vacio)}</td></tr>`}</tbody></table>
       </div></div>`;
   }
 
@@ -2036,6 +2046,7 @@
     document.getElementById("v2-page-balance").innerHTML = pageBalance(m);
     document.getElementById("v2-page-cartera").innerHTML = pageCartera(m, prices);
     document.getElementById("v2-page-propiedades").innerHTML = pagePropiedades(m);
+    document.getElementById("v2-page-otros").innerHTML = pageOtros(m);
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
     // Solo las organizaciones tienen presupuesto; el resto ni pinta la página.
     const pres = document.getElementById("v2-page-presupuesto");
@@ -2123,6 +2134,7 @@
   window.v2AddMov = () => F() && F().openMovimiento();
   window.v2AddInv = () => F() && F().openInversion();
   window.v2AddProp = () => F() && F().openPropiedad();
+  window.v2AddOtro = () => F() && F().openPropiedad(null, { otros: true });
   window.v2AddNav = () => F() && F().openNav();
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
   window.v2AddPas = () => F() && F().openPasivo();

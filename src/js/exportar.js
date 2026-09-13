@@ -198,7 +198,7 @@ ${hojas.map((h, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Con
       (doc.inversiones || []).map((r) => [r.fecha, r.tipo_movimiento || "Compra", r.nombre, r.isin,
         r.unidades, r.coste, r.cuenta]));
 
-    mete("Propiedades",
+    mete("Inmuebles y otros",
       ["Nombre", "Tipo", "Valor actual (€)", "Compra (€)", "Fecha de compra", "Centro de coste", "Alquilada"],
       [0, 0, 2, 2, 1, 0, 0],
       (doc.propiedades || doc.inmuebles || []).map((r) => [r.nombre || r.concepto, r.tipo,
@@ -220,7 +220,7 @@ ${hojas.map((h, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Con
       const m = M().build(doc, window.__PRICES || {});
       const filas = m.saldos.map((s) => [s.cuenta, s.saldo]);
       filas.push([], ["Caja", m.patrimonioLiquido], ["Cartera", m.carteraTotal],
-                 ["Propiedades", m.inm.total], ["Por cobrar", (m.cobrar || {}).total || 0],
+                 ["Inmuebles", m.inm.total], ["Otros", (m.otros || {}).total || 0], ["Por cobrar", (m.cobrar || {}).total || 0],
                  ["Pasivos", -m.pas.total], [], ["Patrimonio neto", m.patrimonioNeto]);
       mete("Saldos", ["Concepto", "Importe (€)"], [0, 2], filas);
     } catch (e) { /* si el modelo falla, el resto de hojas siguen valiendo */ }
