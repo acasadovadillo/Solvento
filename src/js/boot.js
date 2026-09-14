@@ -844,10 +844,41 @@
     }
   }
 
+  /* ── Abrirlo como app en el iPhone ─────────────────────────────────────────
+   * Solvento ya es instalable: manifest, icono, pantalla completa. Lo que el
+   * iPhone no tiene es un botón de «instalar»: hay que ir a Compartir y a
+   * «Añadir a pantalla de inicio», y nadie lo adivina. Si se está en Safari
+   * —no en la app ya instalada— se dice una vez, y se puede cerrar para
+   * siempre. No se mira el User-Agent para saber si es un iPhone: se mira si
+   * el navegador sabe qué es «standalone», que solo lo sabe Safari en iOS.
+   */
+  function avisoInstalar() {
+    const K = "solvento_aviso_instalar";
+    const esSafariMovil = typeof navigator.standalone === "boolean" && /iPhone|iPad|iPod/.test(navigator.userAgent);
+    if (!esSafariMovil || navigator.standalone) return;          // ya abierta como app
+    try { if (localStorage.getItem(K) === "1") return; } catch (e) { /* nada */ }
+    const b = document.createElement("div");
+    b.id = "v2-aviso-instalar";
+    b.style.cssText = "position:fixed;left:0.75rem;right:0.75rem;bottom:0.75rem;z-index:1300;background:var(--f2);" +
+      "border:1px solid var(--b2);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.35);padding:0.8rem 0.9rem;" +
+      "display:flex;gap:0.75rem;align-items:flex-start;font-size:0.84rem;color:var(--t1);line-height:1.4;";
+    b.innerHTML = '<div style="font-size:1.4rem;line-height:1;">📲</div>' +
+      '<div style="flex:1;"><b style="color:var(--t0);">Ábrelo como app.</b> Pulsa <b>Compartir</b> ' +
+      '<span style="display:inline-block;border:1px solid var(--b3);border-radius:4px;padding:0 0.3rem;font-size:0.78rem;">⬆</span> ' +
+      'y luego <b>«Añadir a pantalla de inicio»</b>. Tendrás Solvento con su icono, a pantalla completa y sin barra del navegador.</div>' +
+      '<button aria-label="No volver a enseñar" style="background:none;border:none;color:var(--t2);font-size:1.1rem;cursor:pointer;padding:0 0.2rem;line-height:1;">✕</button>';
+    b.querySelector("button").addEventListener("click", () => {
+      try { localStorage.setItem(K, "1"); } catch (e) { /* nada */ }
+      b.remove();
+    });
+    document.body.appendChild(b);
+  }
+
   async function init() {
     // Antes que nada: de quién es este Solvento y dónde guarda. De eso depende
     // hasta la primera lectura, así que no puede llegar tarde.
     if (window.SolventoPerfil) { try { await window.SolventoPerfil.cargar(); } catch (e) {} }
+    avisoInstalar();
     $("login-form").addEventListener("submit", handleLogin);
     $("pass-form").addEventListener("submit", handlePassword);
     $("pw-cancelar").addEventListener("click", cerrarCambioPassword);
