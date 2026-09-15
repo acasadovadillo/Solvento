@@ -127,6 +127,12 @@
   }
 
   // ── Último NAV por ISIN (ordena por fecha; las hojas mezclan asc/desc) ──
+  // La clave de un activo en los valores liquidativos subidos: su ISIN, y si
+  // no lo tiene, su nombre. La misma que usa nav.js al guardar el archivo.
+  const claveNav = (meta) => {
+    const isin = String((meta && meta.isin) || "").trim();
+    return isin && isin !== "-" ? isin : String((meta && meta.nombre) || "").trim();
+  };
   function lastNavByIsin(nav) {
     const out = {};
     for (const isin in (nav || {})) {
@@ -145,6 +151,7 @@
     const byJk = buildRegistry(db.inversiones);
     const navLast = lastNavByIsin(db.nav);
     const eur = (prices && prices.eur) || {};
+    const navSubido = (prices && prices.nav) || {};
 
     // Agregar coste/unidades CON SIGNO por activo (solo filas con coste numérico)
     const agg = {};
@@ -166,7 +173,12 @@
       const meta = byJk[jk] || { nombre: jk, isin: "-", categoria: "Renta variable", tipo: "", banco: "", yf: null };
       const a = agg[jk];
       let importe = NaN, fuente = "manual", precioUnit = NaN;
-      if (meta.yf && eur[meta.yf] != null && isFinite(a.unidades)) {
+      // Lo que has subido tú manda sobre lo que venga de fuera: es tu dato y
+      // sabes de dónde sale. Yahoo queda para lo que no hayas subido.
+      const subido = navSubido[claveNav(meta)];
+      if (subido && subido.length && isFinite(a.unidades)) {
+        precioUnit = subido[subido.length - 1][1]; importe = round2(precioUnit * a.unidades); fuente = "subido";
+      } else if (meta.yf && eur[meta.yf] != null && isFinite(a.unidades)) {
         precioUnit = eur[meta.yf]; importe = round2(precioUnit * a.unidades); fuente = "yf";
       } else if (navLast[meta.isin] != null && isFinite(a.unidades)) {
         precioUnit = navLast[meta.isin]; importe = round2(precioUnit * a.unidades); fuente = "nav";
@@ -175,7 +187,7 @@
       const ganancia = isFinite(importe) ? round2(importe - coste) : NaN;
       const rentPct = (coste > 0 && isFinite(importe)) ? (importe / coste - 1) * 100 : NaN;
       assets.push({
-        nombre: meta.nombre, isin: meta.isin, categoria: meta.categoria, tipo: meta.tipo,
+        nombre: meta.nombre, isin: meta.isin, yf: meta.yf, categoria: meta.categoria, tipo: meta.tipo,
         banco: meta.banco, coste, unidades: a.unidades, importe, ganancia, rentPct,
         cagr: cagr(importe, coste, a.fechaPrimera), fechaPrimera: a.fechaPrimera,
         n: a.n, fuente, precioUnit,
@@ -1139,7 +1151,10 @@
     const priceTL = {};
     for (const jk in unitsTL) {
       const meta = byJk[jk];
-      if (meta && meta.yf && hist[meta.yf] && hist[meta.yf].length) {
+      const subido = meta && prices && prices.nav && prices.nav[claveNav(meta)];
+      if (subido && subido.length) {
+        priceTL[jk] = subido;
+      } else if (meta && meta.yf && hist[meta.yf] && hist[meta.yf].length) {
         priceTL[jk] = hist[meta.yf];
       } else if (meta && db.nav && db.nav[meta.isin]) {
         priceTL[jk] = db.nav[meta.isin]
@@ -1291,7 +1306,10 @@
     const priceTL = {};
     for (const jk in unitsTL) {
       const meta = byJk[jk];
-      if (meta && meta.yf && hist[meta.yf] && hist[meta.yf].length) {
+      const subido = meta && prices && prices.nav && prices.nav[claveNav(meta)];
+      if (subido && subido.length) {
+        priceTL[jk] = subido;
+      } else if (meta && meta.yf && hist[meta.yf] && hist[meta.yf].length) {
         priceTL[jk] = hist[meta.yf];
       } else if (meta && db.nav && db.nav[meta.isin]) {
         priceTL[jk] = db.nav[meta.isin]

@@ -13,6 +13,7 @@ on:
       - "*-data.enc"         # los guardados cifrados no cambian el código
       - "prices.json"   # evita re-disparo por el propio commit de precios
       - "fundamentals.json"
+      - "nav/**"        # los valores liquidativos subidos desde la web tampoco
   schedule:
     - cron: "59 23 * * *"  # todos los días a las 23:59 UTC
 

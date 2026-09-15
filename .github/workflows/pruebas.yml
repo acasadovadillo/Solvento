@@ -16,6 +16,7 @@ on:
       - "*-data.enc"         # los guardados cifrados no cambian el código
       - "prices.json"       # ni los precios que sube el otro workflow
       - "fundamentals.json"
+      - "nav/**"            # ni los valores liquidativos que se suben desde la web
   pull_request:
   workflow_dispatch:
 

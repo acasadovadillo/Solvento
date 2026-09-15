@@ -16,10 +16,10 @@
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
   <!-- El tema, antes que el CSS: si se aplicara después de pintar, quien use
        el tema claro vería un fogonazo oscuro en cada carga. -->
-  <script src="src/js/tema.js?v=p180"></script>
-  <link rel="stylesheet" href="src/css/base.css?v=p180" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p180" />
-  <link rel="stylesheet" href="src/css/components.css?v=p180" />
+  <script src="src/js/tema.js?v=p183"></script>
+  <link rel="stylesheet" href="src/css/base.css?v=p183" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p183" />
+  <link rel="stylesheet" href="src/css/components.css?v=p183" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -267,6 +267,7 @@
           <button class="aj-tab active" data-sec="cuentas" onclick="v2AjSec('cuentas')">Cuentas</button>
           <button class="aj-tab" data-sec="cartera" onclick="v2AjSec('cartera')">Cartera y activos</button>
           <button class="aj-tab" data-sec="categorias" onclick="v2AjSec('categorias')">Categorías</button>
+          <button class="aj-tab" data-sec="nav" onclick="v2AjSec('nav')">Valores liquidativos</button>
           <button class="aj-tab" data-sec="apariencia" onclick="v2AjSec('apariencia')">Apariencia</button>
           <button class="aj-tab" data-sec="menu" onclick="v2AjSec('menu')">Menú lateral</button>
           <button class="aj-tab" data-sec="sync" onclick="v2AjSec('sync')">Sincronización</button>
@@ -301,6 +302,14 @@
             <h3 style="margin-top:2rem;">Centros de coste</h3>
             <p>El otro eje: a qué inmueble, proyecto o persona se imputa cada apunte. La categoría dice qué se compró; el centro, para qué o para quién.</p>
             <div id="aj-centros"></div>
+          </section>
+
+          <section class="aj-sec" id="aj-sec-nav">
+            <h3>Valores liquidativos</h3>
+            <p>El precio de cada activo, traído por ti. Sube el histórico de valores liquidativos de la gestora o del
+               bróker —dos columnas, fecha y valor— y ese archivo manda sobre lo que llegue de fuera. Un activo que
+               lleve siete días o más sin valor nuevo avisa aquí y en Cartera.</p>
+            <div id="aj-valores"></div>
           </section>
 
           <section class="aj-sec" id="aj-sec-apariencia">
@@ -399,17 +408,18 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p180"></script>
-<script src="src/js/config.js?v=p180"></script>
-<script src="src/js/model.js?v=p180"></script>
-<script src="src/js/charts.js?v=p180"></script>
-<script src="src/js/render.js?v=p180"></script>
-<script src="src/js/db.js?v=p180"></script>
-<script src="src/js/sync.js?v=p180"></script>
-<script src="src/js/forms.js?v=p180"></script>
-<script src="src/js/perfil.js?v=p180"></script>
-<script src="src/js/exportar.js?v=p180"></script>
-<script src="src/js/boot.js?v=p180"></script>
+<script src="src/js/crypto.js?v=p183"></script>
+<script src="src/js/config.js?v=p183"></script>
+<script src="src/js/model.js?v=p183"></script>
+<script src="src/js/charts.js?v=p183"></script>
+<script src="src/js/render.js?v=p183"></script>
+<script src="src/js/db.js?v=p183"></script>
+<script src="src/js/sync.js?v=p183"></script>
+<script src="src/js/nav.js?v=p183"></script>
+<script src="src/js/forms.js?v=p183"></script>
+<script src="src/js/perfil.js?v=p183"></script>
+<script src="src/js/exportar.js?v=p183"></script>
+<script src="src/js/boot.js?v=p183"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

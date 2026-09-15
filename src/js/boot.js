@@ -104,6 +104,7 @@
     document.documentElement.style.overflow = "";
     $("app").style.display = "block";
     render();
+    cargarNav();
     try { DB.state.token = await SYNC.loadToken(password); } catch (e) { DB.state.token = null; }
     // Hubo una opción para que el token viajara DENTRO del documento cifrado, y
     // se ha quitado: si esa contraseña fuese débil, quien descifrara la copia
@@ -129,6 +130,35 @@
   }
   function render() {
     if (DB.state.doc && window.SolventoRender) window.SolventoRender.render(DB.state.doc, PRICES);
+  }
+
+  // ── Valores liquidativos subidos ───────────────────────────────────────────
+  // Se cargan en cuanto hay documento —hace falta saber qué activos tienes—
+  // y se vuelven a cargar cuando llega prices.json o cuando subes uno nuevo.
+  // Lo subido se cuelga de PRICES, que es lo que el modelo mira, y el resto
+  // del programa no distingue de dónde salió cada precio.
+  function activosParaNav() {
+    const N = window.SolventoNav, CFG = window.SolventoConfig, doc = DB.state.doc;
+    if (!N || !doc) return [];
+    const vistos = {};
+    CFG.activos().forEach((a) => { const k = N.claveDe(a); if (k) vistos[k] = a; });
+    (doc.inversiones || []).forEach((r) => {
+      const a = { nombre: r.nombre, isin: r.isin, yf: CFG.tickerConocido ? CFG.tickerConocido(r.isin) : null };
+      const k = N.claveDe(a);
+      if (k && !vistos[k]) vistos[k] = a;
+    });
+    return Object.keys(vistos).map((k) => vistos[k]);
+  }
+  let _navCargando = null;
+  function cargarNav() {
+    const N = window.SolventoNav;
+    if (!N || !DB.state.doc) return Promise.resolve();
+    if (_navCargando) return _navCargando;
+    _navCargando = N.cargar(activosParaNav()).then(() => {
+      PRICES = N.aplicarA(PRICES || {});
+      render();
+    }).catch(() => {}).finally(() => { _navCargando = null; });
+    return _navCargando;
   }
 
   let _toastTimer = null;
@@ -914,13 +944,13 @@
     document.addEventListener("visibilitychange", () => { if (!document.hidden) reintentarPendiente(); });
     fetch("prices.json?" + Date.now())
       .then((r) => (r.ok ? r.json() : null))
-      .then((p) => { PRICES = p; render(); })
+      .then((p) => { PRICES = p; render(); cargarNav(); })
       .catch(() => {});
     window.addEventListener("online", reintentarPendiente);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) reintentarPendiente(); });
     startBoot();
   }
 
-  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, abrirCambioPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken, pintarComprobacion, comprobarAhora };
+  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, abrirCambioPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken, pintarComprobacion, comprobarAhora, cargarNav, activosParaNav, precios: () => PRICES };
   document.addEventListener("DOMContentLoaded", init);
 })();

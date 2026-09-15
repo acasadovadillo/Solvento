@@ -759,7 +759,74 @@
       .filter((n) => n.tipo === "grupo" || !n.pagina.org || esOrg)
       .map((n) => (n.tipo === "grupo" ? filaGrupo(n) : filaPagina(n.pagina))).join("");
 
-    return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros, menu };
+    return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros, menu, nav: fragmentoNav() };
+  }
+
+  /* ── Valores liquidativos ─────────────────────────────────────────────────
+   * Un activo por fila: de dónde sale su precio hoy, de cuándo es el último
+   * valor —en ámbar si tiene siete días o más— y el botón para subir el
+   * histórico en un archivo de dos columnas. Lo subido pasa a mandar sobre lo
+   * que venga de Yahoo, y se guarda en claro en el repositorio con un nombre
+   * fijo por activo.
+   */
+  function fragmentoNav() {
+    const N = window.SolventoNav, B = window.SolventoBoot;
+    if (!N || !B || !B.activosParaNav) return "";
+    const prices = (B.precios && B.precios()) || {};
+    const lista = B.activosParaNav();
+    if (!lista.length) return `<div style="color:var(--t2);font-size:0.85rem;">Todavía no tienes activos: da de alta el primero en «Cartera y activos» o registra una compra.</div>`;
+    const filas = lista.map((a) => {
+      const clave = N.claveDe(a), subido = N.de(clave), f = N.frescura(a, prices, DB.state.doc);
+      const jsClave = clave.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      const fuente = subido ? `subido · ${subido.n} valores`
+        : (f.fuente === "yahoo" ? "Yahoo (automático)" : (f.fuente === "manual" ? "escrito a mano" : "sin precio"));
+      const fecha = f.fecha ? f.fecha.split("-").reverse().join("/") : "—";
+      const estado = f.aviso
+        ? `<span style="color:var(--ambar);font-weight:600;">⚠ ${f.dias == null ? "sin valor" : "hace " + f.dias + " días"}</span>`
+        : `<span style="color:var(--verde);font-weight:600;">al día</span>`;
+      const archivo = subido
+        ? ` · <a href="${esc(N.archivoDe(a))}" target="_blank" rel="noopener" style="color:var(--azul);text-decoration:underline dotted;">ver archivo</a>`
+        : "";
+      return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;border-bottom:1px solid var(--b1);flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="color:var(--t1);font-weight:600;font-size:0.88rem;">${esc(a.nombre || clave)}</div>
+          <div style="color:var(--t2);font-size:0.75rem;">${esc(a.isin && a.isin !== "-" ? a.isin : "sin ISIN")}${a.yf ? " · " + esc(a.yf) : ""} · ${fuente}${archivo}</div>
+          <div style="font-size:0.75rem;margin-top:0.15rem;">último valor ${esc(fecha)} · ${estado}</div>
+        </div>
+        <label class="filebtn solo-editor" style="font-size:0.78rem;padding:0.4rem 0.7rem;white-space:nowrap;">Importar CSV
+          <input type="file" accept=".csv,.txt,text/csv,text/plain" data-nav-clave="${jsClave}" style="display:none;"></label>
+      </div>`;
+    }).join("");
+    return filas + `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.9rem;line-height:1.5;">
+      Dos columnas, <b>fecha</b> y <b>valor</b>, en el orden que sea y con el separador que sea: «02/01/2024;13,94»,
+      «2024-01-02,13.94»… Lo que subas se junta con lo que ya hubiera —por fecha, y lo nuevo pisa— y se guarda como
+      <span style="font-family:ui-monospace,monospace;">nav/historical-nav_&lt;ticker&gt;_&lt;ISIN&gt;.csv</span>.
+      Es un dato público del mercado: va en claro.</div>`;
+  }
+
+  // El archivo elegido se lee aquí mismo y se sube con el token. Sin token no
+  // se puede escribir en el repositorio, y se dice antes de leer nada.
+  function wireNav() {
+    document.querySelectorAll('#aj-valores input[type="file"][data-nav-clave]').forEach((inp) => {
+      inp.addEventListener("change", async (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        ev.target.value = "";
+        if (!file) return;
+        const N = window.SolventoNav, B = window.SolventoBoot;
+        const activo = B.activosParaNav().find((a) => N.claveDe(a) === inp.dataset.navClave);
+        if (!activo) return;
+        if (!DB.state.token) { B.toast("Para subir valores hace falta el token: ponlo en Sincronización", "var(--ambar)"); return; }
+        B.toast("Subiendo " + file.name + "…", "var(--t1b)");
+        try {
+          const r = await N.importar(activo, await file.text(), DB.state.token);
+          await B.cargarNav();
+          refrescarAjustes();
+          B.toast(`${activo.nombre}: ${r.nuevas} valores leídos, ${r.total} en total · último ${new Date(r.ultimo).toISOString().slice(0, 10).split("-").reverse().join("/")}`, "var(--verde)");
+        } catch (e) {
+          B.toast("No se pudo subir: " + (e.message || e), "var(--rojo)");
+        }
+      });
+    });
   }
 
   /* ── Ordenar el menú arrastrando ──────────────────────────────────────────
@@ -1513,7 +1580,7 @@
 
   window.SolventoForms = {
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, verPagina, wireMenuOrden, ordenarPaginas, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, verPagina, wireMenuOrden, ordenarPaginas, wireNav, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, elegirBanco, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),

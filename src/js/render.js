@@ -665,7 +665,7 @@
         ? `<div style="color:${rc(a.ganancia)};font-weight:600;">${a.ganancia >= 0 ? "+" : ""}${fmtEur(a.ganancia)}</div><div style="color:${rc(a.rentPct)};font-size:0.78rem;">${fmtPct(a.rentPct)}${isFinite(a.cagr) && a.coste >= 100 ? '<span class="col-secundaria"> · CAGR ' + a.cagr.toFixed(1) + "%</span>" : ""}</div>`
         : `<span style="color:var(--t3);">—</span>`;
       return `<tr class="table-row">
-        <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:var(--t0);font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:var(--t2);">${esc(a.tipo)}${a.isin && a.isin !== "-" ? ' · <span style="font-family:ui-monospace,monospace;">' + esc(a.isin) + "</span>" : ""}</div></div></div></td>
+        <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">${logoImg(a.nombre, a.isin)}<div><div style="font-weight:600;color:var(--t0);font-size:0.9rem;">${esc(a.nombre)}</div><div style="font-size:0.74rem;color:var(--t2);">${esc(a.tipo)}${a.isin && a.isin !== "-" ? ' · <span style="font-family:ui-monospace,monospace;">' + esc(a.isin) + "</span>" : ""}</div>${avisoFrescura(a)}</div></div></td>
         <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${fmtEur(a.importe)}</td>
         <td style="text-align:right;color:var(--t1b);white-space:nowrap;">${a.coste ? fmtEur(a.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${rentCell}</td>
@@ -851,6 +851,18 @@
       `<div class="v2-wrap"><div class="v2-hub-grid">${tarjetaEfectivo(m, banco)}</div></div>` +
       sinDatos + donutTipos(assets, posiciones) + treemapPanel(assets) +
       tablaCartera(invBanco) + operacionesList(banco);
+  }
+
+  // Un precio de hace nueve días vale una cartera de hace nueve días. Si el
+  // último valor conocido de un activo —subido, de Yahoo o escrito a mano—
+  // tiene siete días o más, se dice en la fila, en ámbar, con la fecha.
+  function avisoFrescura(a) {
+    const N = window.SolventoNav;
+    if (!N) return "";
+    const f = N.frescura(a, window.__PRICES || {}, CURRENT_DOC || {});
+    if (!f.aviso) return "";
+    const txt = f.dias == null ? "sin valor liquidativo" : "valor de hace " + f.dias + " días" + (f.fecha ? " · " + f.fecha.split("-").reverse().join("/") : "");
+    return `<div style="font-size:0.72rem;color:var(--ambar);margin-top:0.15rem;" title="Súbelo en Ajustes → Valores liquidativos">⚠ ${esc(txt)}</div>`;
   }
 
   function pageCartera(m, prices) {
@@ -2227,6 +2239,8 @@
     poner("aj-centros", fr.centros);
     poner("aj-menu", fr.menu);
     if (F().wireMenuOrden) F().wireMenuOrden();
+    poner("aj-valores", fr.nav);
+    if (F().wireNav) F().wireNav();
     poner("aj-revision", panelRevision());
     const B = window.SolventoBoot;
     if (B && B.rellenarToken) B.rellenarToken();

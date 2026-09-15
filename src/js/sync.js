@@ -239,7 +239,26 @@
     return true;
   }
 
+  // Escribir un archivo cualquiera del repositorio —los valores liquidativos
+  // subidos, por ejemplo—. Mismo token, misma rama: si ya existe se pisa con
+  // su sha, y si no, se crea.
+  async function ghPutArchivo(token, ruta, contentStr, message) {
+    const url = `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${ruta}`;
+    const headers = { Accept: "application/vnd.github+json", Authorization: "Bearer " + token,
+                      "X-GitHub-Api-Version": "2022-11-28" };
+    let sha = null;
+    const cur = await fetch(url + "?ref=" + encodeURIComponent(SYNC.branch) + "&_=" + Date.now(), { headers });
+    if (cur.ok) sha = (await cur.json()).sha;
+    const body = { message: message || "Solvento: actualizar " + ruta, content: b64enc(contentStr), branch: SYNC.branch };
+    if (sha) body.sha = sha;
+    const r = await fetch(url, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, headers), body: JSON.stringify(body) });
+    if (r.status === 401 || r.status === 403) { const e = new Error("el token no vale o no puede escribir"); e.code = "AUTH"; throw e; }
+    if (!r.ok) throw new Error("GitHub PUT " + ruta + " " + r.status);
+    return true;
+  }
+
   window.SolventoSync = {
+    ghPutArchivo,
     ghGet, ghPut, storeToken, loadToken, hasToken, clearToken,
     fetchRemoteBlob, fetchBlobRaw, push, pushTickers, getSha, setSha, verificarGuardado, comprobarPublicado,
   };

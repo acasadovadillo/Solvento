@@ -43,6 +43,11 @@ while IFS= read -r f; do
     printf '  · %s — el nombre dice que son datos en claro\n' "$f"
     continue
   fi
+  # Los valores liquidativos subidos desde la web son la excepción al CSV: un
+  # histórico de precios es un dato público del mercado, no dice nada de nadie.
+  if printf '%s' "$f" | grep -Eq '^nav/historical-nav_[A-Za-z0-9.\-]+\.csv$'; then
+    continue
+  fi
   if printf '%s' "$f" | grep -Eiq "$EXTENSIONES"; then
     printf '  · %s — extracto o libro de cuentas (aquí no vive ninguno)\n' "$f"
     continue

@@ -323,6 +323,27 @@ comprobar("los miles llevan punto también entre 1.000 y 9.999",
   eurTxt(999.5) === "999,50 €" && eurTxt(20931.73) === "20.931,73 €",
   eurTxt(1203.08));
 
+// ── Valores liquidativos subidos ─────────────────────────────────────────
+// Lo que subes tú manda sobre lo que venga de Yahoo: el precio del activo es
+// el último valor de tu archivo, y su serie histórica, tu archivo entero.
+eval(leer(base + "src/js/nav.js"));
+var N = window.SolventoNav;
+var serie = N.parsear("Fecha;VL\n02/01/2024;10,00\n03/01/2024;12,50\n");
+comprobar("un CSV de dos columnas se lee sea cual sea su formato",
+  serie.length === 2 && serie[1][1] === 12.5 && N.serializar(serie).indexOf("2024-01-03,12.5") > 0);
+var conNav = JSON.parse(JSON.stringify(doc));
+var primerActivo = M.build(conNav, precios).inv.assets[0];
+var claveA = N.claveDe(primerActivo);
+var preciosNav = JSON.parse(JSON.stringify(precios)); preciosNav.nav = {}; preciosNav.nav[claveA] = [[Date.UTC(2026, 0, 2), 100], [Date.UTC(2026, 8, 1), 200]];
+var mn = M.build(conNav, preciosNav);
+var an = mn.inv.assets.filter(function (x) { return N.claveDe(x) === claveA; })[0];
+comprobar("el valor subido manda sobre el de Yahoo",
+  an && an.fuente === "subido" && an.precioUnit === 200 && cerca(an.importe, 200 * an.unidades),
+  an && (an.fuente + " " + an.precioUnit));
+comprobar("y un activo con siete días o más sin valor avisa",
+  N.frescura({ yf: "Z" }, { hist: { Z: [[Date.now() - 8 * 86400000, 1]] } }, {}).aviso === true &&
+  N.frescura({ yf: "Z" }, { hist: { Z: [[Date.now() - 2 * 86400000, 1]] } }, {}).aviso === false);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");
