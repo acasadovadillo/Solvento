@@ -344,6 +344,34 @@ comprobar("y un activo con siete días o más sin valor avisa",
   N.frescura({ yf: "Z" }, { hist: { Z: [[Date.now() - 8 * 86400000, 1]] } }, {}).aviso === true &&
   N.frescura({ yf: "Z" }, { hist: { Z: [[Date.now() - 2 * 86400000, 1]] } }, {}).aviso === false);
 
+// ── El presupuesto mensual ─────────────────────────────────────────────────
+// Lo de la hoja de cálculo: el importe mensual es el importe entre cada
+// cuántos meses se paga, lo que queda es ingresos menos gastos, la calculadora
+// lo parte en ahorro y ocio, y la aportación se reparte entre los productos.
+var plan = M.planMensual({
+  gastos: [{ grupo: "Casa", nombre: "Comunidad", importe: 100, frecuencia: 1 },
+           { grupo: "Casa", nombre: "IBI", importe: 600, frecuencia: 12 },
+           { grupo: "Coche", nombre: "Seguro", importe: 360, frecuencia: 12 },
+           { grupo: "Coche", nombre: "Sin frecuencia", importe: 50, frecuencia: 0 }],
+  ingresos: [{ nombre: "Nómina", importe: 1000, frecuencia: 1 }, { nombre: "Extra", importe: 600, frecuencia: 6 }],
+  pct_ahorro: 0.4,
+  ocio: [{ nombre: "Cenas", importe: 300 }, { nombre: "Cine", importe: 50 }],
+  inversion: { aportacion: null, productos: [
+    { clase: "Renta variable", nombre: "A", pct: 0.75, redondeo: 200, rent5a: 0.10 },
+    { clase: "Renta fija", nombre: "B", pct: 0.25, redondeo: 100, rent5a: 0.02 }] },
+});
+comprobar("el presupuesto reparte cada pago entre los meses que cubre",
+  cerca(plan.totalGastos, 180) && cerca(plan.totalIngresos, 1100) && cerca(plan.balance, 920) && cerca(plan.semanal, 230) &&
+  plan.grupos.length === 2 && cerca(plan.grupos[0].total, 150),
+  "gastos " + plan.totalGastos + " ingresos " + plan.totalIngresos);
+comprobar("la calculadora parte lo que queda en ahorro y ocio, y el ocio se mide contra su tope",
+  cerca(plan.ahorro, 368) && cerca(plan.topeOcio, 552) && cerca(plan.ahorro + plan.topeOcio, plan.balance) &&
+  cerca(plan.totalOcio, 350) && cerca(plan.margenOcio, 202));
+comprobar("la aportación es lo ahorrado y cada producto se lleva su parte",
+  plan.aportacionAuto && cerca(plan.aportacion, 368) && cerca(plan.productos[0].eur, 276) &&
+  cerca(plan.eurTotal, 368) && plan.pctTotal === 1 && cerca(plan.aportacionReal, 300) && cerca(plan.rentEsperada, 0.08),
+  "aportación " + plan.aportacion + " rent " + plan.rentEsperada);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

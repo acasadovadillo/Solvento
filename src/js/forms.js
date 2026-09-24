@@ -1570,6 +1570,149 @@
   }
 
   // ── Borrado ──
+  /* ── El presupuesto personal ──────────────────────────────────────────────
+   * Vive en doc.plan, dentro del bloque cifrado como todo lo demás: son tus
+   * ingresos y tus gastos, no datos públicos. Tres listas de líneas (gastos,
+   * ingresos, ocio), el porcentaje de ahorro de la calculadora y la cartera
+   * de aportación mensual.
+   */
+  const FRECUENCIAS = [["1", "Mensual"], ["2", "Cada 2 meses"], ["3", "Trimestral"], ["4", "Cada 4 meses"],
+                       ["6", "Semestral"], ["12", "Anual"]];
+  function planDoc() {
+    const doc = DB.state.doc;
+    const p = doc.plan || (doc.plan = {});
+    ["gastos", "ingresos", "ocio"].forEach((k) => { if (!Array.isArray(p[k])) p[k] = []; });
+    if (!p.inversion) p.inversion = { aportacion: null, productos: [] };
+    if (!Array.isArray(p.inversion.productos)) p.inversion.productos = [];
+    if (p.pct_ahorro == null) p.pct_ahorro = 0.5;
+    return p;
+  }
+  const numES = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) ? n : NaN; };
+  const pctTxt = (x) => (x == null || !isFinite(x) ? "" : String(Math.round(x * 10000) / 100));
+
+  // Gastos, ingresos y ocio: la misma ficha con lo que cada uno necesita.
+  function openPlanLinea(lista, id) {
+    const p = planDoc();
+    const e = (p[lista] || []).find((x) => x.id === id) || {};
+    const conFrecuencia = lista !== "ocio", conGrupo = lista === "gastos";
+    const grupos = uniq(p.gastos.map((x) => x.grupo));
+    const titulo = { gastos: "gasto fijo", ingresos: "ingreso", ocio: "gasto de ocio" }[lista];
+    const frec = String(e.frecuencia || 1);
+    const body =
+      (conGrupo ? field("pl-grupo", "Grupo", datalist("pl-grupo", grupos, e.grupo)) : "") +
+      field("pl-nombre", "Nombre", input("pl-nombre", "text", e.nombre, 'placeholder="' + (conGrupo ? "Seguro del coche" : lista === "ocio" ? "Cenas fuera" : "Alquiler del piso") + '"')) +
+      field("pl-importe", conFrecuencia ? "Importe de cada pago (€)" : "Al mes (€)", input("pl-importe", "number", e.importe, 'step="0.01" min="0"')) +
+      (conFrecuencia
+        ? field("pl-frec", "Cada cuánto", selectKV("pl-frec",
+            FRECUENCIAS.some((f) => f[0] === frec) ? FRECUENCIAS : FRECUENCIAS.concat([[frec, "Cada " + frec + " meses"]]), frec)) +
+          `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.4rem;">Se reparte entre los meses que cubre: un seguro de 1.000 € al año cuenta 83,33 € al mes.</div>`
+        : "");
+    shell((e.id ? "Editar " : "Nuevo ") + titulo, body, () => {
+      const nombre = G("pl-nombre");
+      if (!nombre) return "Indica el nombre";
+      const importe = numES(G("pl-importe"));
+      if (!isFinite(importe) || importe < 0) return "Introduce un importe válido";
+      const rec = Object.assign({}, e, { id: e.id || newId(lista[0]), nombre, importe });
+      if (conFrecuencia) rec.frecuencia = +G("pl-frec") || 1;
+      if (conGrupo) rec.grupo = G("pl-grupo");
+      upsert(p[lista], rec);
+      return null;
+    });
+  }
+
+  function openPlanProducto(id) {
+    const p = planDoc();
+    const e = p.inversion.productos.find((x) => x.id === id) || {};
+    const clases = uniq(["Renta variable", "Renta fija"].concat(p.inversion.productos.map((x) => x.clase)));
+    const tipos = uniq(["ETF", "Fondo de inversión", "Acciones", "Criptoactivo"].concat(p.inversion.productos.map((x) => x.tipo)));
+    const nombres = uniq(CFG.activos().map((a) => a.nombre).concat(p.inversion.productos.map((x) => x.nombre)));
+    const body =
+      field("pp-nombre", "Producto", datalist("pp-nombre", nombres, e.nombre)) +
+      field("pp-clase", "Clase", datalist("pp-clase", clases, e.clase || "Renta variable")) +
+      field("pp-tipo", "Tipo", datalist("pp-tipo", tipos, e.tipo || "ETF")) +
+      field("pp-pct", "Parte de la aportación (%)", input("pp-pct", "number", pctTxt(e.pct), 'step="0.01" min="0" max="100" placeholder="20"')) +
+      field("pp-real", "Lo que aportas de verdad al mes (€)", input("pp-real", "number", e.redondeo, 'step="0.01" min="0" placeholder="opcional"')) +
+      field("pp-obj", "Objetivo dentro de su clase (%)", input("pp-obj", "number", pctTxt(e.objetivo), 'step="0.01" min="0" max="100" placeholder="opcional"')) +
+      field("pp-rent", "Rentabilidad anualizada a 5 años (%)", input("pp-rent", "number", pctTxt(e.rent5a), 'step="0.01" placeholder="opcional"'));
+    shell(e.id ? "Editar producto" : "Nuevo producto", body, () => {
+      const nombre = G("pp-nombre");
+      if (!nombre) return "Indica el producto";
+      const pct = numES(G("pp-pct"));
+      if (!isFinite(pct) || pct < 0 || pct > 100) return "La parte de la aportación va de 0 a 100 %";
+      const opc = (id, div) => { const v = numES(G(id)); return isFinite(v) ? v / div : null; };
+      upsert(p.inversion.productos, Object.assign({}, e, {
+        id: e.id || newId("p"), nombre, clase: G("pp-clase"), tipo: G("pp-tipo"), pct: pct / 100,
+        redondeo: opc("pp-real", 1), objetivo: opc("pp-obj", 100), rent5a: opc("pp-rent", 100),
+      }));
+      return null;
+    });
+  }
+
+  // La aportación sigue sola a lo que ahorras; fijarla a mano es la excepción.
+  function openPlanAportacion() {
+    const p = planDoc();
+    const auto = window.SolventoModel.planMensual(Object.assign({}, p, { inversion: { aportacion: null, productos: [] } })).ahorro;
+    const body =
+      field("pa-aport", "Aportación mensual (€)", input("pa-aport", "number", p.inversion.aportacion, 'step="0.01" min="0" placeholder="' + auto + '"')) +
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Déjalo <b>vacío</b> y será lo que ahorras cada mes
+        según la calculadora (ahora, ${eur(auto)}), y cambiará con ella.</div>`;
+    shell("Aportación mensual", body, () => {
+      const v = G("pa-aport");
+      if (v === "") { p.inversion.aportacion = null; return null; }
+      const n = numES(v);
+      if (!isFinite(n) || n < 0) return "Introduce un importe válido";
+      p.inversion.aportacion = n;
+      return null;
+    });
+  }
+
+  function borrarPlan(lista, id) {
+    if (soloLectura()) return;
+    const p = planDoc();
+    const arr = lista === "productos" ? p.inversion.productos : p[lista];
+    const x = arr.find((y) => y.id === id);
+    if (!x || !window.confirm("¿Borrar «" + x.nombre + "» del presupuesto?")) return;
+    const quedan = arr.filter((y) => y.id !== id);
+    if (lista === "productos") p.inversion.productos = quedan; else p[lista] = quedan;
+    if (window.SolventoBoot && window.SolventoBoot.saveDoc) window.SolventoBoot.saveDoc();
+  }
+
+  // La calculadora se toca mucho seguido —se arrastra la barra—, así que se
+  // repinta al momento y se guarda cuando se deja de mover.
+  let _pctTimer = null;
+  function ponerPctAhorro(v) {
+    if (soloLectura()) return;
+    const n = numES(v);
+    if (!isFinite(n)) return;
+    planDoc().pct_ahorro = Math.max(0, Math.min(100, n)) / 100;
+    if (window.v2PlanPintar) window.v2PlanPintar();
+    clearTimeout(_pctTimer);
+    _pctTimer = setTimeout(() => { if (window.SolventoBoot && window.SolventoBoot.saveDoc) window.SolventoBoot.saveDoc(); }, 700);
+  }
+
+  // Traer el Excel entero. Si ya hay un presupuesto, se pregunta antes: esto
+  // lo sustituye, no lo mezcla.
+  async function importarPlanXlsx(file) {
+    if (soloLectura() || !file) return;
+    const B = window.SolventoBoot;
+    try {
+      const nuevo = await window.SolventoPlan.importarXlsx(await file.arrayBuffer());
+      // En la hoja la aportación se tecleaba a mano igual que lo ahorrado. Si
+      // coincide, se deja automática: así sigue a la calculadora.
+      const calc = window.SolventoModel.planMensual(Object.assign({}, nuevo, { inversion: { aportacion: null, productos: [] } }));
+      if (nuevo.inversion.aportacion != null && Math.abs(nuevo.inversion.aportacion - calc.ahorro) < 1) nuevo.inversion.aportacion = null;
+      const doc = DB.state.doc, viejo = doc.plan;
+      const hay = viejo && ((viejo.gastos || []).length || (viejo.ingresos || []).length || (viejo.ocio || []).length);
+      const resumen = `${nuevo.gastos.length} gastos fijos, ${nuevo.ingresos.length} ingresos, ${nuevo.ocio.length} de ocio y ${nuevo.inversion.productos.length} productos de inversión`;
+      if (hay && !window.confirm("Se va a SUSTITUIR tu presupuesto por el del Excel:\n\n" + resumen + "\n\n¿Seguir?")) return;
+      doc.plan = nuevo;
+      if (B && B.saveDoc) await B.saveDoc();
+      if (B && B.toast) B.toast("Presupuesto importado · " + resumen, "var(--verde)");
+    } catch (e) {
+      if (B && B.toast) B.toast("No se pudo leer el Excel: " + (e.message || e), "var(--rojo)");
+    }
+  }
+
   function del(collection, id) {
     if (soloLectura()) return;
     const doc = DB.state.doc;
@@ -1579,6 +1722,7 @@
   const findById = (coll, id) => (DB.state.doc[coll] || []).find((x) => x.id === id);
 
   window.SolventoForms = {
+    openPlanLinea, openPlanProducto, openPlanAportacion, borrarPlan, ponerPctAhorro, importarPlanXlsx,
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
     fragmentosAjustes, verPagina, wireMenuOrden, ordenarPaginas, wireNav, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,

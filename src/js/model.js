@@ -523,6 +523,82 @@
     };
   }
 
+  /* ── El presupuesto personal ──────────────────────────────────────────────
+   * La hoja de cálculo de siempre, dentro: los gastos fijos y los ingresos
+   * con su frecuencia, lo que queda al mes, cuánto de eso se ahorra e invierte
+   * y cuánto se puede gastar en ocio, el ocio que de verdad se paga contra ese
+   * tope, y cómo se reparte la aportación mensual entre los productos.
+   *
+   * La frecuencia es cada cuántos meses se paga: 1 es mensual, 12 anual. El
+   * importe mensual es el importe entre la frecuencia, y una frecuencia vacía
+   * o a cero no suma nada —en la hoja era una división por cero—.
+   *
+   * Todo se calcula con decimales completos y se redondea al final, igual que
+   * la hoja: redondear cada línea y luego sumar daría céntimos de diferencia.
+   */
+  function planMensual(plan) {
+    plan = plan || {};
+    const mensualDe = (x) => {
+      const imp = num(x.importe), f = num(x.frecuencia);
+      return isFinite(imp) && f > 0 ? imp / f : 0;
+    };
+    const conMensual = (lista) => (lista || []).map((x) => Object.assign({}, x, { mensual: mensualDe(x) }));
+    const suma = (lista, k) => lista.reduce((t, x) => t + (isFinite(num(x[k])) ? num(x[k]) : 0), 0);
+
+    const gastos = conMensual(plan.gastos);
+    const ingresos = conMensual(plan.ingresos);
+    const totalGastos = suma(gastos, "mensual");
+    const totalIngresos = suma(ingresos, "mensual");
+    const balance = totalIngresos - totalGastos;
+
+    // Los gastos se agrupan como en la hoja: la casa, el coche, lo personal.
+    const grupos = [];
+    gastos.forEach((x) => {
+      const g = String(x.grupo || "").trim() || "Sin grupo";
+      let e = grupos.find((y) => y.nombre === g);
+      if (!e) grupos.push(e = { nombre: g, items: [], total: 0 });
+      e.items.push(x); e.total += x.mensual;
+    });
+
+    // La calculadora: de lo que queda, qué parte se aparta y qué parte es ocio.
+    let pct = num(plan.pct_ahorro);
+    if (!isFinite(pct)) pct = 0.5;
+    pct = Math.max(0, Math.min(1, pct));
+    const ahorro = balance * pct;
+    const topeOcio = balance - ahorro;
+
+    const ocio = (plan.ocio || []).map((x) => Object.assign({}, x, { mensual: isFinite(num(x.importe)) ? num(x.importe) : 0 }));
+    const totalOcio = suma(ocio, "mensual");
+
+    // La aportación a la cartera es lo ahorrado, salvo que se haya fijado otra
+    // a mano. Cada producto se lleva su porcentaje de ella.
+    const inv = plan.inversion || {};
+    const aportacionFija = num(inv.aportacion);
+    const aportacion = isFinite(aportacionFija) ? aportacionFija : ahorro;
+    const productos = (inv.productos || []).map((x) => {
+      const p = isFinite(num(x.pct)) ? num(x.pct) : 0;
+      return Object.assign({}, x, { pct: p, eur: aportacion * p });
+    });
+    const pctTotal = suma(productos, "pct");
+    const aportacionReal = suma(productos, "redondeo");
+    // Rentabilidad esperada: la media de la de cada producto, pesada por lo que
+    // se lleva de la aportación.
+    const conRent = productos.filter((x) => isFinite(num(x.rent5a)));
+    const rentEsperada = conRent.length ? conRent.reduce((t, x) => t + x.pct * num(x.rent5a), 0) : NaN;
+
+    const r = (x) => round2(x);
+    return {
+      gastos, ingresos, grupos,
+      totalGastos: r(totalGastos), totalIngresos: r(totalIngresos),
+      balance: r(balance), semanal: r(balance / 4),
+      pct, ahorro: r(ahorro), topeOcio: r(topeOcio),
+      ocio, totalOcio: r(totalOcio), margenOcio: r(topeOcio - totalOcio),
+      aportacion: r(aportacion), aportacionAuto: !isFinite(aportacionFija),
+      productos, pctTotal: Math.round(pctTotal * 10000) / 10000,
+      eurTotal: r(aportacion * pctTotal), aportacionReal: r(aportacionReal), rentEsperada,
+    };
+  }
+
   // ── Categorías con jerarquía ─────────────────────────────────────────
   // Las categorías se guardan en el movimiento como texto: "Educación" o
   // "Educación > Formaciones". Mantener ese formato tiene una ventaja grande:
@@ -1422,5 +1498,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, tarjetas, tarjetaDeLiquidacion, cicloTarjeta, revisarLiquidacion, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, planMensual, tarjetas, tarjetaDeLiquidacion, cicloTarjeta, revisarLiquidacion, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

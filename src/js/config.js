@@ -331,7 +331,7 @@
     { id: "propiedades", nombre: "Inmuebles",   grupo: "activos", nota: "pisos, casas, locales, garajes, terrenos" },
     { id: "otros",       nombre: "Otros",       grupo: "activos", nota: "vehículos, arte, metales, colecciones" },
     { id: "pasivos",     nombre: "Pasivos",     nota: "deudas, hipotecas y tarjetas" },
-    { id: "presupuesto", nombre: "Presupuesto", org: true, nota: "lo aprobado contra lo ejecutado" },
+    { id: "presupuesto", nombre: "Presupuesto", nota: "gastos fijos, ingresos, ahorro, ocio y aportación" },
   ];
   const GRUPOS = [{ id: "activos", nombre: "Activos", nota: "lo que tienes: caja, balance, cartera, inmuebles y otros" }];
   // Lo guardado se filtra contra el catálogo: una página fija no se puede

@@ -1276,6 +1276,168 @@
   // Lo que se aprobó en la asamblea contra lo que va saliendo. Es la página que
   // una asociación mira cada mes y una persona no necesita nunca: por eso vive
   // detrás del tipo de perfil y no se le enseña a nadie más.
+  /* ── Presupuesto personal ─────────────────────────────────────────────────
+   * La hoja de cálculo de cinco pestañas, en una página que se lee de arriba
+   * abajo: lo que entra y lo que sale cada mes, cuánto queda, qué parte se
+   * aparta, el ocio contra su tope y cómo se reparte la aportación.
+   */
+  const FREC_TXT = { 1: "mensual", 2: "cada 2 meses", 3: "trimestral", 4: "cada 4 meses", 6: "semestral", 12: "anual" };
+  const frecTxt = (f) => FREC_TXT[f] || ("cada " + f + " meses");
+  const pctFmt = (x, d) => (isFinite(x) ? (x * 100).toFixed(d == null ? 2 : d).replace(".", ",") + " %" : "—");
+  const jsId = (x) => String(x).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const panelT = (titulo, derecha, cuerpo) => `<div class="v2-wrap"><div class="table-container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">${derecha || ""}</div>
+      </div>${cuerpo}</div></div>`;
+  const tile = (etq, valor, color, sub) => `<div style="flex:1;min-width:150px;background:var(--f1);border:1px solid var(--b1);border-radius:12px;padding:0.9rem 1rem;">
+      <div style="font-size:0.72rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(etq)}</div>
+      <div style="font-size:1.35rem;font-weight:800;color:${color};margin-top:0.25rem;white-space:nowrap;">${valor}</div>
+      ${sub ? `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.15rem;">${sub}</div>` : ""}</div>`;
+
+  function pagePlan() {
+    const doc = CURRENT_DOC || {};
+    const plan = doc.plan || {};
+    const p = window.SolventoModel.planMensual(plan);
+    const importar = `<label class="solo-editor" style="background:var(--f4);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;white-space:nowrap;">Importar desde Excel
+        <input type="file" accept=".xlsx" onchange="v2PlanImportar(this)" style="display:none;"></label>`;
+    const vacio = !(plan.gastos || []).length && !(plan.ingresos || []).length && !(plan.ocio || []).length &&
+                  !((plan.inversion || {}).productos || []).length;
+    if (vacio) {
+      return header("Presupuesto", fmtEur(0)) +
+        `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;padding:3rem 1.5rem;">
+          <div style="color:var(--t1);font-size:0.95rem;font-weight:600;margin-bottom:0.5rem;">Tu presupuesto mensual</div>
+          <div style="color:var(--t2);font-size:0.85rem;max-width:520px;margin:0 auto 1.25rem;line-height:1.5;">
+            Apunta tus gastos fijos y tus ingresos con su frecuencia y Solvento calcula lo que te queda cada mes,
+            cuánto apartar para ahorrar e invertir, el tope de ocio y cómo repartir la aportación entre tus productos.
+            Si lo llevabas en una hoja de cálculo, tráela tal cual.</div>
+          <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+            ${importar}${addBtn("＋ Gasto fijo", "v2PlanLinea('gastos')")}${addBtn("＋ Ingreso", "v2PlanLinea('ingresos')")}</div>
+        </div></div>`;
+    }
+
+    // ── 1. Balance y calculadora ──
+    const pctNum = Math.round(p.pct * 100);
+    const ancho = Math.max(0, Math.min(100, pctNum));
+    const balance = `<div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        ${tile("Ingresos al mes", fmtEur(p.totalIngresos), GREEN)}
+        ${tile("Gastos fijos al mes", fmtEur(p.totalGastos), RED)}
+        ${tile("Te queda", fmtEur(p.balance), rc(p.balance), fmtEur(p.semanal) + " a la semana")}
+      </div>
+      <div style="margin-top:1.25rem;padding-top:1.1rem;border-top:1px solid var(--b1);">
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <div style="font-size:0.85rem;color:var(--t1);font-weight:600;">Aparto para ahorrar e invertir</div>
+          <input type="range" min="0" max="100" step="1" value="${pctNum}" oninput="v2PlanPct(this.value)" class="solo-editor"
+            style="flex:1;min-width:140px;accent-color:var(--azul);">
+          <div style="display:flex;align-items:center;gap:0.25rem;">
+            <input id="v2-plan-pct" type="number" min="0" max="100" step="1" value="${pctNum}" onchange="v2PlanPct(this.value)"
+              style="width:4.2rem;background:var(--f1);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-family:inherit;font-size:0.9rem;padding:0.35rem 0.5rem;text-align:right;">
+            <span style="color:var(--t2);">%</span></div>
+        </div>
+        <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;margin:0.9rem 0 0.75rem;background:var(--b1);">
+          <div style="width:${ancho}%;background:var(--azul);"></div><div style="width:${100 - ancho}%;background:var(--ambar);"></div></div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          ${tile("Ahorro e inversión", fmtEur(p.ahorro), AZUL, pctNum + " % de lo que te queda")}
+          ${tile("Para ocio", fmtEur(p.topeOcio), AMBAR, "tu tope de ocio al mes")}
+        </div>
+        ${p.balance < 0 ? `<div style="font-size:0.8rem;color:var(--rojo);margin-top:0.75rem;">Los gastos fijos superan a los ingresos: no queda nada que apartar.</div>` : ""}
+      </div>`;
+
+    // ── 2. Gastos fijos, por grupos ──
+    const filaLinea = (lista, x, conFrec) => `<tr class="table-row">
+        <td style="text-align:left;padding-left:${lista === "gastos" ? "1.2rem" : "0.45rem"};color:var(--t1);">${esc(x.nombre)}</td>
+        <td class="col-secundaria" style="text-align:right;color:var(--t1b);white-space:nowrap;">${conFrec ? esc(fmtEur(+x.importe || 0)) + " · " + esc(frecTxt(+x.frecuencia || 1)) : ""}</td>
+        <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${esc(fmtEur(x.mensual))}</td>
+        ${rowActions(`v2PlanLinea('${lista}','${jsId(x.id)}')`, `v2PlanBorrar('${lista}','${jsId(x.id)}')`)}</tr>`;
+    const tablaGastos = p.gastos.length
+      ? `<table class="minimal-table"><thead><tr><th style="text-align:left;">Gasto</th><th class="col-secundaria" style="text-align:right;">Pago</th><th style="text-align:right;">Al mes</th><th></th></tr></thead><tbody>` +
+        p.grupos.map((g) => `<tr><td style="text-align:left;color:var(--t2);font-size:0.74rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;padding-top:0.9rem;">${esc(g.nombre)}</td><td class="col-secundaria"></td>
+            <td style="text-align:right;color:var(--t2);font-size:0.78rem;font-weight:700;padding-top:0.9rem;white-space:nowrap;">${esc(fmtEur(g.total))}</td><td></td></tr>` +
+          g.items.map((x) => filaLinea("gastos", x, true)).join("")).join("") +
+        `<tr><td style="text-align:left;font-weight:800;color:var(--t0);padding-top:0.9rem;">Total</td><td class="col-secundaria"></td>
+          <td style="text-align:right;font-weight:800;color:${RED};padding-top:0.9rem;white-space:nowrap;">${esc(fmtEur(p.totalGastos))}</td><td></td></tr></tbody></table>`
+      : `<div style="color:var(--t2);font-size:0.85rem;">Sin gastos fijos.</div>`;
+
+    // ── 3. Ingresos ──
+    const tablaIngresos = p.ingresos.length
+      ? `<table class="minimal-table"><thead><tr><th style="text-align:left;">Ingreso</th><th class="col-secundaria" style="text-align:right;">Cobro</th><th style="text-align:right;">Al mes</th><th></th></tr></thead><tbody>` +
+        p.ingresos.map((x) => filaLinea("ingresos", x, true)).join("") +
+        `<tr><td style="text-align:left;font-weight:800;color:var(--t0);padding-top:0.9rem;">Total</td><td class="col-secundaria"></td>
+          <td style="text-align:right;font-weight:800;color:${GREEN};padding-top:0.9rem;white-space:nowrap;">${esc(fmtEur(p.totalIngresos))}</td><td></td></tr></tbody></table>`
+      : `<div style="color:var(--t2);font-size:0.85rem;">Sin ingresos.</div>`;
+
+    // ── 4. Ocio contra su tope ──
+    const usoOcio = p.topeOcio > 0 ? p.totalOcio / p.topeOcio : (p.totalOcio > 0 ? 2 : 0);
+    const pasa = p.margenOcio < -0.005;
+    const ocio = `<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:0.5rem;">
+          <div style="font-size:1.25rem;font-weight:800;color:${pasa ? RED : "var(--t0)"};">${esc(fmtEur(p.totalOcio))}
+            <span style="font-size:0.85rem;color:var(--t2);font-weight:500;">de ${esc(fmtEur(p.topeOcio))} de tope</span></div>
+          <div style="font-size:0.85rem;font-weight:700;color:${pasa ? RED : GREEN};">${pasa
+            ? "Te pasas " + esc(fmtEur(-p.margenOcio))
+            : "Te quedan " + esc(fmtEur(p.margenOcio))}</div></div>
+        <div style="height:6px;border-radius:3px;background:var(--b1);overflow:hidden;margin:0.6rem 0 0.9rem;">
+          <div style="height:100%;width:${Math.min(100, usoOcio * 100)}%;background:${pasa ? RED : AMBAR};"></div></div>` +
+      (p.ocio.length
+        ? `<table class="minimal-table"><tbody>` + p.ocio.map((x) => filaLinea("ocio", x, false)).join("") + `</tbody></table>`
+        : `<div style="color:var(--t2);font-size:0.85rem;">Nada apuntado todavía.</div>`);
+
+    // ── 5. Aportación a la cartera ──
+    const clases = [];
+    p.productos.forEach((x) => {
+      const c = String(x.clase || "").trim() || "Sin clase";
+      let e = clases.find((y) => y.nombre === c);
+      if (!e) clases.push(e = { nombre: c, items: [], pct: 0, eur: 0 });
+      e.items.push(x); e.pct += x.pct; e.eur += x.eur;
+    });
+    const hayReal = p.productos.some((x) => isFinite(+x.redondeo) && x.redondeo !== null);
+    const hayObj = p.productos.some((x) => x.objetivo != null);
+    const hayRent = p.productos.some((x) => x.rent5a != null);
+    const filaProd = (x) => `<tr class="table-row">
+        <td style="text-align:left;padding-left:1.2rem;"><div style="color:var(--t1);">${esc(x.nombre)}</div>
+          <div style="color:var(--t2);font-size:0.74rem;">${esc(x.tipo || "")}</div></td>
+        <td style="text-align:right;color:var(--t1b);white-space:nowrap;">${pctFmt(x.pct, 1)}</td>
+        <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${esc(fmtEur(x.eur))}</td>
+        ${hayReal ? `<td class="col-secundaria" style="text-align:right;color:var(--t1b);white-space:nowrap;">${x.redondeo != null ? esc(fmtEur(+x.redondeo)) : "—"}</td>` : ""}
+        ${hayObj ? `<td class="col-secundaria" style="text-align:right;color:var(--t2);white-space:nowrap;">${x.objetivo != null ? pctFmt(+x.objetivo, 0) : "—"}</td>` : ""}
+        ${hayRent ? `<td class="col-secundaria" style="text-align:right;color:${x.rent5a != null ? rc(+x.rent5a) : "var(--t2)"};white-space:nowrap;">${x.rent5a != null ? pctFmt(+x.rent5a, 1) : "—"}</td>` : ""}
+        ${rowActions(`v2PlanProducto('${jsId(x.id)}')`, `v2PlanBorrar('productos','${jsId(x.id)}')`)}</tr>`;
+    const cols = 3 + (hayReal ? 1 : 0) + (hayObj ? 1 : 0) + (hayRent ? 1 : 0);
+    const cuadra = Math.abs(p.pctTotal - 1) < 0.0005;
+    const avisos = [];
+    if (p.productos.length && !cuadra) avisos.push(`El reparto suma ${pctFmt(p.pctTotal, 1)}, no 100 %: ${p.pctTotal < 1 ? "queda aportación sin asignar" : "se reparte más de lo que aportas"}.`);
+    if (hayReal && Math.abs(p.aportacionReal - p.aportacion) >= 0.01) avisos.push(`De verdad aportas ${fmtEur(p.aportacionReal)} al mes, ${p.aportacionReal < p.aportacion ? "menos" : "más"} que los ${fmtEur(p.aportacion)} previstos.`);
+    const inversion = `<div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+          ${tile("Aportación al mes", fmtEur(p.aportacion), AZUL,
+            (p.aportacionAuto ? "lo que ahorras según la calculadora" : "fijada a mano") +
+            ` · <button class="solo-editor" onclick="v2PlanAportacion()" style="background:none;border:none;padding:0;color:var(--azul);font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">cambiar</button>`)}
+          ${isFinite(p.rentEsperada) ? tile("Rentabilidad esperada", pctFmt(p.rentEsperada), rc(p.rentEsperada), "media a 5 años, pesada por el reparto") : ""}
+        </div>` +
+      (avisos.length ? `<div style="font-size:0.8rem;color:var(--ambar);margin-bottom:0.75rem;line-height:1.5;">${avisos.map((a) => "⚠ " + esc(a)).join("<br>")}</div>` : "") +
+      (p.productos.length
+        ? `<table class="minimal-table"><thead><tr><th style="text-align:left;">Producto</th><th style="text-align:right;">Reparto</th><th style="text-align:right;">Al mes</th>
+            ${hayReal ? '<th class="col-secundaria" style="text-align:right;">Real</th>' : ""}
+            ${hayObj ? '<th class="col-secundaria" style="text-align:right;">Objetivo en su clase</th>' : ""}
+            ${hayRent ? '<th class="col-secundaria" style="text-align:right;">Rent. 5 años</th>' : ""}<th></th></tr></thead><tbody>` +
+          clases.map((c) => `<tr><td style="text-align:left;color:var(--t2);font-size:0.74rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;padding-top:0.9rem;">${esc(c.nombre)}</td>
+              <td style="text-align:right;color:var(--t2);font-size:0.78rem;font-weight:700;padding-top:0.9rem;">${pctFmt(c.pct, 1)}</td>
+              <td style="text-align:right;color:var(--t2);font-size:0.78rem;font-weight:700;padding-top:0.9rem;white-space:nowrap;">${esc(fmtEur(c.eur))}</td>
+              <td colspan="${cols - 2}"></td></tr>` + c.items.map(filaProd).join("")).join("") +
+          `<tr><td style="text-align:left;font-weight:800;color:var(--t0);padding-top:0.9rem;">Total</td>
+            <td style="text-align:right;font-weight:800;color:${cuadra ? "var(--t0)" : AMBAR};padding-top:0.9rem;">${pctFmt(p.pctTotal, 1)}</td>
+            <td style="text-align:right;font-weight:800;color:var(--t0);padding-top:0.9rem;white-space:nowrap;">${esc(fmtEur(p.eurTotal))}</td>
+            ${hayReal ? `<td class="col-secundaria" style="text-align:right;font-weight:800;color:var(--t1b);padding-top:0.9rem;white-space:nowrap;">${esc(fmtEur(p.aportacionReal))}</td>` : ""}
+            <td colspan="${cols - 2 - (hayReal ? 1 : 0)}"></td></tr></tbody></table>`
+        : `<div style="color:var(--t2);font-size:0.85rem;">Sin productos: añade en qué inviertes y qué parte de la aportación se lleva cada uno.</div>`);
+
+    return header("Presupuesto", fmtEur(p.balance) + ` <span style="font-size:1rem;color:var(--t2);font-weight:600;">al mes</span>`) +
+      panelT("Balance mensual", importar, balance) +
+      panelT("Gastos fijos", addBtn("＋ Gasto fijo", "v2PlanLinea('gastos')"), tablaGastos) +
+      panelT("Ingresos", addBtn("＋ Ingreso", "v2PlanLinea('ingresos')"), tablaIngresos) +
+      panelT("Ocio", addBtn("＋ Ocio", "v2PlanLinea('ocio')"), ocio) +
+      panelT("Aportación a la cartera", addBtn("＋ Producto", "v2PlanProducto()"), inversion) +
+      `<div style="height:2rem;"></div>`;
+  }
+
   let PRES_ANIO = null;
   function pagePresupuesto() {
     const doc = CURRENT_DOC || {};
@@ -2105,9 +2267,10 @@
     document.getElementById("v2-page-propiedades").innerHTML = pagePropiedades(m);
     document.getElementById("v2-page-otros").innerHTML = pageOtros(m);
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
-    // Solo las organizaciones tienen presupuesto; el resto ni pinta la página.
+    // Una organización tiene su presupuesto aprobado en asamblea —lo previsto
+    // contra lo ejecutado—; una persona, su presupuesto mensual.
     const pres = document.getElementById("v2-page-presupuesto");
-    if (pres) pres.innerHTML = (window.SolventoPerfil && window.SolventoPerfil.esOrganizacion()) ? pagePresupuesto() : "";
+    if (pres) pres.innerHTML = (window.SolventoPerfil && window.SolventoPerfil.esOrganizacion()) ? pagePresupuesto() : pagePlan();
     document.getElementById("v2-page-operaciones").innerHTML = pageOperaciones(m);
     document.getElementById("v2-page-reporte").innerHTML = pageReporte(m);
     if (window.v2AjPintar) window.v2AjPintar();
@@ -2196,6 +2359,22 @@
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
   window.v2AddPas = () => F() && F().openPasivo();
   window.v2MenuVer = (id, visible) => F() && F().verPagina(id, visible);
+  window.v2PlanLinea = (lista, id) => F() && F().openPlanLinea(lista, id);
+  window.v2PlanProducto = (id) => F() && F().openPlanProducto(id);
+  window.v2PlanAportacion = () => F() && F().openPlanAportacion();
+  window.v2PlanBorrar = (lista, id) => F() && F().borrarPlan(lista, id);
+  window.v2PlanPct = (v) => F() && F().ponerPctAhorro(v);
+  window.v2PlanImportar = (inp) => { const f = inp.files && inp.files[0]; inp.value = ""; if (f && F()) F().importarPlanXlsx(f); };
+  // Repintar solo el presupuesto: al arrastrar la barra de la calculadora no
+  // tiene sentido rehacer las demás páginas en cada paso. Se conserva el foco
+  // del campo de porcentaje si era ahí donde se estaba escribiendo.
+  window.v2PlanPintar = () => {
+    const pg = document.getElementById("v2-page-presupuesto");
+    if (!pg || (window.SolventoPerfil && window.SolventoPerfil.esOrganizacion())) return;
+    const rango = document.activeElement && document.activeElement.type === "range";
+    pg.innerHTML = pagePlan();
+    if (rango) { const r = pg.querySelector('input[type="range"]'); if (r) r.focus(); }
+  };
   // El tema no pasa por el documento: es de este dispositivo, y tema.js ya lo
   // ha aplicado antes de que existiera ninguna página. Aquí solo se enseña
   // cuál está puesto y se cambia.
