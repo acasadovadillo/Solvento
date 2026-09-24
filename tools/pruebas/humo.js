@@ -372,6 +372,50 @@ comprobar("la aportación es lo ahorrado y cada producto se lleva su parte",
   cerca(plan.eurTotal, 368) && plan.pctTotal === 1 && cerca(plan.aportacionReal, 300) && cerca(plan.rentEsperada, 0.08),
   "aportación " + plan.aportacion + " rent " + plan.rentEsperada);
 
+// ── El presupuesto contra lo que pasó ────────────────────────────────────────
+// Cada movimiento va a la línea que mejor lo describe —con centro gana a sin
+// centro—, lo que no cae en ninguna es «fuera del presupuesto», y la cartera
+// se compara con las compras del mes, producto a producto.
+var docSeg = {
+  movimientos: [
+    { tipo: "Gasto", fecha: "03/09/2026", importe: "20", tipo_gasto: "Vivienda > Suministros > Agua", centro: "Inmuebles > Piso A" },
+    { tipo: "Gasto", fecha: "04/09/2026", importe: "15", tipo_gasto: "Vivienda > Suministros > Agua", centro: "Inmuebles > Piso B" },
+    { tipo: "Gasto", fecha: "05/09/2026", importe: "400", tipo_gasto: "Ocio > Bares y restaurantes" },
+    { tipo: "Gasto", fecha: "06/09/2026", importe: "70", tipo_gasto: "Compras > Tecnología" },
+    { tipo: "Gasto", fecha: "06/08/2026", importe: "999", tipo_gasto: "Ocio > Bares y restaurantes" },
+    { tipo: "Ingreso", fecha: "01/09/2026", importe: "1000", tipo_ingreso: "Alquileres", centro: "Inmuebles > Piso A" },
+  ],
+  inversiones: [
+    { fecha: "10/09/2026", tipo_movimiento: "Compra", nombre: "Core S&P 500 USD (Acc)", isin: "IE00B5BMR087", coste: "150" },
+    { fecha: "10/09/2026", tipo_movimiento: "Compra", nombre: "Otro fondo", coste: "30" },
+  ],
+};
+var planSeg = {
+  gastos: [{ grupo: "Piso A", nombre: "Agua", importe: 25, frecuencia: 1, categoria: "Vivienda > Suministros > Agua", centro: "Inmuebles > Piso A" },
+           { grupo: "Piso B", nombre: "Agua", importe: 25, frecuencia: 1, categoria: "Vivienda > Suministros", centro: "Inmuebles > Piso B" },
+           { grupo: "Varios", nombre: "Sin atar", importe: 10, frecuencia: 1 }],
+  ingresos: [{ nombre: "Alquiler piso A", importe: 1000, frecuencia: 1, categoria: "Alquileres" }],
+  pct_ahorro: 0.5,
+  ocio: [{ nombre: "Salir", importe: 300, categoria: "Ocio" }],
+  inversion: { aportacion: 200, productos: [{ nombre: "Core S&P 500 USD (Acc) (iShares)", pct: 1 }] },
+};
+var seg = M.seguimientoPlan(docSeg, planSeg, { tipo: "mes", ym: "2026-09" });
+comprobar("cada gasto real va a la línea que mejor lo describe, y cada línea recoge el suyo",
+  seg.gastos[0].real === 20 && seg.gastos[1].real === 15 && seg.gastos[2].real === 0 && !seg.gastos[2].atada &&
+  seg.ocio[0].real === 400 && seg.ingresos[0].real === 1000,
+  JSON.stringify(seg.gastos.map(function (g) { return g.real; })));
+comprobar("lo que no estaba previsto sale fuera del presupuesto, y lo de otro mes no cuenta",
+  seg.fueraGastos.length === 1 && seg.fueraGastos[0].nombre === "Compras" && seg.fueraGastos[0].real === 70 &&
+  seg.totales.fuera === 70 && seg.totales.gastoReal === 505 && seg.sinAtar === 1);
+comprobar("el ocio se mide contra el tope del periodo y el ahorro real es lo que quedó",
+  cerca(seg.totales.ocioTope, (1000 - 60) / 2) && seg.totales.ocioReal === 400 && seg.totales.ahorroReal === 495);
+comprobar("la inversión del mes se compara producto a producto con lo previsto",
+  seg.totales.invPrevisto === 200 && seg.totales.invReal === 180 && seg.productos[0].real === 150 &&
+  seg.productos[0].resto === 50 && seg.fueraInversion[0].nombre === "Otro fondo");
+var segA = M.seguimientoPlan(docSeg, planSeg, { tipo: "anio", anio: 2025 });
+comprobar("un año cerrado prevé doce meses",
+  segA.nMeses === 12 && cerca(segA.totales.gastoFijoPrevisto, 60 * 12) && segA.totales.gastoReal === 0);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

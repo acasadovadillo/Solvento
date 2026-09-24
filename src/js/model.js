@@ -599,6 +599,143 @@
     };
   }
 
+  /* ── El presupuesto contra lo que pasó ────────────────────────────────────
+   * El plan dice lo que se espera cada mes; los movimientos, lo que ocurrió.
+   * Cada línea del plan se ata a una categoría —y si hace falta, a un centro
+   * de coste: el agua de un piso y la de otro son la misma categoría y dos
+   * líneas distintas— y recoge lo que se movió en ella en el periodo.
+   *
+   * Un movimiento cuenta en UNA sola línea, la que mejor lo describe: la que
+   * tiene centro gana a la que no, y la categoría más concreta a la más
+   * general. Así «Vivienda > Suministros > Agua» en Poza de la Sal va a la
+   * línea del agua de Poza de la Sal y no también a una línea genérica.
+   *
+   * Lo que no cae en ninguna línea es «fuera del presupuesto»: el gasto que
+   * no estaba previsto, que es lo más útil de mirar.
+   *
+   * Periodo: un mes («2026-09») o un año. En un año, lo previsto es el plan
+   * mensual por los meses que lleva: el año en curso, hasta el mes de hoy.
+   */
+  const normRuta = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().split(">").map((x) => x.trim()).filter(Boolean).join(" > ");
+  const dentroDe = (valor, ruta) => {
+    const v = normRuta(valor), r = normRuta(ruta);
+    return !!r && (v === r || v.indexOf(r + " > ") === 0);
+  };
+  const hondo = (ruta) => (normRuta(ruta) ? normRuta(ruta).split(" > ").length : 0);
+  // El nombre de un producto sin lo que va entre paréntesis ni signos: así
+  // «Core S&P 500 USD (Acc) (iShares)» y «Core S&P 500 USD (Acc)» son el mismo.
+  const nombreBase = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/\([^)]*\)/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+
+  function seguimientoPlan(db, plan, periodo) {
+    const base = planMensual(plan);
+    const hoy = new Date();
+    periodo = periodo || { tipo: "mes", ym: hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0") };
+    const anio = periodo.tipo === "anio" ? +periodo.anio : +String(periodo.ym).slice(0, 4);
+    const mes = periodo.tipo === "anio" ? null : +String(periodo.ym).slice(5, 7);
+    const enPeriodo = (f) => f && f.getFullYear() === anio && (mes == null || f.getMonth() + 1 === mes);
+    const nMeses = mes != null ? 1 : (anio < hoy.getFullYear() ? 12 : anio === hoy.getFullYear() ? hoy.getMonth() + 1 : 0);
+
+    // Las líneas, con lo previsto en el periodo y un hueco para lo real.
+    const prep = (x, lista) => Object.assign({}, x, {
+      lista, previsto: x.mensual * nMeses, real: 0, n: 0,
+      atada: !!(String(x.categoria || "").trim() || String(x.centro || "").trim()),
+    });
+    const gastos = base.gastos.map((x) => prep(x, "gastos"));
+    const ocio = base.ocio.map((x) => prep(x, "ocio"));
+    const ingresos = base.ingresos.map((x) => prep(x, "ingresos"));
+    const mejor = (lineas, m, catCampo) => {
+      let top = null, topScore = -1;
+      lineas.forEach((l) => {
+        if (!l.atada) return;
+        const cat = String(l.categoria || "").trim(), cen = String(l.centro || "").trim();
+        if (cat && !dentroDe(m[catCampo], cat)) return;
+        if (cen && !dentroDe(m.centro, cen)) return;
+        const sc = (cen ? 1000 + hondo(cen) : 0) + hondo(cat) * 10;
+        if (sc > topScore) { top = l; topScore = sc; }
+      });
+      return top;
+    };
+
+    const fueraG = {}, fueraI = {};
+    let gastoReal = 0, ingresoReal = 0;
+    for (const m of (db && db.movimientos) || []) {
+      if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") continue;
+      if (!enPeriodo(parseFechaES(m.fecha))) continue;
+      const imp = Math.abs(num(m.importe)) || 0;
+      if (m.tipo === "Gasto") {
+        gastoReal += imp;
+        const l = mejor(gastos.concat(ocio), m, "tipo_gasto");
+        if (l) { l.real += imp; l.n++; }
+        else { const k = String(m.tipo_gasto || "Sin categoría").split(">")[0].trim() || "Sin categoría"; fueraG[k] = (fueraG[k] || 0) + imp; }
+      } else {
+        ingresoReal += imp;
+        const l = mejor(ingresos, m, "tipo_ingreso");
+        if (l) { l.real += imp; l.n++; }
+        else { const k = String(m.tipo_ingreso || "Sin categoría").split(">")[0].trim() || "Sin categoría"; fueraI[k] = (fueraI[k] || 0) + imp; }
+      }
+    }
+    const cerrar = (l) => Object.assign(l, { previsto: round2(l.previsto), real: round2(l.real), resto: round2(l.previsto - l.real) });
+    [gastos, ocio, ingresos].forEach((arr) => arr.forEach(cerrar));
+    const lista = (o) => Object.keys(o).map((k) => ({ nombre: k, real: round2(o[k]) })).sort((a, b) => b.real - a.real);
+    const suma = (arr, k) => round2(arr.reduce((t, x) => t + x[k], 0));
+
+    const grupos = [];
+    gastos.forEach((x) => {
+      const g = String(x.grupo || "").trim() || "Sin grupo";
+      let e = grupos.find((y) => y.nombre === g);
+      if (!e) grupos.push(e = { nombre: g, items: [], previsto: 0, real: 0 });
+      e.items.push(x); e.previsto += x.previsto; e.real += x.real;
+    });
+    grupos.forEach((g) => { g.previsto = round2(g.previsto); g.real = round2(g.real); });
+
+    // La cartera: lo que se compró en el periodo, producto a producto.
+    const productos = base.productos.map((x) => Object.assign({}, x, { previsto: x.eur * nMeses, real: 0 }));
+    const casa = (prod, r) => {
+      const isin = String(prod.isin || "").trim();
+      if (isin && isin === String(r.isin || "").trim()) return 3;
+      if (prod.activo && String(prod.activo).trim() === String(r.nombre || "").trim()) return 3;
+      const a = nombreBase(prod.activo || prod.nombre), b = nombreBase(r.nombre);
+      if (!a || !b) return 0;
+      if (a === b) return 2;
+      return (a.indexOf(b) === 0 || b.indexOf(a) === 0) && Math.min(a.length, b.length) >= 4 ? 1 : 0;
+    };
+    const fueraInv = {};
+    let invertido = 0;
+    for (const r of (db && db.inversiones) || []) {
+      const tipo = r.tipo_movimiento || "Compra";
+      if (tipo !== "Compra") continue;
+      if (!enPeriodo(parseFechaES(r.fecha))) continue;
+      const c = num(r.coste);
+      if (!isFinite(c) || c <= 0) continue;
+      invertido += c;
+      let top = null, sc = 0;
+      productos.forEach((p) => { const k = casa(p, r); if (k > sc) { sc = k; top = p; } });
+      if (top) top.real += c; else fueraInv[r.nombre || "—"] = (fueraInv[r.nombre || "—"] || 0) + c;
+    }
+    productos.forEach((p) => { p.previsto = round2(p.previsto); p.real = round2(p.real); p.resto = round2(p.previsto - p.real); });
+
+    const ocioReal = suma(ocio, "real");
+    const tope = round2(base.topeOcio * nMeses);
+    const ahorroReal = round2(ingresoReal - gastoReal);
+    return {
+      periodo, anio, mes, nMeses, base,
+      ingresos, gastos, grupos, ocio,
+      fueraGastos: lista(fueraG), fueraIngresos: lista(fueraI), fueraInversion: lista(fueraInv),
+      sinAtar: gastos.concat(ocio, ingresos).filter((l) => !l.atada).length,
+      totales: {
+        ingresoPrevisto: round2(base.totalIngresos * nMeses), ingresoReal: round2(ingresoReal),
+        gastoFijoPrevisto: round2(base.totalGastos * nMeses), gastoFijoReal: suma(gastos, "real"),
+        gastoReal: round2(gastoReal), fuera: round2(gastoReal - suma(gastos, "real") - ocioReal),
+        ocioTope: tope, ocioReal, ocioResto: round2(tope - ocioReal),
+        ahorroPrevisto: round2(base.ahorro * nMeses), ahorroReal,
+        invPrevisto: round2(base.aportacion * nMeses), invReal: round2(invertido),
+      },
+      productos,
+    };
+  }
+
   // ── Categorías con jerarquía ─────────────────────────────────────────
   // Las categorías se guardan en el movimiento como texto: "Educación" o
   // "Educación > Formaciones". Mantener ese formato tiene una ventaja grande:
@@ -1498,5 +1635,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, planMensual, tarjetas, tarjetaDeLiquidacion, cicloTarjeta, revisarLiquidacion, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, planMensual, seguimientoPlan, tarjetas, tarjetaDeLiquidacion, cicloTarjeta, revisarLiquidacion, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

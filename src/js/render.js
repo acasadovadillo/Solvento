@@ -1295,7 +1295,149 @@
       <div style="font-size:1.35rem;font-weight:800;color:${color};margin-top:0.25rem;white-space:nowrap;">${valor}</div>
       ${sub ? `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.15rem;">${sub}</div>` : ""}</div>`;
 
+  /* Dos pestañas: el seguimiento —lo previsto contra lo que pasó, como el
+   * presupuesto de una organización— y el plan, donde se escribe. Se abre en
+   * el seguimiento en cuanto hay algo que seguir. */
+  let PLAN_VISTA = null;
+  const hoyYM = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+  let PLAN_PERIODO = { tipo: "mes", ym: hoyYM(), anio: new Date().getFullYear() };
+
   function pagePlan() {
+    const plan = (CURRENT_DOC || {}).plan || {};
+    const hay = (plan.gastos || []).length || (plan.ingresos || []).length || (plan.ocio || []).length ||
+                ((plan.inversion || {}).productos || []).length;
+    const vista = PLAN_VISTA || (hay ? "seguimiento" : "plan");
+    if (!hay) return pagePlanEditar();
+    const pest = (id, txt) => `<button onclick="v2PlanVista('${id}')" style="background:none;border:none;border-bottom:2px solid ${vista === id ? "var(--t0)" : "transparent"};
+        color:${vista === id ? "var(--t0)" : "var(--t2)"};font-weight:${vista === id ? 700 : 500};font-size:0.88rem;padding:0.5rem 1rem 0.6rem;cursor:pointer;font-family:inherit;margin-bottom:-1px;">${txt}</button>`;
+    const pestanas = `<div class="v2-wrap" style="margin-top:1rem;display:flex;gap:0.25rem;border-bottom:1px solid var(--b1);">
+        ${pest("seguimiento", "Seguimiento")}${pest("plan", "Plan")}</div>`;
+    return vista === "plan" ? pagePlanEditar(pestanas) : pagePlanSeguimiento(pestanas);
+  }
+
+  function pagePlanSeguimiento(pestanas) {
+    const doc = CURRENT_DOC || {};
+    const s = window.SolventoModel.seguimientoPlan(doc, doc.plan || {}, PLAN_PERIODO);
+    const t = s.totales;
+    const nombreMes = (ym) => { const [a, m] = ym.split("-"); return new Date(+a, +m - 1, 1).toLocaleDateString("es-ES", { month: "long", year: "numeric" }); };
+    const etiqueta = PLAN_PERIODO.tipo === "anio"
+      ? String(s.anio) + (s.nMeses < 12 ? " · " + s.nMeses + (s.nMeses === 1 ? " mes" : " meses") : "")
+      : nombreMes(PLAN_PERIODO.ym);
+
+    // ── Selector de periodo ──
+    const btn = (on, txt, js) => `<button onclick="${js}" style="background:${on ? "var(--b1)" : "none"};border:1px solid var(--b2);border-radius:8px;
+        color:${on ? "var(--t0)" : "var(--t1b)"};font-size:0.75rem;font-family:inherit;padding:0.25rem 0.65rem;cursor:pointer;">${txt}</button>`;
+    const selector = `<div class="v2-wrap" style="margin-top:1rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+        ${btn(false, "‹", "v2PlanPaso(-1)")}
+        <span style="color:var(--t0);font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;min-width:10rem;text-align:center;">${esc(etiqueta)}</span>
+        ${btn(false, "›", "v2PlanPaso(1)")}
+        <span style="flex:1;"></span>
+        <span style="display:inline-flex;gap:0.4rem;">${btn(PLAN_PERIODO.tipo === "mes", "Mes", "v2PlanTipo('mes')")}${btn(PLAN_PERIODO.tipo === "anio", "Año", "v2PlanTipo('anio')")}</span></div>`;
+
+    // ── Lo que hay que mirar ──
+    const ok = (bien, txt) => `<div style="display:flex;gap:0.5rem;align-items:flex-start;padding:0.35rem 0;font-size:0.85rem;color:var(--t1);">
+        <span style="color:${bien ? GREEN : AMBAR};font-weight:800;width:1rem;flex-shrink:0;">${bien ? "✓" : "⚠"}</span><span>${txt}</span></div>`;
+    const b = (x) => `<b style="color:var(--t0);">${esc(fmtEur(Math.abs(x)))}</b>`;
+    const avisos = [];
+    avisos.push(t.ocioReal <= t.ocioTope + 0.005
+      ? ok(true, `Ocio: llevas ${b(t.ocioReal)} de ${b(t.ocioTope)} de tope, te quedan ${b(t.ocioResto)}.`)
+      : ok(false, `Ocio: te has pasado ${b(-t.ocioResto)} del tope (${b(t.ocioReal)} de ${b(t.ocioTope)}).`));
+    avisos.push(t.gastoFijoReal <= t.gastoFijoPrevisto + 0.005
+      ? ok(true, `Gastos fijos: ${b(t.gastoFijoReal)} de ${b(t.gastoFijoPrevisto)} previstos.`)
+      : ok(false, `Gastos fijos: ${b(t.gastoFijoReal)}, ${b(t.gastoFijoReal - t.gastoFijoPrevisto)} más de lo previsto.`));
+    if (t.fuera > 0.005) avisos.push(ok(false, `Fuera del presupuesto: ${b(t.fuera)} en gastos que no estaban previstos` +
+      (s.fueraGastos.length ? ` —sobre todo ${esc(s.fueraGastos.slice(0, 2).map((x) => x.nombre).join(" y "))}—.` : ".")));
+    avisos.push(t.ingresoReal >= t.ingresoPrevisto - 0.005
+      ? ok(true, `Ingresos: ${b(t.ingresoReal)} de ${b(t.ingresoPrevisto)} previstos.`)
+      : ok(false, `Ingresos: faltan ${b(t.ingresoPrevisto - t.ingresoReal)} por entrar (${b(t.ingresoReal)} de ${b(t.ingresoPrevisto)}).`));
+    avisos.push(t.ahorroReal >= t.ahorroPrevisto - 0.005
+      ? ok(true, `Ahorro: te han quedado ${b(t.ahorroReal)}, más que los ${b(t.ahorroPrevisto)} previstos.`)
+      : ok(false, `Ahorro: te han quedado ${t.ahorroReal < 0 ? "−" : ""}${b(t.ahorroReal)} de los ${b(t.ahorroPrevisto)} previstos.`));
+    avisos.push(t.invReal >= t.invPrevisto - 0.005
+      ? ok(true, `Inversión: has aportado ${b(t.invReal)} de ${b(t.invPrevisto)} previstos.`)
+      : ok(false, `Inversión: has aportado ${b(t.invReal)} de ${b(t.invPrevisto)}; faltan ${b(t.invPrevisto - t.invReal)}.`));
+    if (s.sinAtar) avisos.push(ok(false, `${s.sinAtar} ${s.sinAtar === 1 ? "línea no está atada" : "líneas no están atadas"} a ninguna categoría: su real sale a cero y lo suyo acaba fuera del presupuesto.
+        <button class="solo-editor" onclick="v2PlanAtar()" style="background:none;border:none;padding:0;color:var(--azul);font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Atarlas automáticamente</button>`));
+    const estado = `<div class="v2-wrap"><div class="dashboard-panel">
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.5rem;">Cómo va</div>
+        ${avisos.join("")}</div></div>`;
+
+    // ── Tarjetas, como en el presupuesto de una organización ──
+    const pct = (a, b2) => (b2 ? a / b2 * 100 : 0);
+    const tarjetas = `<div class="v2-hub-grid" style="margin-top:1.5rem;">
+        ${hubCard("Ingresos", fmtEur(t.ingresoReal), pct(t.ingresoReal, t.ingresoPrevisto), GREEN, "de " + fmtEur(t.ingresoPrevisto) + " previstos", null, null, null, "de lo previsto")}
+        ${hubCard("Gastos", fmtEur(t.gastoReal), pct(t.gastoReal, t.gastoFijoPrevisto + t.ocioTope), "var(--ambar)", "fijos " + fmtEur(t.gastoFijoReal) + " · ocio " + fmtEur(t.ocioReal) + " · fuera " + fmtEur(t.fuera), null, null, null, "de fijos + tope de ocio")}
+        ${hubCard("Ahorro", (t.ahorroReal < 0 ? "−" : "") + fmtEur(Math.abs(t.ahorroReal)), null, rc(t.ahorroReal), "previsto " + fmtEur(t.ahorroPrevisto), null, null, null)}
+        ${hubCard("Inversión", fmtEur(t.invReal), pct(t.invReal, t.invPrevisto), AZUL, "de " + fmtEur(t.invPrevisto) + " previstos", null, null, null, "de lo previsto")}
+      </div>`;
+
+    // ── Tablas: previsto, real, diferencia ──
+    const barra = (v, color) => `<div style="height:5px;border-radius:3px;background:var(--b1);overflow:hidden;margin-top:0.3rem;">
+        <div style="height:100%;width:${Math.max(0, Math.min(100, isFinite(v) ? v : 100))}%;background:${color};"></div></div>`;
+    const fila = (x, ingreso, edita, sangria) => {
+      const bien = ingreso ? x.real >= x.previsto - 0.005 : x.real <= x.previsto + 0.005;
+      const color = x.previsto ? (bien ? GREEN : RED) : "var(--t2)";
+      const sin = x.atada === false
+        ? `<div style="font-size:0.72rem;color:var(--ambar);margin-top:0.2rem;">sin categoría: <button class="solo-editor" onclick="${edita}" style="background:none;border:none;padding:0;color:var(--azul);font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">atarla</button></div>`
+        : (x.previsto ? barra(pct(x.real, x.previsto), color) : "");
+      return `<tr class="table-row">
+        <td style="text-align:left;${sangria ? "padding-left:1.2rem;" : ""}"><div style="color:var(--t0);font-weight:600;">${esc(x.nombre)}</div>${sin}</td>
+        <td style="text-align:right;color:var(--t1b);white-space:nowrap;">${esc(fmtEur(x.previsto))}</td>
+        <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${esc(fmtEur(x.real))}</td>
+        <td class="col-secundaria" style="text-align:right;white-space:nowrap;color:${color};font-weight:600;">
+          ${!x.previsto ? "—" : Math.abs(x.resto) < 0.005 ? "✓ justo"
+            : (x.resto > 0 ? (ingreso ? "faltan " : "quedan ") : (ingreso ? "de más " : "te pasas ")) + esc(fmtEur(Math.abs(x.resto)))}</td>
+        <td class="celda-acc" style="text-align:right;width:1%;white-space:nowrap;">
+          <button class="fila-acc" onclick="${edita}" title="Editar la línea"
+            style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.85rem;padding:0.2rem 0.4rem;">✎</button></td></tr>`;
+    };
+    const cab = (c1) => `<thead><tr><th style="text-align:left;">${c1}</th><th style="text-align:right;">Previsto</th><th style="text-align:right;">Real</th>
+        <th class="col-secundaria" style="text-align:right;">Diferencia</th><th></th></tr></thead>`;
+    const grupo = (nombre, prev, real) => `<tr><td style="text-align:left;color:var(--t2);font-size:0.74rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;padding-top:0.9rem;">${esc(nombre)}</td>
+        <td style="text-align:right;color:var(--t2);font-size:0.78rem;font-weight:700;padding-top:0.9rem;white-space:nowrap;">${prev == null ? "—" : esc(fmtEur(prev))}</td>
+        <td style="text-align:right;color:var(--t2);font-size:0.78rem;font-weight:700;padding-top:0.9rem;white-space:nowrap;">${esc(fmtEur(real))}</td>
+        <td class="col-secundaria"></td><td></td></tr>`;
+    const tabla = (titulo, cuerpo) => panelT(titulo, "", cuerpo);
+    const ed = (lista, id) => `v2PlanLinea('${lista}','${jsId(id)}')`;
+
+    const tIngresos = s.ingresos.length
+      ? `<table class="minimal-table">${cab("Ingreso")}<tbody>${s.ingresos.map((x) => fila(x, true, ed("ingresos", x.id))).join("")}
+          ${s.fueraIngresos.length ? grupo("Otros ingresos, no previstos", null, s.fueraIngresos.reduce((a, x) => a + x.real, 0)) +
+            s.fueraIngresos.map((x) => `<tr class="table-row"><td style="text-align:left;padding-left:1.2rem;color:var(--t1b);">${esc(x.nombre)}</td><td></td>
+              <td style="text-align:right;color:var(--t1);white-space:nowrap;">${esc(fmtEur(x.real))}</td><td class="col-secundaria"></td><td></td></tr>`).join("") : ""}
+        </tbody></table>`
+      : `<div style="color:var(--t3);font-size:0.85rem;">Sin ingresos en el plan.</div>`;
+    const tGastos = s.gastos.length
+      ? `<table class="minimal-table">${cab("Gasto fijo")}<tbody>${s.grupos.map((g) => grupo(g.nombre, g.previsto, g.real) +
+          g.items.map((x) => fila(x, false, ed("gastos", x.id), true)).join("")).join("")}</tbody></table>`
+      : `<div style="color:var(--t3);font-size:0.85rem;">Sin gastos fijos en el plan.</div>`;
+    const topeFila = { nombre: "Tope de ocio", previsto: t.ocioTope, real: t.ocioReal, resto: t.ocioResto, atada: true };
+    const tOcio = `<table class="minimal-table">${cab("Ocio")}<tbody>
+        ${fila(topeFila, false, "v2PlanVista('plan')").replace('<div style="color:var(--t0);font-weight:600;">Tope de ocio</div>',
+          '<div style="color:var(--t0);font-weight:800;">Tope de ocio</div><div style="font-size:0.72rem;color:var(--t2);">lo que sale de la calculadora</div>')}
+        ${s.ocio.map((x) => fila(x, false, ed("ocio", x.id), true)).join("")}</tbody></table>`;
+    const tFuera = s.fueraGastos.length
+      ? `<table class="minimal-table"><thead><tr><th style="text-align:left;">Categoría</th><th style="text-align:right;">Real</th></tr></thead><tbody>` +
+        s.fueraGastos.map((x) => `<tr class="table-row"><td style="text-align:left;color:var(--t1);">${esc(x.nombre)}</td>
+          <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${esc(fmtEur(x.real))}</td></tr>`).join("") +
+        `</tbody></table><div style="font-size:0.75rem;color:var(--t2);margin-top:0.6rem;">Gastos que no caen en ninguna línea del plan.
+          Si alguno es recurrente, añádelo al plan; si es ocio, átalo a una línea de ocio.</div>`
+      : `<div style="color:var(--t2);font-size:0.85rem;">Todo lo gastado estaba previsto.</div>`;
+    const tInv = s.productos.length
+      ? `<table class="minimal-table">${cab("Producto")}<tbody>${s.productos.map((x) => fila(Object.assign({}, x, { atada: true }), true, `v2PlanProducto('${jsId(x.id)}')`)
+            .replace("faltan ", "falta aportar ").replace("de más ", "de más ")).join("")}
+          ${s.fueraInversion.length ? grupo("Compras de otros productos", null, s.fueraInversion.reduce((a, x) => a + x.real, 0)) +
+            s.fueraInversion.map((x) => `<tr class="table-row"><td style="text-align:left;padding-left:1.2rem;color:var(--t1b);">${esc(x.nombre)}</td><td></td>
+              <td style="text-align:right;color:var(--t1);white-space:nowrap;">${esc(fmtEur(x.real))}</td><td class="col-secundaria"></td><td></td></tr>`).join("") : ""}
+        </tbody></table>`
+      : `<div style="color:var(--t3);font-size:0.85rem;">Sin productos en el plan.</div>`;
+
+    return header("Presupuesto", esc(etiqueta)) + pestanas + selector + estado + tarjetas +
+      tabla("Ingresos", tIngresos) + tabla("Gastos fijos", tGastos) + tabla("Ocio", tOcio) +
+      tabla("Fuera del presupuesto", tFuera) + tabla("Aportación a la cartera", tInv) + `<div style="height:2rem;"></div>`;
+  }
+
+  function pagePlanEditar(pestanas) {
     const doc = CURRENT_DOC || {};
     const plan = doc.plan || {};
     const p = window.SolventoModel.planMensual(plan);
@@ -1430,6 +1572,7 @@
         : `<div style="color:var(--t2);font-size:0.85rem;">Sin productos: añade en qué inviertes y qué parte de la aportación se lleva cada uno.</div>`);
 
     return header("Presupuesto", fmtEur(p.balance) + ` <span style="font-size:1rem;color:var(--t2);font-weight:600;">al mes</span>`) +
+      (pestanas || "") +
       panelT("Balance mensual", importar, balance) +
       panelT("Gastos fijos", addBtn("＋ Gasto fijo", "v2PlanLinea('gastos')"), tablaGastos) +
       panelT("Ingresos", addBtn("＋ Ingreso", "v2PlanLinea('ingresos')"), tablaIngresos) +
@@ -2364,6 +2507,24 @@
   window.v2PlanAportacion = () => F() && F().openPlanAportacion();
   window.v2PlanBorrar = (lista, id) => F() && F().borrarPlan(lista, id);
   window.v2PlanPct = (v) => F() && F().ponerPctAhorro(v);
+  window.v2PlanAtar = () => F() && F().atarPlan();
+  window.v2PlanVista = (v) => { PLAN_VISTA = v; window.v2PlanPintar(); window.scrollTo(0, 0); };
+  window.v2PlanTipo = (tipo) => {
+    PLAN_PERIODO.tipo = tipo;
+    if (tipo === "anio") PLAN_PERIODO.anio = +String(PLAN_PERIODO.ym).slice(0, 4);
+    else if (String(PLAN_PERIODO.ym).slice(0, 4) !== String(PLAN_PERIODO.anio)) PLAN_PERIODO.ym = PLAN_PERIODO.anio + "-12";
+    window.v2PlanPintar();
+  };
+  window.v2PlanPaso = (d) => {
+    if (PLAN_PERIODO.tipo === "anio") PLAN_PERIODO.anio += d;
+    else {
+      const [a, m] = PLAN_PERIODO.ym.split("-").map(Number);
+      const f = new Date(a, m - 1 + d, 1);
+      PLAN_PERIODO.ym = f.getFullYear() + "-" + String(f.getMonth() + 1).padStart(2, "0");
+      PLAN_PERIODO.anio = f.getFullYear();
+    }
+    window.v2PlanPintar();
+  };
   window.v2PlanImportar = (inp) => { const f = inp.files && inp.files[0]; inp.value = ""; if (f && F()) F().importarPlanXlsx(f); };
   // Repintar solo el presupuesto: al arrastrar la barra de la calculadora no
   // tiene sentido rehacer las demás páginas en cada paso. Se conserva el foco

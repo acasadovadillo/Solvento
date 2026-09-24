@@ -1606,18 +1606,34 @@
         ? field("pl-frec", "Cada cuánto", selectKV("pl-frec",
             FRECUENCIAS.some((f) => f[0] === frec) ? FRECUENCIAS : FRECUENCIAS.concat([[frec, "Cada " + frec + " meses"]]), frec)) +
           `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.4rem;">Se reparte entre los meses que cubre: un seguro de 1.000 € al año cuenta 83,33 € al mes.</div>`
-        : "");
-    shell((e.id ? "Editar " : "Nuevo ") + titulo, body, () => {
+        : "") +
+      // Para compararla con lo que pasó: en qué categoría caen sus movimientos
+      // y, si hay varias líneas de la misma categoría, en qué centro de coste.
+      `<div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--t2);font-weight:700;margin:1.1rem 0 0.1rem;">Para seguirlo con lo real</div>` +
+      field("pl-cat", lista === "ingresos" ? "Categoría de ingreso" : "Categoría de gasto", selectorArbol("pl-cat", e.categoria)) +
+      field("pl-centro", "Centro de coste (opcional)", selectorArbol("pl-centro", e.centro)) +
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.4rem;">Los movimientos de esa categoría —y de ese centro, si lo pones— cuentan como lo real de esta línea.
+        Usa el centro para separar, por ejemplo, el agua de un piso de la de otro.</div>`;
+    const abierta = shell((e.id ? "Editar " : "Nuevo ") + titulo, body, () => {
       const nombre = G("pl-nombre");
       if (!nombre) return "Indica el nombre";
       const importe = numES(G("pl-importe"));
       if (!isFinite(importe) || importe < 0) return "Introduce un importe válido";
-      const rec = Object.assign({}, e, { id: e.id || newId(lista[0]), nombre, importe });
+      const rec = Object.assign({}, e, { id: e.id || newId(lista[0]), nombre, importe,
+                                          categoria: G("pl-cat"), centro: G("pl-centro") });
       if (conFrecuencia) rec.frecuencia = +G("pl-frec") || 1;
       if (conGrupo) rec.grupo = G("pl-grupo");
       upsert(p[lista], rec);
       return null;
     });
+    if (!abierta) return;
+    const doc = DB.state.doc;
+    const cats = lista === "ingresos"
+      ? uniq(categoriasIngresoCfg().concat((doc.movimientos || []).map((m) => m.tipo_ingreso)))
+      : uniq(categoriasCfg().concat((doc.movimientos || []).map((m) => m.tipo_gasto)));
+    wireArbol("pl-cat", cats, "— Sin asignar —");
+    wireArbol("pl-centro", uniq(centrosCfg().concat((doc.movimientos || []).map((m) => m.centro))), "— Cualquiera —",
+              (k) => (k === 0 ? "+ Nuevo centro…" : "+ Nuevo centro dentro…"));
   }
 
   function openPlanProducto(id) {
@@ -1628,6 +1644,8 @@
     const nombres = uniq(CFG.activos().map((a) => a.nombre).concat(p.inversion.productos.map((x) => x.nombre)));
     const body =
       field("pp-nombre", "Producto", datalist("pp-nombre", nombres, e.nombre)) +
+      field("pp-activo", "Activo de tu cartera (para compararlo con tus compras)",
+        datalist("pp-activo", uniq(CFG.activos().map((a) => a.nombre).concat((DB.state.doc.inversiones || []).map((r) => r.nombre))), e.activo)) +
       field("pp-clase", "Clase", datalist("pp-clase", clases, e.clase || "Renta variable")) +
       field("pp-tipo", "Tipo", datalist("pp-tipo", tipos, e.tipo || "ETF")) +
       field("pp-pct", "Parte de la aportación (%)", input("pp-pct", "number", pctTxt(e.pct), 'step="0.01" min="0" max="100" placeholder="20"')) +
@@ -1641,7 +1659,7 @@
       if (!isFinite(pct) || pct < 0 || pct > 100) return "La parte de la aportación va de 0 a 100 %";
       const opc = (id, div) => { const v = numES(G(id)); return isFinite(v) ? v / div : null; };
       upsert(p.inversion.productos, Object.assign({}, e, {
-        id: e.id || newId("p"), nombre, clase: G("pp-clase"), tipo: G("pp-tipo"), pct: pct / 100,
+        id: e.id || newId("p"), nombre, activo: G("pp-activo"), clase: G("pp-clase"), tipo: G("pp-tipo"), pct: pct / 100,
         redondeo: opc("pp-real", 1), objetivo: opc("pp-obj", 100), rent5a: opc("pp-rent", 100),
       }));
       return null;
@@ -1664,6 +1682,63 @@
       p.inversion.aportacion = n;
       return null;
     });
+  }
+
+  /* Atar las líneas sin categoría a la suya, por el nombre. Solo cuando no
+   * hay duda: el nombre de la línea coincide con el último nivel de UNA
+   * categoría («I.B.I.» con «Vivienda > Impuestos y tasas > IBI»), y el
+   * grupo, con UN centro de coste («POZA DE LA SAL» con «Inmuebles > Poza de
+   * la Sal»). Si dos líneas acabarían en la misma categoría sin un centro que
+   * las distinga, no se toca ninguna: mejor sin atar que atada mal.
+   */
+  function atarPlan() {
+    if (soloLectura()) return;
+    const p = planDoc(), doc = DB.state.doc;
+    const clave = (x) => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const hoja = (ruta) => clave(String(ruta).split(">").pop());
+    const unica = (nombre, rutas) => {
+      const k = clave(nombre);
+      if (k.length < 3) return null;
+      let c = rutas.filter((r) => hoja(r) === k);
+      if (c.length !== 1) c = rutas.filter((r) => { const h = hoja(r); return h.length >= 3 && (h.indexOf(k) === 0 || k.indexOf(h) === 0); });
+      if (c.length !== 1) c = rutas.filter((r) => { const h = hoja(r); return h.length >= 4 && k.indexOf(h) >= 0; });
+      return c.length === 1 ? c[0] : null;
+    };
+    const catG = uniq(categoriasCfg().concat((doc.movimientos || []).map((m) => m.tipo_gasto)));
+    const catI = uniq(categoriasIngresoCfg().concat((doc.movimientos || []).map((m) => m.tipo_ingreso)));
+    const centros = uniq(centrosCfg().concat((doc.movimientos || []).map((m) => m.centro)));
+    // Un centro solo se ata si los movimientos de esa categoría lo usan de
+    // verdad: un grupo que se llame «Personal» no obliga a que el supermercado
+    // lleve el centro «Personal», y atarlo dejaría esa línea siempre a cero.
+    const dentro = (v, r) => { const a = clave(v), b = clave(r); return !!b && a.indexOf(b) === 0; };
+    const usado = (campo, categoria, centro) => (doc.movimientos || []).some((m) =>
+      dentro(m[campo], categoria) && dentro(m.centro, centro));
+    const propuestas = [];
+    [["gastos", catG, "tipo_gasto"], ["ocio", catG, "tipo_gasto"], ["ingresos", catI, "tipo_ingreso"]].forEach(([lista, cats, campo]) => {
+      p[lista].forEach((l) => {
+        if (String(l.categoria || "").trim() || String(l.centro || "").trim()) return;
+        const categoria = unica(l.nombre, cats);
+        let centro = unica(l.grupo || (lista === "ingresos" ? l.nombre : ""), centros);
+        if (centro && categoria && !usado(campo, categoria, centro)) centro = null;
+        if (categoria || (lista === "ingresos" && centro)) propuestas.push({ l, categoria: categoria || "", centro: centro || "" });
+      });
+    });
+    // Dos propuestas con la misma categoría y sin centro que las separe: fuera.
+    const choca = (a) => propuestas.some((b) => b !== a && b.categoria === a.categoria && (!a.centro || a.centro === b.centro));
+    let n = 0;
+    propuestas.filter((x) => !choca(x)).forEach((x) => { x.l.categoria = x.categoria; x.l.centro = x.centro; n++; });
+    const activos = uniq(CFG.activos().map((a) => a.nombre).concat((doc.inversiones || []).map((r) => r.nombre)));
+    const base = (s) => String(s || "").toLowerCase().replace(/\([^)]*\)/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+    p.inversion.productos.forEach((x) => {
+      if (x.activo) return;
+      const c = activos.filter((a) => base(a) === base(x.nombre) || (base(a).length >= 4 && (base(x.nombre).indexOf(base(a)) === 0 || base(a).indexOf(base(x.nombre)) === 0)));
+      if (c.length === 1) { x.activo = c[0]; n++; }
+    });
+    const B = window.SolventoBoot;
+    const sin = ["gastos", "ocio", "ingresos"].reduce((t, k) => t + p[k].filter((l) => !String(l.categoria || "").trim() && !String(l.centro || "").trim()).length, 0);
+    if (B && B.saveDoc) B.saveDoc();
+    if (B && B.toast) B.toast(n ? `${n} ${n === 1 ? "línea atada" : "líneas atadas"}${sin ? " · " + sin + " sin pareja clara: átalas a mano con ✎" : ""}`
+                               : "No he encontrado ninguna pareja sin dudas: átalas a mano con ✎", n ? "var(--verde)" : "var(--ambar-2)");
   }
 
   function borrarPlan(lista, id) {
@@ -1722,7 +1797,7 @@
   const findById = (coll, id) => (DB.state.doc[coll] || []).find((x) => x.id === id);
 
   window.SolventoForms = {
-    openPlanLinea, openPlanProducto, openPlanAportacion, borrarPlan, ponerPctAhorro, importarPlanXlsx,
+    openPlanLinea, openPlanProducto, openPlanAportacion, borrarPlan, ponerPctAhorro, importarPlanXlsx, atarPlan,
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
     fragmentosAjustes, verPagina, wireMenuOrden, ordenarPaginas, wireNav, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
