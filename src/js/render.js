@@ -1760,7 +1760,15 @@
           <td style="text-align:right;white-space:nowrap;font-size:0.82rem;color:${rojoAbajo ? AMBAR : "var(--t2)"};"
               ${rojoAbajo ? 'title="Se ha pagado más de lo que debía: revisa el importe del recibo"' : ""}>
             ${esc(fmtEur(f.acumulado))}${rojoAbajo ? " ⚠" : ""}</td>
-          <td></td></tr>`;
+          <td style="text-align:right;white-space:nowrap;">
+            ${d.tipo === "Tarjeta de crédito" && f.m.id ? `<button type="button" class="fila-acc solo-editor solo-edicion"
+              onclick="event.stopPropagation();v2DelMov('${jsNombre(f.m.id)}')"
+              title="Borrar este movimiento" aria-label="Borrar movimiento de ${esc(d.nombre)}"
+              style="background:none;border:none;color:var(--t2);cursor:pointer;padding:0.2rem 0.4rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>
+            </button>` : ""}</td></tr>`;
       }).join("");
     };
 
