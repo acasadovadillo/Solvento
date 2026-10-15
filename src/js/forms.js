@@ -506,7 +506,7 @@
     const lblCuenta = document.querySelector('.ff[data-for="d-cuenta"] label');
     function upd() {
       const t = tipoEl.value === TARJETA;
-      if (lblCuenta) lblCuenta.textContent = t ? "Cuenta de cargo" : "Cuenta vinculada — opcional";
+      if (lblCuenta) lblCuenta.textContent = t ? "Cuenta de cargo" : "Cuenta vinculada — solo si no es la entidad";
       if (lbl) lbl.textContent = t ? "Pendiente de pagar (€) — opcional" : "Pendiente de pagar (€)";
       if (impEl) impEl.placeholder = t ? "Déjalo vacío: se calcula solo" : "120000";
       if (nota) {
@@ -514,7 +514,7 @@
           ? `Déjalo <b>vacío</b> y el saldo lo calculan sus movimientos: cada compra suma y cada recibo la salda.
              La <b>cuenta de cargo</b> es de donde sale el dinero el día del recibo.`
           : `Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.
-             Si tiene <b>cuenta vinculada</b>, en Caja aparece colgando de ella.`;
+             En Caja cuelga de su <b>entidad</b> si es una de tus cuentas; si el dinero está en otra, elígela en <b>cuenta vinculada</b>.`;
       }
     }
     tipoEl.addEventListener("change", upd); upd();

@@ -360,16 +360,23 @@
   }
 
   function valuatePasivos(pasivos, movimientos) {
+    const cuentas = new Set(CFG.cuentas().map((c) => c.cuenta));
     const items = (pasivos || [])
       .map((r) => {
         const nombre = r.nombre || r.concepto || "Deuda";
+        // Si no se dijo de qué cuenta cuelga, la entidad vale cuando ES una de
+        // tus cuentas —«Bankinter»—, igual que con las tarjetas: casi siempre
+        // el banco con el que tienes la deuda es donde está o de donde sale el
+        // dinero, y no hay por qué escribirlo dos veces.
+        const cuenta = [r.cuenta, r.entidad].map((x) => String(x || "").trim())
+          .find((x) => cuentas.has(x)) || "";
         const calculado = r.calcular === false ? null : saldoDeMovimientos(nombre, movimientos);
         return {
           id: r.id,
           nombre,
           tipo: r.tipo || "Préstamo",
           entidad: r.entidad || "",
-          cuenta: r.cuenta || "",            // cuenta a la que está vinculada, si lo está
+          cuenta,                            // cuenta de la que cuelga, si cuelga de alguna
           importe: calculado != null && r.importe == null ? calculado : num(r.importe ?? r.pendiente ?? r.saldo),
         };
       })
