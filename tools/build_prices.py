@@ -17,7 +17,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 # yf_ticker → moneda de cotización (el resto cotiza en EUR)
-YF_TICKERS = ["IUAA.L", "IWDA.AS", "CSPX.AS", "HEMA.L", "IGLN.L",
+YF_TICKERS = ["IUAA.L", "IWDA.AS", "CSPX.AS", "HEMA.MI", "PPFB.DE",
               "BTC-EUR", "AAPL", "0P000168OI.F", "SSAC.AS"]
 
 # La app escribe tickers.json cuando das de alta un activo desde Ajustes, para

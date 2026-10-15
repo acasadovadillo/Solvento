@@ -36,8 +36,8 @@
     { nombre: "US Aggregate Bond USD (Acc)",     isin: "IE00BYXYYM63", categoria: "Renta fija",     tipo: "ETF",                banco: "Trade Republic", yf: "IUAA.L" },
     { nombre: "Core MSCI World USD (Acc)",       isin: "IE00B4L5Y983", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "IWDA.AS" },
     { nombre: "Core S&P 500 USD (Acc)",          isin: "IE00B5BMR087", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "CSPX.AS" },
-    { nombre: "MSCI Emerging Markets USD (Acc)", isin: "IE000KCS7J59", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "HEMA.L" },
-    { nombre: "Physical Gold USD (Acc)",         isin: "IE00B4ND3602", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "IGLN.L" },
+    { nombre: "MSCI Emerging Markets USD (Acc)", isin: "IE000KCS7J59", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "HEMA.MI" },
+    { nombre: "Physical Gold USD (Acc)",         isin: "IE00B4ND3602", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "PPFB.DE" },
     { nombre: "Bitcoin",                         isin: "-",            categoria: "Renta variable", tipo: "Criptoactivo",       banco: "Trade Republic", yf: "BTC-EUR" },
     { nombre: "Apple",                           isin: "US0378331005", categoria: "Renta variable", tipo: "Acciones",           banco: "Trade Republic", yf: "AAPL" },
     { nombre: "Renta 4 Multigestión Numantia Patrimonio Global FI", isin: "ES0173311103", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "MyInvestor", yf: "0P000168OI.F" },
@@ -297,9 +297,19 @@
     const a = ACTIVOS_DEFECTO.find((x) => x.isin === s);
     return (a && a.yf) || null;
   };
+  // Tickers que se cambiaron por la cotización EN EUROS del mismo fondo. Los
+  // de Londres cotizan en dólares y había que convertirlos con el cambio del
+  // día, que no es el del bróker: Trade Republic opera en euros y su cifra no
+  // cuadraba con la de aquí. Un activo guardado con el ticker viejo se lleva
+  // el nuevo sin tener que editarlo.
+  const TICKER_EN_EUROS = { "HEMA.L": "HEMA.MI", "IGLN.L": "PPFB.DE" };
   const activos = () => {
     const propios = cfgDoc().activos || activosDeducidos();
-    return propios.map((a) => (a.yf ? a : Object.assign({}, a, { yf: tickerConocido(a.isin) })));
+    return propios.map((a) => {
+      if (!a.yf) return Object.assign({}, a, { yf: tickerConocido(a.isin) });
+      const eur = TICKER_EN_EUROS[a.yf];
+      return eur ? Object.assign({}, a, { yf: eur }) : a;
+    });
   };
   const objetivo = () => cfgDoc().objetivo || OBJETIVO_DEFECTO;
   // Los brókers de la sub-navegación de Cartera se deducen de las cuentas:

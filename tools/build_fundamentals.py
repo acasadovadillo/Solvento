@@ -44,6 +44,7 @@ PROXY_INDICE = {
     "SSAC.AS": ("ACWI", "MSCI ACWI"),
     "CSPX.AS": ("IVV", "S&P 500"),
     "HEMA.L":  ("IEMG", "MSCI Emerging Markets"),
+    "HEMA.MI": ("IEMG", "MSCI Emerging Markets"),
     "IUAA.L":  ("AGG", "Bloomberg US Aggregate"),
 }
 # Lo que no es un fondo indexado: se pide como acción

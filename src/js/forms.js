@@ -975,7 +975,8 @@
         logo: elegido ? CFG.logoBanco(elegido) : (e.logo || null),
         emoji: elegido ? (elegido.emoji || undefined) : e.emoji,
         cartera: cartera === "no" ? null : cartera,
-        etiquetaEfectivo: G("c-etiqueta") || undefined,
+        // Sin Cartera la etiqueta no se pinta en ningún sitio: no se guarda.
+        etiquetaEfectivo: cartera === "no" ? undefined : (G("c-etiqueta") || undefined),
       });
       delete rec.broker;
       if (i >= 0) {
@@ -986,6 +987,16 @@
       } else c.cuentas.push(rec);
       return null;
     }, refrescarAjustes);
+    wireCuentaVisibility();
+  }
+  // La etiqueta es el nombre que lleva su efectivo en Cartera: si la cuenta no
+  // sale en Cartera, el campo no se aplica a nada y solo confunde.
+  function wireCuentaVisibility() {
+    const sel = document.getElementById("c-cartera");
+    const fila = document.querySelector('.ff[data-for="c-etiqueta"]');
+    if (!sel || !fila) return;
+    const upd = () => { fila.style.display = sel.value === "no" ? "none" : ""; };
+    sel.addEventListener("change", upd); upd();
   }
 
   function elegirBanco(b) {
