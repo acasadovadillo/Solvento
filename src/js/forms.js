@@ -469,8 +469,10 @@
       field("d-entidad", "Entidad", datalist("d-entidad", CUENTAS(), e.entidad)) +
       // Por dónde se cobra. En una tarjeta no es un dato de adorno: es lo que
       // permite que el recibo del mes sepa de qué cuenta sale el dinero, y que
-      // mañana una tarjeta de otro banco funcione igual sin tocar nada.
-      field("d-cuenta", "Cuenta de cargo", selectKV("d-cuenta",
+      // mañana una tarjeta de otro banco funcione igual sin tocar nada. En el
+      // resto de deudas dice dónde está o de dónde saldrá el dinero —una fianza
+      // que duerme en Bankinter— y la deja colgando de esa cuenta en Caja.
+      field("d-cuenta", "Cuenta vinculada", selectKV("d-cuenta",
         [["", "— Ninguna —"]].concat(CUENTAS().map((c) => [c, c])), e.cuenta || "")) +
       field("d-importe", "Pendiente de pagar (€)", input("d-importe", "number", e.importe, 'step="0.01" min="0" placeholder="120000"')) +
       `<div class="ff-nota" id="d-nota" style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.</div>`;
@@ -501,17 +503,18 @@
     const impEl = document.getElementById("d-importe");
     const nota = document.getElementById("d-nota");
     const lbl = document.querySelector('.ff[data-for="d-importe"] label');
-    const cuenta = document.querySelector('.ff[data-for="d-cuenta"]');
+    const lblCuenta = document.querySelector('.ff[data-for="d-cuenta"] label');
     function upd() {
       const t = tipoEl.value === TARJETA;
-      if (cuenta) cuenta.style.display = t ? "" : "none";
+      if (lblCuenta) lblCuenta.textContent = t ? "Cuenta de cargo" : "Cuenta vinculada — opcional";
       if (lbl) lbl.textContent = t ? "Pendiente de pagar (€) — opcional" : "Pendiente de pagar (€)";
       if (impEl) impEl.placeholder = t ? "Déjalo vacío: se calcula solo" : "120000";
       if (nota) {
         nota.innerHTML = t
           ? `Déjalo <b>vacío</b> y el saldo lo calculan sus movimientos: cada compra suma y cada recibo la salda.
              La <b>cuenta de cargo</b> es de donde sale el dinero el día del recibo.`
-          : `Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.`;
+          : `Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.
+             Si tiene <b>cuenta vinculada</b>, en Caja aparece colgando de ella.`;
       }
     }
     tipoEl.addEventListener("change", upd); upd();
