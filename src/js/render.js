@@ -970,6 +970,55 @@
     const ficha = fichaBien(r.id);
     return ficha ? window.SolventoModel.rentabilidadBien(ficha, r, (CURRENT_DOC || {}).movimientos, window.__PRICES) : null;
   };
+  // La TIR de la cartera es la vara de medir: lo que habría dado ese dinero en
+  // tus fondos. Un piso que rinde menos no es necesariamente un mal piso —es
+  // otra clase de activo—, pero conviene saber cuánto se paga por tenerlo.
+  const tirCartera = () => { const inv = window.__MODEL && window.__MODEL.inv; return inv && isFinite(inv.tir) ? inv.tir : NaN; };
+  const pp = (d) => `${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1).replace(".", ",")} p.p.`;
+  function contraCartera(tir) {
+    const tc = tirCartera();
+    if (!isFinite(tc)) return "lo que rinde al año";
+    const d = tir - tc;
+    return `Cartera ${fmtPct(tc)} · <span style="color:${rc(d)};font-weight:600;">${pp(d)}</span>`;
+  }
+  // Todos los bienes de la página contra la Cartera, en barras desde el cero.
+  function panelTirCartera(items) {
+    const tc = tirCartera();
+    if (!isFinite(tc)) return "";
+    const filas = items.map((r) => ({ r, R: rentaDe(r) }))
+      .filter((x) => x.R && !x.R.falta && isFinite(x.R.tir))
+      .map((x) => ({ nombre: x.r.nombre, tir: x.R.tir, color: x.r.accent, desde: x.R.inicio }))
+      .sort((a, b) => b.tir - a.tir);
+    if (!filas.length) return "";
+    const inv = window.__MODEL.inv;
+    const todas = [{ nombre: "Cartera", tir: tc, color: "var(--violeta)", cartera: true, desde: inv.desde }].concat(filas);
+    const tope = Math.max(...todas.map((f) => Math.abs(f.tir)), 1);
+    const hayNeg = todas.some((f) => f.tir < 0);
+    const desde = (f) => f.desde ? f.desde.toLocaleDateString("es-ES", { month: "short", year: "numeric" }) : "";
+    const fila = (f) => {
+      const ancho = Math.abs(f.tir) / tope * (hayNeg ? 50 : 100);
+      const izq = hayNeg ? (f.tir < 0 ? 50 - ancho : 50) : 0;
+      const d = f.tir - tc;
+      return `<div style="display:grid;grid-template-columns:minmax(0,9rem) 1fr auto;gap:0.75rem;align-items:center;padding:0.4rem 0;">
+        <div style="min-width:0;">
+          <div style="color:${f.cartera ? "var(--t0)" : "var(--t1)"};font-weight:${f.cartera ? 700 : 600};font-size:0.85rem;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(f.nombre)}">${esc(f.nombre)}</div>
+          <div style="color:var(--t3);font-size:0.7rem;">desde ${esc(desde(f))}</div></div>
+        <div style="position:relative;height:12px;background:var(--f1b);border-radius:6px;">
+          ${hayNeg ? `<div style="position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--b3);"></div>` : ""}
+          <div style="position:absolute;left:${izq}%;width:${Math.max(ancho, 0.8)}%;top:0;bottom:0;border-radius:6px;
+            background:${f.color};opacity:${f.cartera ? 1 : 0.85};"></div></div>
+        <div style="text-align:right;white-space:nowrap;min-width:5.5rem;">
+          <div style="font-weight:700;color:${rc(f.tir)};font-size:0.88rem;">${fmtPct(f.tir)}</div>
+          ${f.cartera ? `<div style="color:var(--t3);font-size:0.7rem;">referencia</div>`
+            : `<div style="color:${rc(d)};font-size:0.7rem;font-weight:600;">${pp(d)}</div>`}</div></div>`;
+    };
+    return `<div class="v2-wrap"><div class="dashboard-panel">
+      <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:0.25rem;">TIR contra tu Cartera</div>
+      <div style="font-size:0.76rem;color:var(--t3);margin-bottom:0.75rem;">Lo que rinde al año cada uno, con revalorización y rentas, al lado de lo que rinden tus fondos.
+        Cada uno cuenta desde su primera compra, así que los periodos no son los mismos.</div>
+      ${todas.map(fila).join("")}</div></div>`;
+  }
   function detalleBien(r) {
     const R = rentaDe(r);
     if (!R) return "";
@@ -996,7 +1045,7 @@
         ? kpi("Rentas netas", eurTxt(R.rentas), R.hayRentas ? `${pctTxt(R.rentasPct)} · ${R.nFlujos} movimientos` : "sin movimientos aún")
         : "",
       kpi("Rentabilidad total", eurTxt(R.ganancia), pctTxt(R.totalPct)),
-      kpi("TIR anual", isFinite(R.tir) ? pctTxt(R.tir) : "—", isFinite(R.tir) ? "lo que rinde al año" : "hace falta más tiempo"),
+      kpi("TIR anual", isFinite(R.tir) ? pctTxt(R.tir) : "—", isFinite(R.tir) ? contraCartera(R.tir) : "hace falta más tiempo"),
     ].join("");
     const fuente = R.fuenteValor === "metal"
       ? `El valor de cada día es su peso por el precio del ${esc(r.metal)} de ese día.`
@@ -1144,7 +1193,7 @@
     return header(titulo, fmtEur(inm.total)) +
       (donutItems.length ? vistaPanel(id, "Distribución por tipo", donutItems, fmtEur(inm.total), "Total", null,
                                       { sinLeyenda: true, desnudo: true }) : "") +
-      rentaPanel +
+      rentaPanel + panelTirCartera(inm.items) +
       `<div class="v2-wrap" style="padding-bottom:2rem;"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
           <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>

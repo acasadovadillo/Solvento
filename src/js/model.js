@@ -187,7 +187,7 @@
       const ganancia = isFinite(importe) ? round2(importe - coste) : NaN;
       const rentPct = (coste > 0 && isFinite(importe)) ? (importe / coste - 1) * 100 : NaN;
       assets.push({
-        nombre: meta.nombre, isin: meta.isin, yf: meta.yf, categoria: meta.categoria, tipo: meta.tipo,
+        jk, nombre: meta.nombre, isin: meta.isin, yf: meta.yf, categoria: meta.categoria, tipo: meta.tipo,
         banco: meta.banco, coste, unidades: a.unidades, importe, ganancia, rentPct,
         cagr: cagr(importe, coste, a.fechaPrimera), fechaPrimera: a.fechaPrimera,
         n: a.n, fuente, precioUnit,
@@ -205,12 +205,29 @@
     let fechaPrimera = null;
     assets.forEach((a) => { if (a.fechaPrimera && (!fechaPrimera || a.fechaPrimera < fechaPrimera)) fechaPrimera = a.fechaPrimera; });
     const portfolioCagr = cagr(total, totalCoste, fechaPrimera, 0.25);
+    // La TIR de la cartera: cada aportación con su fecha (y cada venta, que
+    // devuelve dinero) y lo que vale hoy. Es la misma cuenta que la TIR de un
+    // piso, y por eso es la que se puede poner a su lado. El CAGR de arriba
+    // trata todo lo aportado como si hubiera entrado el primer día.
+    // Solo cuentan los activos con precio: aportar a uno que no se sabe cuánto
+    // vale y no sumar su valor hundiría la cifra.
+    const conPrecio = new Set(assets.filter((a) => isFinite(a.importe)).map((a) => a.jk));
+    const flujosCartera = [];
+    for (const r of db.inversiones || []) {
+      const c = num(r.coste), f = parseFechaES(r.fecha);
+      if (!isFinite(c) || !f || !conPrecio.has(jkOf(r.nombre, r.isin))) continue;
+      flujosCartera.push([+f, -c]);
+    }
+    flujosCartera.sort((a, b) => a[0] - b[0]);
+    const tir = flujosCartera.length && fechaPrimera && (NOW - fechaPrimera) / (365.25 * 864e5) >= 0.25
+      ? xirr(flujosCartera.concat([[+NOW, total]])) : NaN;
 
     // Asignación por categoría (RV/RF) actual vs objetivo
     const porCat = {};
     assets.forEach((a) => { if (isFinite(a.importe)) porCat[a.categoria] = (porCat[a.categoria] || 0) + a.importe; });
 
-    return { assets, total, totalCoste, totalGanancia, rentPct, portfolioCagr, hayRentabilidad: totalCoste > 0, porCat };
+    return { assets, total, totalCoste, totalGanancia, rentPct, portfolioCagr, tir, desde: fechaPrimera,
+             hayRentabilidad: totalCoste > 0, porCat };
   }
 
   // ── Inmuebles ──
