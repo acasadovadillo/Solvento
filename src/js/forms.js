@@ -459,9 +459,10 @@
   // ── Pasivo (deuda) ──
   const TARJETA = "Tarjeta de crédito";
   const PASIVO_TIPOS = ["Hipoteca", "Préstamo personal", "Préstamo coche",
-                        TARJETA, "Deuda con particular", "Otro"];
-  function openPasivo(existing) {
-    const doc = DB.state.doc, e = existing || {};
+                        TARJETA, "Deuda con particular", "Fianza", "Otro"];
+  // `tipoInicial`: al dar de alta desde la página de un tipo, ya viene puesto.
+  function openPasivo(existing, tipoInicial) {
+    const doc = DB.state.doc, e = existing || (tipoInicial ? { tipo: tipoInicial } : {});
     if (!Array.isArray(doc.pasivos)) doc.pasivos = [];
     const body =
       field("d-nombre", "Concepto", input("d-nombre", "text", e.nombre, 'placeholder="Hipoteca de la vivienda"')) +
@@ -751,16 +752,19 @@
     // Un grupo es un bloque: se arrastra entero por su asa, y dentro sus
     // páginas se arrastran entre ellas. Sin casilla propia: un grupo se esconde
     // solo cuando no le queda ninguna página visible.
+    // Un grupo puede llevar otro dentro (Inversiones en Activos): se pinta igual,
+    // un nivel más adentro, y se arrastra entre sus hermanas de ese nivel.
+    const filaNodo = (h) => (h.tipo === "grupo" ? filaGrupo(h) : filaPagina(h.pagina));
     const filaGrupo = (n) => `<div class="menu-fila menu-grupo" data-pagina="${n.id}" style="border-bottom:1px solid var(--b1);">
         <div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;">
           ${asa(n.grupo.nombre)}
           <div style="flex:1;min-width:0;"><div style="color:var(--t1);font-weight:700;font-size:0.88rem;">${esc(n.grupo.nombre)}
               <span style="color:var(--t3);font-weight:500;font-size:0.74rem;margin-left:0.4rem;">grupo · se pliega en el menú</span></div>
             <div style="color:var(--t2);font-size:0.75rem;">${esc(n.grupo.nota || "")}</div></div></div>
-        <div class="menu-hijos">${n.hijos.filter((p) => !p.org || esOrg).map(filaPagina).join("")}</div></div>`;
+        <div class="menu-hijos">${n.hijos.filter((h) => h.tipo === "grupo" || !h.pagina.org || esOrg).map(filaNodo).join("")}</div></div>`;
     const menu = CFG.menuArbol()
       .filter((n) => n.tipo === "grupo" || !n.pagina.org || esOrg)
-      .map((n) => (n.tipo === "grupo" ? filaGrupo(n) : filaPagina(n.pagina))).join("");
+      .map(filaNodo).join("");
 
     return { cuentas, activos, objetivo, categorias, categoriasIngreso, centros, menu, nav: fragmentoNav() };
   }

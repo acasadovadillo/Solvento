@@ -64,7 +64,7 @@
   // las cifras en negativo: aquí el color identifica un tipo, no una alarma.
   const TIPO_COLORES_PASIVO = {
     "Hipoteca": "#b91c1c", "Préstamo personal": "#ea580c", "Préstamo coche": "#d97706",
-    "Tarjeta de crédito": "#e11d48", "Deuda con particular": "#9333ea", "Otro": "#6b7280",
+    "Tarjeta de crédito": "#e11d48", "Deuda con particular": "#9333ea", "Fianza": "#7c3aed", "Otro": "#6b7280",
   };
   const PASIVO_ACCENT_DEFAULT = "#9f1239";
 
@@ -336,14 +336,22 @@
   const PAGINAS = [
     { id: "patrimonio",  nombre: "Patrimonio",  fijo: true, nota: "la portada" },
     { id: "caja",        nombre: "Caja",        grupo: "activos", nota: "cuentas y movimientos" },
-    { id: "balance",     nombre: "Balance",     grupo: "activos", nota: "ingresos y gastos por categoría" },
-    { id: "cartera",     nombre: "Cartera",     grupo: "activos", nota: "inversiones y posiciones" },
-    { id: "propiedades", nombre: "Inmuebles",   grupo: "activos", nota: "pisos, casas, locales, garajes, terrenos" },
-    { id: "otros",       nombre: "Otros",       grupo: "activos", nota: "vehículos, arte, metales, colecciones" },
-    { id: "pasivos",     nombre: "Pasivos",     nota: "deudas, hipotecas y tarjetas" },
+    { id: "cartera",     nombre: "Cartera",     grupo: "inversiones", nota: "ETFs, fondos y acciones" },
+    { id: "propiedades", nombre: "Inmuebles",   grupo: "inversiones", nota: "pisos, casas, locales, garajes, terrenos" },
+    { id: "otros",       nombre: "Otros",       grupo: "inversiones", nota: "vehículos, joyas, metales, arte" },
+    { id: "pasivos",     nombre: "Pasivos",     nota: "deudas, hipotecas, tarjetas y fianzas" },
+    // El id sigue siendo «balance» para no perder lo guardado con él, pero la
+    // página no es un balance —eso es la foto de lo que tienes y debes, y lo
+    // enseña Patrimonio—: es lo que entra y sale cada mes. Por eso tampoco va
+    // dentro de Activos, sino al lado del Presupuesto, que es lo planeado.
+    { id: "balance",     nombre: "Ingresos y gastos", nota: "lo que entra y sale cada mes, por categoría" },
     { id: "presupuesto", nombre: "Presupuesto", nota: "gastos fijos, ingresos, ahorro, ocio y aportación" },
   ];
-  const GRUPOS = [{ id: "activos", nombre: "Activos", nota: "lo que tienes: caja, balance, cartera, inmuebles y otros" }];
+  // Un grupo puede colgar de otro (`padre`): Inversiones vive dentro de Activos.
+  const GRUPOS = [
+    { id: "activos",     nombre: "Activos",     nota: "lo que tienes: caja e inversiones" },
+    { id: "inversiones", nombre: "Inversiones", padre: "activos", nota: "cartera, inmuebles y otros bienes" },
+  ];
   // Lo guardado se filtra contra el catálogo: una página fija no se puede
   // ocultar aunque alguien escriba su nombre a mano en el documento, y un id
   // que ya no existe no deja escondida una página que sí.
@@ -361,10 +369,16 @@
   // —las páginas de un grupo, o lo que va suelto arriba— es lo mismo cada vez:
   // primero lo que esté en la lista, en ese orden; después lo que no, en el
   // orden del catálogo.
+  //
+  // Un orden guardado antes de que existiera Inversiones es el de otro menú
+  // —Balance dentro de Activos, sin subgrupo— y aplicado a este dejaba cada
+  // cosa fuera de su sitio. Se ignora: el menú vuelve al orden de siempre y
+  // basta con arrastrar de nuevo lo que se quiera mover.
   const menuOrden = () => {
     const l = cfgDoc().menu_orden;
+    if (!Array.isArray(l) || l.indexOf("inversiones") < 0) return [];
     const existe = (id) => PAGINAS.some((p) => p.id === id) || GRUPOS.some((g) => g.id === id);
-    return Array.isArray(l) ? l.filter((id, i) => existe(id) && l.indexOf(id) === i) : [];
+    return l.filter((id, i) => existe(id) && l.indexOf(id) === i);
   };
   const ordenar = (lista) => {
     const orden = menuOrden();
@@ -373,19 +387,25 @@
   };
   const paginasOrdenadas = () => ordenar(PAGINAS);
   // El menú como árbol: arriba, páginas sueltas y grupos en su orden; dentro de
-  // cada grupo, sus páginas en el suyo.
-  const menuArbol = () => {
-    const arriba = PAGINAS.filter((p) => !p.grupo).map((p) => ({ tipo: "pagina", pagina: p, id: p.id }))
-      .concat(GRUPOS.map((g) => ({ tipo: "grupo", grupo: g, id: g.id,
-                                    hijos: ordenar(PAGINAS.filter((p) => p.grupo === g.id)) })));
-    // Sin orden guardado, el grupo va donde estaría su primera página en el
-    // catálogo: Activos entre Patrimonio y Pasivos, no al final.
-    const posCatalogo = (n) => n.tipo === "pagina" ? PAGINAS.indexOf(n.pagina)
-      : PAGINAS.findIndex((p) => p.grupo === n.id);
+  // cada grupo, sus páginas y sus subgrupos en el suyo. Cada nodo es
+  // { tipo: "pagina", pagina, id } o { tipo: "grupo", grupo, id, hijos }.
+  const nodoPagina = (p) => ({ tipo: "pagina", pagina: p, id: p.id });
+  const nodoGrupo = (g) => ({ tipo: "grupo", grupo: g, id: g.id, hijos: nivel(
+    PAGINAS.filter((p) => p.grupo === g.id).map(nodoPagina)
+      .concat(GRUPOS.filter((h) => h.padre === g.id).map(nodoGrupo))) });
+  // Las páginas que cuelgan de un nodo, a cualquier profundidad.
+  const paginasDe = (n) => n.tipo === "pagina" ? [n.pagina] : [].concat(...n.hijos.map(paginasDe));
+  // Sin orden guardado, cada nodo va donde estaría su primera página en el
+  // catálogo: Activos entre Patrimonio y Pasivos, no al final.
+  const posCatalogo = (n) => Math.min(...paginasDe(n).map((p) => PAGINAS.indexOf(p)), Infinity);
+  function nivel(nodos) {
     const orden = menuOrden();
     const pos = (n) => { const i = orden.indexOf(n.id); return i < 0 ? Infinity : i; };
-    return arriba.sort((a, b) => pos(a) - pos(b) || posCatalogo(a) - posCatalogo(b));
-  };
+    return nodos.sort((a, b) => pos(a) - pos(b) || posCatalogo(a) - posCatalogo(b));
+  }
+  const menuArbol = () => nivel(
+    PAGINAS.filter((p) => !p.grupo).map(nodoPagina)
+      .concat(GRUPOS.filter((g) => !g.padre).map(nodoGrupo)));
 
   // Los miles, también por debajo de diez mil. Intl en español no agrupa hasta
   // cinco cifras —«1203,08 €» pero «20.931,73 €»— porque así lo dice el CLDR.
@@ -398,7 +418,7 @@
   window.SolventoConfig = {
     miles,
     usarDoc, cuentas, activos, objetivo, brokers, tickerConocido,
-    PAGINAS, GRUPOS, menuOculto, paginaVisible, menuOrden, paginasOrdenadas, menuArbol,
+    PAGINAS, GRUPOS, menuOculto, paginaVisible, menuOrden, paginasOrdenadas, menuArbol, paginasDe,
     CUENTAS_DEFECTO, ACTIVOS_DEFECTO, OBJETIVO_DEFECTO, EFECTIVO,
     CAT_COLORES, TIPO_COLORES, TIPO_COLORES_INMUEBLE, TIPOS_POR_PESO, TIPOS_INMUEBLE, esInmueble, INMUEBLE_ACCENT_DEFAULT, SERIE_COLORES,
     TIPO_COLORES_PASIVO, PASIVO_ACCENT_DEFAULT, BANCOS, logoBanco,

@@ -1,6 +1,6 @@
 /*
  * Solvento — Render (Fase 2): navegación por pestañas + páginas
- * (Patrimonio, Caja, Balance, Cartera, Inmuebles, Otros, Pasivos) con donuts, treemap
+ * (Patrimonio, Caja, Cartera, Inmuebles, Otros, Pasivos, Ingresos y gastos) con donuts, treemap
  * de asignación, pintado desde el modelo (datos descifrados + prices.json).
  * Las gráficas de EVOLUCIÓN temporal llegan en el siguiente incremento (necesitan
  * histórico de precios).
@@ -631,7 +631,7 @@
       // Con una sola deuda de ese tipo, su nombre dice más que «1 deuda».
       const sub = g.n === 1 ? esc(g.uno.nombre) : g.n + " deudas";
       return hubCard(t, fmtEur(g.total), pas.total ? g.total / pas.total * 100 : 0,
-                     color(t), sub, null, "pasivos", "pasivos", "de tu deuda");
+                     color(t), sub, null, "pasivos::" + jsNombre(t), "pasivos", "de tu deuda");
     }).join("");
 
     // Sin coletilla: con una deuda pequeña salía «pesa un 0,0 % de lo que
@@ -1647,7 +1647,22 @@
   }
 
   function pagePasivos(m) {
-    const pas = (m && m.pas) || { items: [], n: 0, total: 0 };
+    const todo = (m && m.pas) || { items: [], n: 0, total: 0 };
+    const tipo = PASIVOS_TIPO;
+    // Volver a verlo todo, cuando se mira un solo tipo.
+    const volver = `<div class="v2-wrap" style="margin-bottom:0.75rem;">
+      <button onclick="v2Tab('pasivos')" style="background:none;border:none;padding:0;color:var(--azul);
+        font-family:inherit;font-size:0.82rem;cursor:pointer;">← Todos los pasivos</button></div>`;
+    if (tipo === SIN_ALQUILAR) {
+      return header(pluralPasivo(tipo), "−" + fmtEur((m.inm && m.inm.costeSinAlquilar) || 0).replace("-", "") + " al año") +
+        volver + panelSinAlquilar(m);
+    }
+    // Con un tipo elegido, la página es la misma pero solo con sus deudas, y su
+    // total es el de ellas; el peso sigue contando sobre toda la deuda.
+    const items = tipo ? todo.items.filter((d) => (d.tipo || "Otro") === tipo) : todo.items;
+    const pas = tipo
+      ? { items, total: Math.round(items.filter((d) => d.importe > 0.005).reduce((t, d) => t + d.importe, 0) * 100) / 100 }
+      : todo;
     if (!pas.items.length) {   // ninguna registrada; una saldada sí se enseña
       return header("Pasivos", fmtEur(0)) +
         `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;padding:3rem;">
@@ -1798,19 +1813,20 @@
       <td style="text-align:left;color:var(--t1b);">${esc(d.tipo)}</td>
       <td style="text-align:right;font-weight:600;white-space:nowrap;color:${d.importe > 0.005 ? "var(--t0)" : "var(--t2)"};">
         ${d.importe > 0.005 ? fmtEur(d.importe) : "saldada"}</td>
-      <td class="col-secundaria" style="text-align:right;color:var(--t1b);">${(pas.total ? d.importe / pas.total * 100 : 0).toFixed(2)}%</td>
+      <td class="col-secundaria" style="text-align:right;color:var(--t1b);">${(todo.total ? d.importe / todo.total * 100 : 0).toFixed(2)}%</td>
       ${rowActions(`v2EditPas('${d.id}')`, `v2DelPas('${d.id}')`)}</tr>` +
       (abierta ? detalleDeuda(d) : "");
     }).join("");
-    return header("Pasivos", fmtEur(pas.total)) +
+    return header(tipo ? pluralPasivo(tipo) : "Pasivos", fmtEur(pas.total)) + (tipo ? volver : "") +
       `<div class="v2-wrap"><div class="table-container">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;">
           <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Deudas</div>
-          ${addBtn("＋ Deuda", "v2AddPas()")}
+          ${addBtn("＋ Deuda", tipo ? `v2AddPas('${esc(jsNombre(tipo))}')` : "v2AddPas()")}
         </div>
         <table class="minimal-table">
         <thead><tr><th style="text-align:left;">Deuda</th><th style="text-align:left;">Tipo</th><th style="text-align:right;">Importe</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead>
-        <tbody>${rows}</tbody></table></div></div>` + panelSinAlquilar(m) + panelPrestamos() + panelCobros();
+        <tbody>${rows}</tbody></table></div></div>` +
+      (tipo ? "" : panelSinAlquilar(m) + panelPrestamos() + panelCobros());
   }
 
   // ── Página Gastos (Fase 6) ──────────────────────────────────────────
@@ -1934,6 +1950,49 @@
   // Qué mes se está mirando en cada deuda desplegada. Se recuerda mientras dure
   // la sesión: al volver de editar un apunte se sigue donde se estaba.
   const PASIVOS_MES = {};
+  // Qué tipo de deuda se está mirando en Pasivos (null = todas). Lo cambian
+  // los hijos de Pasivos en el menú y las tarjetas de Patrimonio.
+  let PASIVOS_TIPO = null;
+  const SIN_ALQUILAR = "sin-alquilar";
+  const PLURAL_PASIVO = {
+    "Hipoteca": "Hipotecas", "Préstamo personal": "Préstamos personales", "Préstamo coche": "Préstamos de coche",
+    "Tarjeta de crédito": "Tarjetas de crédito", "Deuda con particular": "Deudas con particulares",
+    "Fianza": "Fianzas", "Otro": "Otras deudas",
+  };
+  const pluralPasivo = (t) => t === SIN_ALQUILAR ? "Inmuebles sin alquilar" : (PLURAL_PASIVO[t] || t);
+  // Los tipos que hay, de más deuda a menos, y al final los inmuebles vacíos
+  // si los hay: también cuestan, aunque no se deban a nadie.
+  function tiposPasivo(m) {
+    const suma = {};
+    (((m && m.pas) || {}).items || []).forEach((d) => {
+      const t = d.tipo || "Otro";
+      suma[t] = (suma[t] || 0) + d.importe;
+    });
+    const tipos = Object.keys(suma).sort((a, b) => suma[b] - suma[a]);
+    if (((m && m.inm && m.inm.sinAlquilar) || []).length) tipos.push(SIN_ALQUILAR);
+    return tipos;
+  }
+  // Los hijos de Pasivos en el menú lateral: uno por tipo que tengas.
+  function pintarTiposPasivo(m) {
+    const cont = document.getElementById("sn-pasivos-tipos");
+    if (!cont) return;
+    const tipos = tiposPasivo(m);
+    if (PASIVOS_TIPO && tipos.indexOf(PASIVOS_TIPO) < 0) PASIVOS_TIPO = null;   // ya no existe
+    cont.innerHTML = tipos.map((t) => `<button class="sn-item" data-pasivo-tipo="${esc(t)}"
+      onclick="v2Tab('pasivos::${esc(jsNombre(t))}')"><span>${esc(pluralPasivo(t))}</span></button>`).join("");
+    const g = cont.closest(".sn-grupo");
+    if (g) g.classList.toggle("sin-hijos", !tipos.length);
+    marcarTipoPasivo();
+  }
+  // En el menú se resalta el tipo que se mira, y no Pasivos a la vez.
+  function marcarTipoPasivo() {
+    const pg = document.getElementById("v2-page-pasivos");
+    const enPasivos = !!(pg && pg.classList.contains("active"));
+    document.querySelectorAll("#sn-pasivos-tipos .sn-item").forEach((b) =>
+      b.classList.toggle("active", enPasivos && b.dataset.pasivoTipo === PASIVOS_TIPO));
+    const cab = document.querySelector('#sidebar .sn-item[data-page="pasivos"]');
+    if (cab && enPasivos) cab.classList.toggle("active", !PASIVOS_TIPO);
+  }
   const jsNombre = (n) => String(n).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   function tablaCategorias(g, mes, presupuesto) {
     // El árbol entero, no dos niveles: «Vivienda > Suministros > Luz» se
@@ -2111,7 +2170,7 @@
   function pageBalance(m) {
     const g = window.__GASTOS || { meses: [], media: { ingresos: 0, gastos: 0, meses: 0 }, categorias: [] };
     if (!g.meses.length) {
-      return header("Balance", fmtEur(0)) +
+      return header("Ingresos y gastos", fmtEur(0)) +
         `<div class="v2-wrap"><div class="dashboard-panel" style="text-align:center;color:var(--t2);padding:3rem;">
           Aún no hay gastos ni ingresos que analizar. Registra movimientos y aquí verás en qué se te va el dinero.</div></div>`;
     }
@@ -2150,7 +2209,7 @@
             Verlos</button>
         </div></div>`
       : "";
-    return header("Balance", fmtEur(mes.ahorro)) + avisoPend + hero +
+    return header("Ingresos y gastos", fmtEur(mes.ahorro)) + avisoPend + hero +
       panelRegla(mes) +
       barrasIngresoGasto(g) +
       (itemsCat.length ? vistaPanel("categorias", "En qué se va el dinero · " + mes.label,
@@ -2261,24 +2320,26 @@
     // de un sitio lo quita del anterior, así que esto también coloca en su
     // grupo una página que estuviera suelta.
     const lista = document.querySelector("#sidebar .sn-list");
-    if (lista && CFG.menuArbol) {
-      CFG.menuArbol().forEach((n) => {
-        if (n.tipo === "pagina") {
-          const b = lista.querySelector(`[data-page="${n.id}"]`);
-          if (b) lista.appendChild(b);
-          return;
-        }
-        const g = lista.querySelector(`.sn-grupo[data-grupo="${n.id}"]`);
-        if (!g) return;
-        lista.appendChild(g);
-        const hijos = g.querySelector(".sn-hijos");
-        n.hijos.forEach((p) => { const b = lista.querySelector(`[data-page="${p.id}"]`); if (b && hijos) hijos.appendChild(b); });
-        // Un grupo sin nada visible dentro no se enseña: sería una puerta a
-        // una habitación vacía.
-        const algunaVisible = n.hijos.some((p) => p.fijo || CFG.paginaVisible(p.id));
-        g.classList.toggle("menu-oculto", !algunaVisible);
-      });
-    }
+    // Un grupo puede llevar otro dentro (Inversiones en Activos), así que se
+    // coloca nivel a nivel. Una página que además es grupo —Pasivos, con sus
+    // tipos— se mueve con su envoltorio, no sola.
+    const colocar = (n, donde) => {
+      if (n.tipo === "pagina") {
+        const b = lista.querySelector(`.sn-item[data-page="${n.id}"]`);
+        if (b) donde.appendChild(b.closest(".sn-grupo-pagina") || b);
+        return;
+      }
+      const g = lista.querySelector(`.sn-grupo[data-grupo="${n.id}"]`);
+      if (!g) return;
+      donde.appendChild(g);
+      const hijos = g.querySelector(":scope > .sn-hijos");
+      if (hijos) n.hijos.forEach((h) => colocar(h, hijos));
+      // Un grupo sin nada visible dentro no se enseña: sería una puerta a
+      // una habitación vacía.
+      const algunaVisible = CFG.paginasDe(n).some((p) => p.fijo || CFG.paginaVisible(p.id));
+      g.classList.toggle("menu-oculto", !algunaVisible);
+    };
+    if (lista && CFG.menuArbol) CFG.menuArbol().forEach((n) => colocar(n, lista));
     let huerfana = false;
     CFG.PAGINAS.forEach((p) => {
       const visible = p.fijo || CFG.paginaVisible(p.id);
@@ -2287,6 +2348,8 @@
           b.classList.toggle("menu-oculto", !visible);
           if (!visible && b.classList.contains("active")) huerfana = true;
         });
+      document.querySelectorAll(`.sn-grupo-pagina[data-grupo-pagina="${p.id}"]`)
+        .forEach((g) => g.classList.toggle("menu-oculto", !visible));
     });
     if (huerfana) showPage("patrimonio");
   }
@@ -2342,7 +2405,17 @@
     tip.style.left = Math.max(medio, Math.min(ancho - medio, centro)) + "px";
   };
 
-  window.v2Tab = showPage;
+  // «pasivos::Hipoteca» abre Pasivos con solo ese tipo; «pasivos» a secas, todo.
+  window.v2Tab = function (id) {
+    const [pagina, tipo] = String(id).split("::");
+    if (pagina === "pasivos" && (tipo || null) !== PASIVOS_TIPO) {
+      PASIVOS_TIPO = tipo || null;
+      const pg = document.getElementById("v2-page-pasivos");
+      if (pg && window.__MODEL) pg.innerHTML = pagePasivos(window.__MODEL);
+    }
+    showPage(pagina);
+    marcarTipoPasivo();
+  };
 
   // Panel lateral de secciones, que se abre desde el logo. Sin argumento
   // alterna; con true/false fuerza el estado.
@@ -2418,6 +2491,7 @@
     document.getElementById("v2-page-propiedades").innerHTML = pagePropiedades(m);
     document.getElementById("v2-page-otros").innerHTML = pageOtros(m);
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
+    pintarTiposPasivo(m);
     // Una organización tiene su presupuesto aprobado en asamblea —lo previsto
     // contra lo ejecutado—; una persona, su presupuesto mensual.
     const pres = document.getElementById("v2-page-presupuesto");
@@ -2508,7 +2582,7 @@
   window.v2AddOtro = () => F() && F().openPropiedad(null, { otros: true });
   window.v2AddNav = () => F() && F().openNav();
   window.v2Cuadrar = (cuenta, saldo) => F() && F().openCuadrar(cuenta, saldo);
-  window.v2AddPas = () => F() && F().openPasivo();
+  window.v2AddPas = (tipo) => F() && F().openPasivo(null, tipo);
   window.v2MenuVer = (id, visible) => F() && F().verPagina(id, visible);
   window.v2PlanLinea = (lista, id) => F() && F().openPlanLinea(lista, id);
   window.v2PlanProducto = (id) => F() && F().openPlanProducto(id);
