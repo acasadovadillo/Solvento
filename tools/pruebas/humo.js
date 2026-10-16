@@ -421,6 +421,37 @@ var segA = M.seguimientoPlan(docSeg, planSeg, { tipo: "anio", anio: 2025 });
 comprobar("un año cerrado prevé doce meses",
   segA.nMeses === 12 && cerca(segA.totales.gastoFijoPrevisto, 60 * 12) && segA.totales.gastoReal === 0);
 
+// ── Rentabilidad de un bien ─────────────────────────────────────────────────
+// Un piso comprado por 100.000 € con 10.000 € de gastos, tasado en 120.000 a
+// mitad de camino y que hoy vale 130.000, con 500 € de renta cada mes y una
+// derrama de 1.000. La rentabilidad total es revalorización + rentas netas
+// sobre lo que costó de verdad (110.000), y la TIR, su ritmo anual.
+comprobar("la TIR de poner 100 y sacar 110 un año después es un 10 %",
+  Math.abs(M.xirr([[Date.UTC(2024, 0, 1), -100], [Date.UTC(2024, 0, 1) + 365.25 * 864e5, 110]]) - 10) < 0.01);
+var movsPiso = [];
+for (var mm = 1; mm <= 24; mm++) {
+  var dd = new Date(2024, mm - 1, 5);
+  movsPiso.push({ tipo: "Ingreso", importe: "500", fecha: "05/" + String(dd.getMonth() + 1).padStart(2, "0") + "/" + dd.getFullYear(),
+                  tipo_ingreso: "Alquileres", centro: "Inmuebles > Piso" });
+}
+movsPiso.push({ tipo: "Gasto", importe: "1000", fecha: "10/06/2024", tipo_gasto: "Vivienda > Derramas", centro: "Inmuebles > Piso > Comunidad" });
+movsPiso.push({ tipo: "Gasto", importe: "999", fecha: "10/06/2024", tipo_gasto: "Vivienda", centro: "Inmuebles > Otro piso" });
+var fichaPiso = { id: "p1", nombre: "Piso", valor: "130000", valor_compra: "100000", gastos_compra: "10000",
+                  fecha_adquisicion: "01/01/2024", centro: "Inmuebles > Piso",
+                  valoraciones: [{ fecha: "01/01/2025", valor: "120000" }] };
+var rb = M.rentabilidadBien(fichaPiso, { importe: 130000 }, movsPiso, {}, new Date(2026, 0, 1));
+comprobar("un bien suma revalorización y rentas netas de su centro sobre lo que costó",
+  rb.coste === 110000 && rb.revalorizacion === 20000 && rb.rentas === 11000 && rb.ganancia === 31000 &&
+  cerca(rb.totalPct, 31000 / 110000 * 100) && rb.nFlujos === 25,
+  JSON.stringify({ coste: rb.coste, reval: rb.revalorizacion, rentas: rb.rentas }));
+var mitad = rb.serie.filter(function (p) { return p.t === +new Date(2024, 11, 31); })[0];
+comprobar("entre la compra y una valoración el valor va en línea recta",
+  mitad && Math.abs(mitad.valor - (100000 + 20000 * (+new Date(2024, 11, 31) - +new Date(2024, 0, 1)) / (+new Date(2025, 0, 1) - +new Date(2024, 0, 1)))) < 1,
+  mitad && mitad.valor);
+comprobar("la TIR del bien sale con sentido y sin precio de compra no se inventa nada",
+  rb.tir > 10 && rb.tir < 20 && M.rentabilidadBien({ valor: "5" }, { importe: 5 }, [], {}).falta.length === 2,
+  rb.tir);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

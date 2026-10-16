@@ -960,6 +960,105 @@
   const pagePropiedades = (m) => pageBienes(m, "inm", "propiedades", "Inmuebles", "＋ Inmueble", "v2AddProp()", "Sin inmuebles");
   const pageOtros = (m) => pageBienes(m, "otros", "otros", "Otros", "＋ Otro activo", "v2AddOtro()",
     "Nada por aquí: vehículos, obras de arte, relojes, metales, colecciones…");
+  // ── Rentabilidad de cada bien ──────────────────────────────────────────
+  // Se despliega desde su fila: lo que costó, lo que vale, lo que ha rentado,
+  // la TIR y la gráfica de cómo ha ido. Para lo que se tasa a mano, debajo van
+  // sus valoraciones, que son los puntos por los que pasa la gráfica.
+  const BIENES_ABIERTO = {};
+  const fichaBien = (id) => ((CURRENT_DOC && (CURRENT_DOC.propiedades || CURRENT_DOC.inmuebles)) || []).find((x) => x.id === id);
+  const rentaDe = (r) => {
+    const ficha = fichaBien(r.id);
+    return ficha ? window.SolventoModel.rentabilidadBien(ficha, r, (CURRENT_DOC || {}).movimientos, window.__PRICES) : null;
+  };
+  function detalleBien(r) {
+    const R = rentaDe(r);
+    if (!R) return "";
+    const idJs = jsNombre(r.id);
+    const ficha = fichaBien(r.id) || {};
+    const completar = `<button class="solo-editor" onclick="v2EditProp('${idJs}')" style="background:none;border:none;padding:0;
+      color:var(--azul);font-family:inherit;font-size:inherit;cursor:pointer;text-decoration:underline dotted;">Completar la ficha</button>`;
+    if (R.falta) {
+      return `<div style="background:var(--f1b);padding:1rem 1.25rem;font-size:0.84rem;color:var(--t1b);">
+        Para calcular su rentabilidad falta ${esc(R.falta.join(" y "))}. ${completar}</div>`;
+    }
+    const pctTxt = (x) => isFinite(x) ? `<span style="color:${rc(x)};">${fmtPct(x)}</span>` : "—";
+    const eurTxt = (x) => `<span style="color:${rc(x)};">${x >= 0 ? "+" : "−"}${esc(fmtEur(Math.abs(x)))}</span>`;
+    const kpi = (lbl, valor, sub) => `<div style="min-width:0;">
+      <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--t3);font-weight:700;">${lbl}</div>
+      <div style="font-size:1.05rem;font-weight:800;color:var(--t0);margin-top:0.15rem;white-space:nowrap;">${valor}</div>
+      ${sub ? `<div style="font-size:0.74rem;color:var(--t2);margin-top:0.1rem;">${sub}</div>` : ""}</div>`;
+    const anosTxt = R.anos >= 1 ? R.anos.toFixed(1).replace(".", ",") + " años" : Math.max(1, Math.round(R.anos * 12)) + " meses";
+    const kpis = [
+      kpi("Coste", esc(fmtEur(R.coste)), R.gastosCompra ? `${esc(fmtEur(R.compra))} + ${esc(fmtEur(R.gastosCompra))} de gastos` : "precio de compra"),
+      kpi("Vale hoy", esc(fmtEur(R.valor)), `desde el ${esc(ficha.fecha_adquisicion || "")} · ${anosTxt}`),
+      kpi("Revalorización", eurTxt(R.revalorizacion), pctTxt(R.revalPct)),
+      r.centro || R.hayRentas
+        ? kpi("Rentas netas", eurTxt(R.rentas), R.hayRentas ? `${pctTxt(R.rentasPct)} · ${R.nFlujos} movimientos` : "sin movimientos aún")
+        : "",
+      kpi("Rentabilidad total", eurTxt(R.ganancia), pctTxt(R.totalPct)),
+      kpi("TIR anual", isFinite(R.tir) ? pctTxt(R.tir) : "—", isFinite(R.tir) ? "lo que rinde al año" : "hace falta más tiempo"),
+    ].join("");
+    const fuente = R.fuenteValor === "metal"
+      ? `El valor de cada día es su peso por el precio del ${esc(r.metal)} de ese día.`
+      : `El valor pasa en línea recta por la compra, tus valoraciones y el valor de hoy.`;
+    // A una joya no se le pide centro de coste: no suele rentar ni costar nada.
+    const centroTxt = r.centro
+      ? `Las rentas son los ingresos menos los gastos con el centro de coste <b>${esc(r.centro)}</b>.`
+      : (CFG.esInmueble(r.tipo) ? `Sin centro de coste no se le imputan rentas ni gastos. ${completar}` : "");
+    const vals = (ficha.valoraciones || []).slice().reverse();
+    const valoraciones = r.porPeso ? "" : `
+      <div style="margin-top:1.1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--t2);font-weight:700;">Valoraciones</div>
+          <button class="solo-editor" onclick="v2Valoracion('${idJs}')" style="background:var(--f4);border:1px solid var(--b2);border-radius:8px;
+            color:var(--t1);font-size:0.75rem;font-weight:600;padding:0.25rem 0.6rem;cursor:pointer;font-family:inherit;">＋ Valoración</button>
+        </div>
+        ${vals.length ? vals.map((v) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;
+            padding:0.35rem 0;border-bottom:1px solid var(--b1);font-size:0.84rem;">
+            <span style="color:var(--t1b);">${esc(v.fecha)}</span>
+            <span style="margin-left:auto;color:var(--t0);font-weight:600;">${esc(fmtEur(parseFloat(v.valor)))}</span>
+            <button class="solo-editor fila-acc" onclick="v2BorrarValoracion('${idJs}','${esc(v.fecha)}')" title="Borrar esta valoración"
+              style="background:none;border:none;color:var(--t2);cursor:pointer;padding:0 0.3rem;">✕</button></div>`).join("")
+          : `<div style="font-size:0.8rem;color:var(--t2);padding:0.4rem 0;">Ninguna todavía: la gráfica va en línea recta de la compra a hoy.
+               Cada vez que cambies su valor actual se apunta una, con la fecha del día.</div>`}
+      </div>`;
+    return `<div style="background:var(--f1b);padding:1.1rem 1.25rem 1.25rem;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(7rem,1fr));gap:1.1rem 1rem;">${kpis}</div>
+      <div id="bien-chart-${esc(r.id)}" style="margin-top:1.25rem;"></div>
+      <div style="font-size:0.74rem;color:var(--t3);margin-top:0.6rem;line-height:1.5;">${fuente} ${centroTxt}</div>
+      ${valoraciones}</div>`;
+  }
+  // Las gráficas se montan cuando su contenedor ya está en la página.
+  function montarBienes() {
+    if (!window.SolventoCharts || !window.SolventoCharts.mountMulti || !window.__MODEL) return;
+    const m = window.__MODEL;
+    [].concat((m.inm && m.inm.items) || [], (m.otros && m.otros.items) || []).forEach((r) => {
+      if (!BIENES_ABIERTO[r.id]) return;
+      const el = document.getElementById("bien-chart-" + r.id);
+      const R = rentaDe(r);
+      if (!el || !R || R.falta) return;
+      if (R.serie.length < 2) {
+        el.innerHTML = `<div style="color:var(--t2);font-size:0.82rem;">La gráfica aparece cuando lleve más de un mes en tu poder.</div>`;
+        return;
+      }
+      const serie = (k) => R.serie.map((p) => [p.t, p[k]]);
+      const series = [{ key: "total", label: "Rentabilidad total", destacada: true, puntos: serie("totalPct") },
+                      { key: "reval", label: "Revalorización", puntos: serie("revalPct") }];
+      if (R.hayRentas) series.push({ key: "rentas", label: "Rentas netas", puntos: serie("rentasPct") });
+      window.SolventoCharts.mountMulti(el, series, { meses: R.serie.map((p) => p.t) });
+    });
+  }
+  window.v2BienToggle = (id) => {
+    BIENES_ABIERTO[id] = !BIENES_ABIERTO[id];
+    const m = window.__MODEL;
+    if (!m) return;
+    document.getElementById("v2-page-propiedades").innerHTML = pagePropiedades(m);
+    document.getElementById("v2-page-otros").innerHTML = pageOtros(m);
+    montarBienes();
+  };
+  window.v2Valoracion = (id) => F() && F().openValoracion(id);
+  window.v2BorrarValoracion = (id, fecha) => F() && F().borrarValoracion(id, fecha);
+
   function pageBienes(m, clave, id, titulo, botonNuevo, accionNuevo, vacio) {
     const inm = m[clave];
     // Los costes reales se calculan una vez para toda la página, no por fila.
@@ -1013,16 +1112,24 @@
       // Con la descripción dentro también, a la celda del nombre solo le queda el
       // nombre: deja de partirse por la mitad y las cifras recuperan su sitio.
       const contexto = `<div style="font-size:0.74rem;color:var(--t2);">${detalle}</div>${alquiler}${realLinea}${sinMarcar}`;
+      const abierto = !!BIENES_ABIERTO[r.id];
+      const idJs = jsNombre(r.id);
       return `<tr class="table-row" onmouseenter="v2Reparto('${id}','${tipoJs}',true)" onmouseleave="v2Reparto('${id}',null)">
         <td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;">
           <span style="width:9px;height:9px;border-radius:50%;background:${r.accent};flex-shrink:0;"></span>
-          <div><div style="color:var(--t0);font-weight:600;">${esc(r.nombre)}</div>
+          <div><button onclick="v2BienToggle('${idJs}')" title="Ver su rentabilidad"
+              style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;background:none;border:none;padding:0;color:var(--t0);
+              font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">
+              <span>${esc(r.nombre)}</span>
+              <span style="color:${abierto ? "var(--azul)" : "var(--t3)"};font-size:0.72rem;font-weight:500;white-space:nowrap;">
+                ${abierto ? "▾ ocultar" : "▸ rentabilidad"}</span></button>
             <div class="solo-ancho">${contexto}</div></div></div></td>
         <td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${fmtEur(r.importe)}</td>
         <td class="col-secundaria" style="text-align:right;color:var(--t1b);white-space:nowrap;">${r.coste > 0 ? fmtEur(r.coste) : "—"}</td>
         <td style="text-align:right;white-space:nowrap;">${revalorizacion}</td>
         ${rowActions(`v2EditProp('${r.id}')`, `v2DelProp('${r.id}')`)}</tr>` +
-        `<tr class="fila-detalle"><td colspan="5">${contexto}</td></tr>`;
+        `<tr class="fila-detalle"><td colspan="5">${contexto}</td></tr>` +
+        (abierto ? `<tr class="bien-detalle"><td colspan="5" style="padding:0;">${detalleBien(r)}</td></tr>` : "");
     }).join("");
 
     const rentaPanel = inm.alquiladas
@@ -1043,7 +1150,7 @@
           <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">${esc(titulo)}</div>
           ${addBtn(botonNuevo, accionNuevo)}
         </div>
-        <table class="minimal-table"><thead><tr><th style="text-align:left;">Nombre</th><th style="text-align:right;">Valor actual</th><th class="col-secundaria" style="text-align:right;">Compra</th><th style="text-align:right;">Revalorización</th><th></th></tr></thead>
+        <table class="minimal-table"><thead><tr><th style="text-align:left;">Nombre</th><th style="text-align:right;">Valor actual</th><th class="col-secundaria" style="text-align:right;">Coste</th><th style="text-align:right;">Revalorización</th><th></th></tr></thead>
         <tbody>${rows || `<tr><td style="color:var(--t2);padding:1rem;">${esc(vacio)}</td></tr>`}</tbody></table>
       </div></div>`;
   }
@@ -2490,6 +2597,7 @@
     document.getElementById("v2-page-cartera").innerHTML = pageCartera(m, prices);
     document.getElementById("v2-page-propiedades").innerHTML = pagePropiedades(m);
     document.getElementById("v2-page-otros").innerHTML = pageOtros(m);
+    montarBienes();
     document.getElementById("v2-page-pasivos").innerHTML = pagePasivos(m);
     pintarTiposPasivo(m);
     // Una organización tiene su presupuesto aprobado en asamblea —lo previsto

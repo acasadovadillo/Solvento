@@ -248,7 +248,8 @@
         importe = num(r.valor != null ? r.valor : r.tasacion);
       }
 
-      const coste = num(r.valor_compra);
+      // Lo que costó de verdad: el precio y lo que se pagó para comprarlo.
+      const coste = isFinite(num(r.valor_compra)) ? round2(num(r.valor_compra) + (num(r.gastos_compra) || 0)) : NaN;
       const fechaCompra = parseFechaES(r.fecha_adquisicion);
       const ganancia = (isFinite(importe) && isFinite(coste)) ? round2(importe - coste) : NaN;
       const rentPct = (coste > 0 && isFinite(importe)) ? (importe / coste - 1) * 100 : NaN;
@@ -294,6 +295,131 @@
     const costeSinAlquilar = round2(sinAlquilar.reduce((s, x) => s + x.costeAnual, 0));
     return { items: arr, total, totalCoste, n: arr.length, alquiladas: alquiladas.length, rentaAnualTotal,
              sinAlquilar, costeSinAlquilar };
+  }
+
+  // ── Rentabilidad de un bien a lo largo del tiempo ────────────────────────
+  // Lo que ha dado un piso o una joya desde que es tuyo tiene dos partes, y la
+  // tabla de Inmuebles solo enseñaba una:
+  //   · revalorización: lo que vale hoy menos lo que costó, gastos de compra
+  //     incluidos (notaría, impuestos, agencia: también salieron de tu bolsillo)
+  //   · rentas netas: lo cobrado menos lo pagado por él, que son los movimientos
+  //     con su centro de coste (o uno que cuelgue de él)
+  // La suma, sobre lo que costó, es su rentabilidad total; y la TIR la pone en
+  // ritmo anual, que es lo que se compara con un ETF o con un depósito.
+  //
+  // El valor de cada mes sale de lo que se sepa: el precio de compra el día que
+  // se compró, cada valoración con su fecha y el valor de la ficha hoy, con una
+  // línea recta entre medias. Lo que se valora por peso no necesita nada de
+  // eso: gramos × precio del metal de cada día.
+  function xirr(flujos) {
+    // flujos = [[fecha, importe]]: negativo lo que pones, positivo lo que sacas
+    if (flujos.length < 2 || !flujos.some((f) => f[1] < 0) || !flujos.some((f) => f[1] > 0)) return NaN;
+    const t0 = flujos[0][0];
+    const npv = (r) => flujos.reduce((s, [f, v]) => s + v / Math.pow(1 + r, (f - t0) / (365.25 * 864e5)), 0);
+    let lo = -0.9999, hi = 10, flo = npv(lo), fhi = npv(hi);
+    if (!isFinite(flo) || !isFinite(fhi) || flo * fhi > 0) return NaN;
+    for (let k = 0; k < 200; k++) {
+      const mid = (lo + hi) / 2, fm = npv(mid);
+      if (Math.abs(fm) < 1e-7) return mid * 100;
+      if (flo * fm < 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
+    }
+    return (lo + hi) / 2 * 100;
+  }
+
+  // Interpolación lineal en una serie [[t, v]] ordenada; fuera de ella, el extremo.
+  function valorEnFecha(puntos, t) {
+    if (!puntos.length) return NaN;
+    if (t <= puntos[0][0]) return puntos[0][1];
+    for (let i = 1; i < puntos.length; i++) {
+      if (t <= puntos[i][0]) {
+        const [ta, va] = puntos[i - 1], [tb, vb] = puntos[i];
+        return tb === ta ? vb : va + (vb - va) * (t - ta) / (tb - ta);
+      }
+    }
+    return puntos[puntos.length - 1][1];
+  }
+
+  /*
+   * r      la ficha tal cual (propiedades[i])
+   * item   la misma, ya valorada por valuatePropiedades (importe de hoy)
+   * hoy    opcional, para las pruebas
+   * Devuelve null si no hay con qué: sin precio de compra o sin fecha no hay
+   * rentabilidad que calcular, solo un valor.
+   */
+  function rentabilidadBien(r, item, movimientos, prices, hoy) {
+    const ahora = hoy || new Date();
+    const compra = num(r.valor_compra), gastosCompra = num(r.gastos_compra) || 0;
+    const inicio = parseFechaES(r.fecha_adquisicion);
+    const coste = round2((isFinite(compra) ? compra : 0) + gastosCompra);
+    const falta = [];
+    if (!(compra > 0)) falta.push("el valor de compra");
+    if (!inicio) falta.push("la fecha de adquisición");
+    if (falta.length) return { falta };
+    const valorHoy = item && isFinite(item.importe) ? item.importe : num(r.valor);
+
+    // El valor en el tiempo
+    let valorEn;
+    const hist = item && item.porPeso && prices && prices.metales_hist && prices.metales_hist[item.metal];
+    if (hist && hist.length) {
+      const peso = item.peso;
+      const serie = hist.map(([t, eurG]) => [t, peso * eurG]).filter(([t]) => t > +inicio);
+      const puntos = [[+inicio, compra]].concat(serie).concat([[+ahora, valorHoy]]);
+      valorEn = (t) => valorEnFecha(puntos, t);
+    } else {
+      const vals = (Array.isArray(r.valoraciones) ? r.valoraciones : [])
+        .map((v) => [parseFechaES(v.fecha), num(v.valor)])
+        .filter(([f, v]) => f && isFinite(v) && f > inicio && f < ahora)
+        .map(([f, v]) => [+f, v]);
+      const puntos = [[+inicio, compra]].concat(vals).concat(isFinite(valorHoy) ? [[+ahora, valorHoy]] : [])
+        .sort((a, b) => a[0] - b[0]);
+      valorEn = (t) => valorEnFecha(puntos, t);
+    }
+
+    // Lo cobrado y lo pagado por él, mes a mes, desde que es tuyo
+    const centro = String(r.centro || "").trim();
+    const deEste = (c) => !!centro && (c === centro || c.indexOf(centro + " > ") === 0);
+    const flujos = [];   // [t, neto]
+    for (const m of movimientos || []) {
+      if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") continue;
+      if (esAjuste(m) || esMovInversion(m)) continue;
+      if (!deEste(String(m.centro || "").trim())) continue;
+      const f = parseFechaES(m.fecha);
+      if (!f || f < inicio || f > ahora) continue;
+      const imp = Math.abs(num(m.importe) || 0);
+      if (!(imp > 0)) continue;
+      flujos.push([+f, m.tipo === "Ingreso" ? imp : -imp]);
+    }
+    flujos.sort((a, b) => a[0] - b[0]);
+
+    // Un punto por mes, al cierre del mes (el último, hoy)
+    const meses = [];
+    for (let d = new Date(inicio.getFullYear(), inicio.getMonth() + 1, 0); ; d = new Date(d.getFullYear(), d.getMonth() + 2, 0)) {
+      if (d >= ahora) { meses.push(+ahora); break; }
+      meses.push(+d);
+    }
+    let k = 0, acum = 0;
+    const serie = meses.map((t) => {
+      while (k < flujos.length && flujos[k][0] <= t) acum += flujos[k++][1];
+      const v = valorEn(t);
+      return { t, valor: round2(v), rentas: round2(acum),
+               revalPct: (v - coste) / coste * 100, rentasPct: acum / coste * 100,
+               totalPct: (v - coste + acum) / coste * 100 };
+    });
+    const ult = serie[serie.length - 1];
+    const anos = (ahora - inicio) / (365.25 * 864e5);
+    // TIR: lo que pusiste al comprar, cada mes lo que dio o costó, y hoy lo que vale
+    const tir = anos >= 0.25
+      ? xirr([[+inicio, -coste]].concat(flujos).concat([[+ahora, valorHoy]]))
+      : NaN;
+    return {
+      inicio, anos, coste, compra, gastosCompra, valor: ult.valor,
+      revalorizacion: round2(ult.valor - coste), rentas: ult.rentas,
+      ganancia: round2(ult.valor - coste + ult.rentas),
+      revalPct: ult.revalPct, rentasPct: ult.rentasPct, totalPct: ult.totalPct,
+      tir, hayRentas: flujos.length > 0, nFlujos: flujos.length, serie,
+      fuenteValor: hist && hist.length ? "metal" : "valoraciones",
+      nValoraciones: (Array.isArray(r.valoraciones) ? r.valoraciones.length : 0),
+    };
   }
 
   // ── Modelo completo ──
@@ -1642,5 +1768,5 @@
     return { caja, cartera, patrimonio };
   }
 
-  window.SolventoModel = { build, buildSeries, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, planMensual, seguimientoPlan, tarjetas, tarjetaDeLiquidacion, cicloTarjeta, revisarLiquidacion, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
+  window.SolventoModel = { build, buildSeries, rentabilidadBien, xirr, buildAnalitica, buildGastos, resumenCentros, pendientes, esPendiente, resumenPrestamos, revision, arreglarTexto, textosMalCodificados, cobrosPendientes, porCobrar, planMensual, seguimientoPlan, tarjetas, tarjetaDeLiquidacion, cicloTarjeta, revisarLiquidacion, presupuestoAnual, aniosConDatos, flujoMensual, partirCategoria, rutaCategoria, agruparCategorias, arbolCategorias, arbolCentros, repartoRegla, clasificarCategoria, REGLA_DEFECTO, _internals: { computeSaldos, valuate, valuatePropiedades, parseFechaES, round2 } };
 })();

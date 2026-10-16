@@ -151,12 +151,20 @@ def main():
         hist[t] = h
         print(f"   {t:14s} → {('%.4f €' % p) if p else 'sin precio':>12s}  · histórico {len(h)} puntos")
     metales = fetch_metales(fx)
+    # El histórico, en € por gramo: para dibujar cuánto ha rentado una joya o un
+    # lingote desde que se compró, no solo cuánto vale hoy.
+    metales_hist = {}
+    for nombre, ticker in METALES.items():
+        h = fetch_hist_eur(ticker, fx)
+        metales_hist[nombre] = [[t, round(v / ONZA_TROY_EN_GRAMOS, 4)] for t, v in h]
+        print(f"   {nombre:14s} · histórico {len(h)} puntos")
     doc = {
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "fx_eur": fx,
         "eur": eur,
         "hist": hist,
         "metales": metales,   # € por gramo
+        "metales_hist": metales_hist,   # [[ts_ms, € por gramo]]
     }
     with open("prices.json", "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))

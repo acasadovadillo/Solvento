@@ -1402,6 +1402,9 @@
         ${field("p-valor", "Valor actual (€)", input("p-valor", "number", e.valor != null ? e.valor : e.tasacion, 'step="0.01" min="0"'))}
       </div>` +
       field("p-compra", "Valor de compra (€)", input("p-compra", "number", e.valor_compra, 'step="0.01" min="0"')) +
+      // Lo que costó comprarlo además del precio: impuestos, notaría, registro,
+      // agencia. Sin esto la rentabilidad sale mejor de lo que fue.
+      field("p-gcompra", "Gastos de compra (€) — opcional", input("p-gcompra", "number", e.gastos_compra, 'step="0.01" min="0" placeholder="Impuestos, notaría, registro, agencia"')) +
       field("p-fecha", "Fecha de adquisición", input("p-fecha", "date", toISO(e.fecha_adquisicion))) +
       `<label style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:var(--t1b);margin-top:0.9rem;cursor:pointer;">
          <input type="checkbox" id="p-alq" ${e.alquilada ? "checked" : ""}> Está alquilada</label>` +
@@ -1431,6 +1434,7 @@
         valor_compra: G("p-compra"), fecha_adquisicion: fromISO(G("p-fecha")),
         alquilada: document.getElementById("p-alq").checked,
       });
+      if (G("p-gcompra")) rec.gastos_compra = G("p-gcompra"); else delete rec.gastos_compra;
       const centro = G("p-centro");
       if (centro) rec.centro = centro; else delete rec.centro;
       if (rec.centro) {
@@ -1445,6 +1449,11 @@
       } else {
         const v = parseFloat(G("p-valor"));
         if (!isFinite(v) || v < 0) return "Introduce un valor válido";
+        // Cambiar el valor es una valoración nueva, y se apunta con su fecha:
+        // así la gráfica de rentabilidad se va dibujando sola, ficha a ficha,
+        // sin que nadie tenga que acordarse de llevar un histórico aparte.
+        const antes = parseFloat(e.valor != null ? e.valor : e.tasacion);
+        if (existing && isFinite(antes) && Math.abs(antes - v) > 0.005) apuntarValoracion(rec, hoyES(), v);
         rec.valor = String(v);
       }
       upsert(doc.propiedades, rec);
@@ -1475,6 +1484,47 @@
     document.getElementById("p-alq").addEventListener("change", refrescar);
     document.getElementById("p-centro").addEventListener("change", refrescar);
     refrescar();
+  }
+
+  // Una valoración por fecha: la de un día pisa a la que hubiera ese mismo día.
+  function apuntarValoracion(rec, fecha, valor) {
+    const lista = (Array.isArray(rec.valoraciones) ? rec.valoraciones : []).filter((x) => x.fecha !== fecha);
+    lista.push({ fecha, valor: String(valor) });
+    const t = (f) => { const [d, m, a] = String(f).split("/"); return new Date(+a, +m - 1, +d).getTime() || 0; };
+    rec.valoraciones = lista.sort((a, b) => t(a.fecha) - t(b.fecha));
+  }
+  // Lo que vale un piso no se sabe a diario: se tasa, se mira en un portal, se
+  // recibe una oferta. Cada vez es un punto con fecha, y entre dos puntos la
+  // gráfica traza una recta. La más reciente es además su valor de hoy.
+  function openValoracion(id) {
+    if (soloLectura()) return;
+    const doc = DB.state.doc;
+    const lista = doc.propiedades || doc.inmuebles || [];
+    const r = lista.find((x) => x.id === id);
+    if (!r) return;
+    const body =
+      field("v-fecha", "Fecha", input("v-fecha", "date", toISO(hoyES()))) +
+      field("v-valor", "Valor (€)", input("v-valor", "number", "", 'step="0.01" min="0"')) +
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Una tasación, el precio de pisos parecidos
+         o una oferta que te hayan hecho. Si es la más reciente, pasa a ser también su valor actual.</div>`;
+    shell("Nueva valoración · " + (r.nombre || r.direccion || ""), body, () => {
+      const fecha = fromISO(G("v-fecha")), v = parseFloat(G("v-valor"));
+      if (!fecha) return "Indica la fecha";
+      if (!isFinite(v) || v < 0) return "Introduce un valor válido";
+      apuntarValoracion(r, fecha, v);
+      const ultima = r.valoraciones[r.valoraciones.length - 1];
+      if (ultima.fecha === fecha) r.valor = String(v);
+      return null;
+    });
+  }
+  async function borrarValoracion(id, fecha) {
+    if (soloLectura()) return;
+    const doc = DB.state.doc;
+    const r = (doc.propiedades || doc.inmuebles || []).find((x) => x.id === id);
+    if (!r || !Array.isArray(r.valoraciones)) return;
+    if (!confirm(`¿Borrar la valoración del ${fecha}?`)) return;
+    r.valoraciones = r.valoraciones.filter((x) => x.fecha !== fecha);
+    if (window.SolventoBoot && window.SolventoBoot.saveDoc) await window.SolventoBoot.saveDoc();
   }
 
   // ── Valor liquidativo (NAV) de un fondo manual ──
@@ -1823,6 +1873,7 @@
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editPropiedad: (id) => openPropiedad(findById("propiedades", id) || findById("inmuebles", id)),
+    openValoracion, borrarValoracion,
     editPasivo: (id) => openPasivo(findById("pasivos", id)),
     deleteMovimiento: (id) => del("movimientos", id),
     editCobro: (id) => openCobro(((DB.state.doc || {}).cobros || []).find((x) => x.id === id)),
