@@ -356,6 +356,37 @@
     return puntos[puntos.length - 1][1];
   }
 
+  // El valor de un bien en cualquier fecha, como función. Lo usan su
+  // rentabilidad y la curva del patrimonio, y tienen que contar lo mismo.
+  //   · por peso, con histórico del metal: gramos × precio de ese día
+  //   · el resto: recta entre la compra, cada valoración y el valor de hoy
+  // Antes de comprarlo vale 0. Sin fecha de compra se toma su valor de hoy
+  // para cualquier fecha: no se sabe cuándo llegó, y sacarlo de la curva la
+  // haría acabar lejos de lo que de verdad tienes.
+  function valorDeBien(r, item, prices, hoy) {
+    const ahora = hoy || new Date();
+    const compra = num(r.valor_compra);
+    const inicio = parseFechaES(r.fecha_adquisicion);
+    const valorHoy = item && isFinite(item.importe) ? item.importe : num(r.valor);
+    if (!inicio) return { valorEn: () => (isFinite(valorHoy) ? valorHoy : 0), hist: null, inicio: null };
+    const base = isFinite(compra) && compra > 0 ? compra : valorHoy;
+    const hist = item && item.porPeso && prices && prices.metales_hist && prices.metales_hist[item.metal];
+    let puntos;
+    if (hist && hist.length) {
+      const serie = hist.map(([t, eurG]) => [t, item.peso * eurG]).filter(([t]) => t > +inicio && t < +ahora);
+      puntos = [[+inicio, base]].concat(serie).concat([[+ahora, valorHoy]]);
+    } else {
+      const vals = (Array.isArray(r.valoraciones) ? r.valoraciones : [])
+        .map((v) => [parseFechaES(v.fecha), num(v.valor)])
+        .filter(([f, v]) => f && isFinite(v) && f > inicio && f < ahora)
+        .map(([f, v]) => [+f, v]);
+      puntos = [[+inicio, base]].concat(vals).concat(isFinite(valorHoy) ? [[+ahora, valorHoy]] : [])
+        .sort((a, b) => a[0] - b[0]);
+    }
+    puntos = puntos.filter((p) => isFinite(p[1]));
+    return { valorEn: (t) => (t < +inicio || !puntos.length ? 0 : valorEnFecha(puntos, t)), hist, inicio };
+  }
+
   /*
    * r      la ficha tal cual (propiedades[i])
    * item   la misma, ya valorada por valuatePropiedades (importe de hoy)
@@ -373,24 +404,7 @@
     if (!inicio) falta.push("la fecha de adquisición");
     if (falta.length) return { falta };
     const valorHoy = item && isFinite(item.importe) ? item.importe : num(r.valor);
-
-    // El valor en el tiempo
-    let valorEn;
-    const hist = item && item.porPeso && prices && prices.metales_hist && prices.metales_hist[item.metal];
-    if (hist && hist.length) {
-      const peso = item.peso;
-      const serie = hist.map(([t, eurG]) => [t, peso * eurG]).filter(([t]) => t > +inicio);
-      const puntos = [[+inicio, compra]].concat(serie).concat([[+ahora, valorHoy]]);
-      valorEn = (t) => valorEnFecha(puntos, t);
-    } else {
-      const vals = (Array.isArray(r.valoraciones) ? r.valoraciones : [])
-        .map((v) => [parseFechaES(v.fecha), num(v.valor)])
-        .filter(([f, v]) => f && isFinite(v) && f > inicio && f < ahora)
-        .map(([f, v]) => [+f, v]);
-      const puntos = [[+inicio, compra]].concat(vals).concat(isFinite(valorHoy) ? [[+ahora, valorHoy]] : [])
-        .sort((a, b) => a[0] - b[0]);
-      valorEn = (t) => valorEnFecha(puntos, t);
-    }
+    const { valorEn, hist } = valorDeBien(r, item, prices, ahora);
 
     // Lo cobrado y lo pagado por él, mes a mes, desde que es tuyo
     const centro = String(r.centro || "").trim();
@@ -1645,7 +1659,8 @@
   // Muestrea en las fechas de movimiento (como la v1): en cada fecha, el valor
   // de la cartera = Σ unidades_acumuladas(fecha) × precio(fecha), con precio del
   // histórico Yahoo (prices.hist) o del NAV (db.nav); el patrimonio neto añade
-  // el líquido acumulado y la tasación de inmuebles ya adquiridos.
+  // el líquido acumulado, el valor de cada bien en esa fecha y lo que te deben,
+  // y resta las deudas vivas. El último punto es hoy y coincide con la cifra.
   function buildSeries(db, prices) {
     const byJk = buildRegistry(db.inversiones);
     const hist = (prices && prices.hist) || {};
@@ -1760,28 +1775,77 @@
       return vivo + cobrosVivos.reduce((s, c) => s + (c.t <= t ? c.v : 0), 0);
     }
 
+    // ── Los bienes, a lo largo del tiempo ──
+    // Antes se leían del formato antiguo (inmuebles/tasación) y con los datos
+    // de ahora no entraba ninguno: la curva acababa lejos del patrimonio neto
+    // que se lee justo encima. Ahora cada bien vale en cada fecha lo mismo que
+    // en su gráfica de rentabilidad.
+    const fichas = db.propiedades || db.inmuebles || [];
+    const bienes = fichas.map((r) => valorDeBien(r, valuatePropiedades([r], prices).items[0], prices, NOW));
+    const bienesEn = (t) => bienes.reduce((s, b) => s + (b.valorEn(t) || 0), 0);
+
+    // ── Las deudas, a lo largo del tiempo ──
+    // Una deuda calculada (una tarjeta) tiene el saldo que digan sus
+    // movimientos hasta esa fecha, con la misma regla que valuatePasivos. Una
+    // de importe escrito a mano no tiene historia: cuenta entera desde su
+    // fecha «Desde» o desde el primer movimiento que la nombra (la fianza,
+    // desde el traspaso con que entró), y si no hay ni una cosa ni otra, en
+    // toda la curva.
+    const deudas = (db.pasivos || []).map((r) => {
+      const nombre = r.nombre || r.concepto || "Deuda";
+      const suyos = (db.movimientos || []).filter((m) => {
+        const o = String(m.cuenta_origen || "").trim(), d = String(m.cuenta_destino || "").trim();
+        return o === nombre || d === nombre;
+      });
+      const calculada = r.calcular !== false && r.importe == null;
+      if (calculada) {
+        const ev = suyos.map((m) => {
+          const f = parseFechaES(m.fecha); if (!f) return null;
+          return { t: f.getTime(), d: saldoDeMovimientos(nombre, [m]) };
+        }).filter(Boolean).sort((a, b) => a.t - b.t);
+        return { fechas: ev.map((e) => e.t), en: (t) => {
+          let v = 0; for (const e of ev) { if (e.t > t) break; v += e.d; }
+          v = round2(v); return v > 0.005 ? v : 0;
+        } };
+      }
+      const importe = num(r.importe != null ? r.importe : (r.pendiente != null ? r.pendiente : r.saldo));
+      const fechasMov = suyos.map((m) => parseFechaES(m.fecha)).filter(Boolean).map((f) => f.getTime());
+      const desde = parseFechaES(r.desde);
+      const t0 = desde ? desde.getTime() : (fechasMov.length ? Math.min(...fechasMov) : null);
+      return { fechas: t0 != null ? [t0] : [], en: (t) => (isFinite(importe) && importe > 0.005 && (t0 == null || t >= t0) ? importe : 0) };
+    });
+    const deudasEn = (t) => deudas.reduce((s, d) => s + d.en(t), 0);
+
     // Las fechas se cierran aquí, cuando ya están todas: los préstamos y los
     // cobros añaden las suyas, y una serie a la que le falta una fecha dibuja un
-    // escalón donde no lo hay.
+    // escalón donde no lo hay. La compra de un bien y el arranque de una deuda
+    // también son escalones, pero solo dentro del tramo que ya cubren los
+    // movimientos: antes del primero no se sabe qué había en la caja, y una
+    // curva que empieza años antes con solo el piso contaría otra historia.
+    const primera = Math.min(...Object.keys(deltaByDate).map(Number));
+    const dentro = (t) => isFinite(t) && t > primera && t < NOW.getTime();
+    bienes.forEach((b) => { if (b.inicio && dentro(+b.inicio)) deltaByDate[+b.inicio] = deltaByDate[+b.inicio] || 0; });
+    deudas.forEach((d) => d.fechas.forEach((t) => { if (dentro(t)) deltaByDate[t] = deltaByDate[t] || 0; }));
     const dates = Object.keys(deltaByDate).map(Number).sort((a, b) => a - b);
-
-    const inmCompra = (db.inmuebles || [])
-      .map((r) => { const f = parseFechaES(r.fecha_adquisicion); return f ? { t: f.getTime(), v: num(r.tasacion) } : null; })
-      .filter((x) => x && isFinite(x.v));
-    const inmEn = (t) => inmCompra.reduce((s, x) => s + (x.t <= t ? x.v : 0), 0);
 
     // La caja se acumulaba ya para el patrimonio, pero no se devolvía, y era la
     // única de las tres que no se podía ver por separado. Es la que dice si el
     // mes se cerró con más dinero disponible o con menos, que es otra pregunta
     // distinta de cuánto vale todo lo que tienes.
     let liq = 0; const caja = [], cartera = [], patrimonio = [];
+    const punto = (t, cv) => {
+      caja.push([t, round2(liq)]);
+      cartera.push([t, round2(cv)]);
+      patrimonio.push([t, round2(liq + cv + bienesEn(t) + cobrarEn(t) - deudasEn(t))]);
+    };
     for (const t of dates) {
       liq += deltaByDate[t];
-      const cv = round2(invEn(t));
-      caja.push([t, round2(liq)]);
-      cartera.push([t, cv]);
-      patrimonio.push([t, round2(liq + cv + inmEn(t) + cobrarEn(t))]);
+      punto(t, invEn(t));
     }
+    // Y el último punto, hoy, con la cartera a precio de hoy —el mismo que usa
+    // Patrimonio—: así la curva acaba donde dice la cifra de arriba, y no en
+    // el día del último movimiento con el precio de cierre de entonces.
+    if (dates.length && dates[dates.length - 1] < NOW.getTime()) punto(NOW.getTime(), valuate(db, prices).total);
     return { caja, cartera, patrimonio };
   }
 

@@ -476,6 +476,9 @@
       field("d-cuenta", "Cuenta vinculada", selectKV("d-cuenta",
         [["", "— Ninguna —"]].concat(CUENTAS().map((c) => [c, c])), e.cuenta || "")) +
       field("d-importe", "Pendiente de pagar (€)", input("d-importe", "number", e.importe, 'step="0.01" min="0" placeholder="120000"')) +
+      // Desde cuándo se debe, para la curva del patrimonio. Si un movimiento la
+      // nombra —la fianza entró con un traspaso— ya se sabe y no hace falta.
+      field("d-desde", "Se debe desde — opcional", input("d-desde", "date", toISO(e.desde))) +
       `<div class="ff-nota" id="d-nota" style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.</div>`;
     shell(existing ? "Editar deuda" : "Nueva deuda", body, () => {
       const nombre = G("d-nombre");
@@ -491,6 +494,8 @@
         entidad: G("d-entidad"), cuenta: G("d-cuenta"),
       };
       if (!calculada) rec.importe = String(importe);
+      const desde = fromISO(G("d-desde"));
+      if (desde && !calculada) rec.desde = desde; else delete rec.desde;
       upsert(doc.pasivos, rec);
       return null;
     });
@@ -505,8 +510,11 @@
     const nota = document.getElementById("d-nota");
     const lbl = document.querySelector('.ff[data-for="d-importe"] label');
     const lblCuenta = document.querySelector('.ff[data-for="d-cuenta"] label');
+    const filaDesde = document.querySelector('.ff[data-for="d-desde"]');
     function upd() {
       const t = tipoEl.value === TARJETA;
+      // Una tarjeta tiene su historia en sus compras y recibos: no lleva fecha.
+      if (filaDesde) filaDesde.style.display = t ? "none" : "";
       if (lblCuenta) lblCuenta.textContent = t ? "Cuenta de cargo" : "Cuenta vinculada — solo si no es la entidad";
       if (lbl) lbl.textContent = t ? "Pendiente de pagar (€) — opcional" : "Pendiente de pagar (€)";
       if (impEl) impEl.placeholder = t ? "Déjalo vacío: se calcula solo" : "120000";
@@ -515,7 +523,8 @@
           ? `Déjalo <b>vacío</b> y el saldo lo calculan sus movimientos: cada compra suma y cada recibo la salda.
              La <b>cuenta de cargo</b> es de donde sale el dinero el día del recibo.`
           : `Anota lo que <b>te queda por pagar</b> hoy, no el importe original. Se descuenta de tu patrimonio neto.
-             En Caja cuelga de su <b>entidad</b> si es una de tus cuentas; si el dinero está en otra, elígela en <b>cuenta vinculada</b>.`;
+             En Caja cuelga de su <b>entidad</b> si es una de tus cuentas; si el dinero está en otra, elígela en <b>cuenta vinculada</b>.
+             <b>Se debe desde</b> sitúa la deuda en la curva del patrimonio; sin ella, cuenta desde el primer movimiento que la nombre.`;
       }
     }
     tipoEl.addEventListener("change", upd); upd();

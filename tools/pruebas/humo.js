@@ -87,6 +87,35 @@ comprobar("la serie de caja termina en el saldo de caja",
   cerca(s.caja[s.caja.length - 1][1], m.patrimonioLiquido),
   s.caja[s.caja.length - 1][1] + " vs " + m.patrimonioLiquido);
 
+// La curva del patrimonio neto acaba donde dice la cifra de arriba: con los
+// bienes (pisos, oro por peso, un bien sin fecha), las deudas (una tarjeta
+// calculada, una fianza escrita a mano que entró con un traspaso) y lo que te
+// deben. Antes los bienes del formato actual no entraban y ninguna deuda
+// restaba, y la curva terminaba lejos de la cifra.
+var conTodo = JSON.parse(JSON.stringify(doc));
+conTodo.propiedades = (conTodo.propiedades || []).concat([
+  { id: "pz1", nombre: "Monedas", tipo: "Metal precioso", metal: "oro", peso_g: "31.1", valor_compra: "1500", fecha_adquisicion: "01/03/2025" },
+  { id: "pz2", nombre: "Cuadro", tipo: "Obra de arte", valor: "800" },
+]);
+conTodo.pasivos = (conTodo.pasivos || []).concat([{ id: "fz1", nombre: "Fianza inquilinos", tipo: "Fianza", importe: "1500" }]);
+conTodo.movimientos = conTodo.movimientos.concat([{ id: "mfz", tipo: "Traspaso", importe: "1500", fecha: "01/09/2026",
+  cuenta_origen: "Fianza inquilinos", cuenta_destino: conTodo.movimientos.filter(function (x) { return x.cuenta_destino; })[0].cuenta_destino }]);
+var mTodo = M.build(conTodo, precios), sTodo = M.buildSeries(conTodo, precios);
+var finTodo = sTodo.patrimonio[sTodo.patrimonio.length - 1][1];
+comprobar("la curva del patrimonio neto acaba en el patrimonio neto, con bienes y deudas",
+  cerca(finTodo, mTodo.patrimonioNeto) && mTodo.pas.total > 0 && (mTodo.inm.total + mTodo.otros.total) > 0,
+  finTodo + " vs " + mTodo.patrimonioNeto);
+// La fianza entra en la caja y en la deuda el mismo día: la curva tiene que
+// ser exactamente la misma que sin ella.
+var sinFianza = JSON.parse(JSON.stringify(conTodo));
+sinFianza.pasivos = sinFianza.pasivos.filter(function (d) { return d.id !== "fz1"; });
+sinFianza.movimientos = sinFianza.movimientos.filter(function (x) { return x.id !== "mfz"; });
+var sSin = M.buildSeries(sinFianza, precios);
+var valorEn = function (serie, t) { var v = null; serie.forEach(function (p) { if (p[0] <= t) v = p[1]; }); return v; };
+comprobar("una fianza entra en la caja y en la deuda a la vez: el patrimonio no se mueve",
+  sTodo.patrimonio.every(function (p) { return cerca(p[1], valorEn(sSin.patrimonio, p[0])); }) &&
+  !cerca(valorEn(sTodo.caja, Date.now()), valorEn(sSin.caja, Date.now())));
+
 var f = M.flujoMensual(doc);
 var suma = f.meses.reduce(function (t, x) { return t + x.neto; }, 0);
 comprobar("la suma de los flujos mensuales es la caja de hoy",
