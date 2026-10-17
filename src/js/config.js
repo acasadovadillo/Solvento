@@ -49,7 +49,7 @@
     { nombre: "MSCI ACWI USD (Acc)",             isin: "IE00B6R52259", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "SSAC.AS" },
   ];
 
-  const OBJETIVO_DEFECTO = { "Renta variable": 60.0, "Renta fija": 40.0 };
+  const OBJETIVO_DEFECTO = { "Renta variable": 90.0, "Renta fija": 10.0 };
 
   const CAT_COLORES = { "Renta variable": "#3b82f6", "Renta fija": "#10b981" };
   const TIPO_COLORES = { "ETF": "#8b5cf6", "Criptoactivo": "#f59e0b", "Acciones": "#ec4899", "Fondo de inversión": "#14b8a6" };
@@ -271,7 +271,7 @@
 
   const cuentas = () => {
     const propias = cfgDoc().cuentas || cuentasDeducidas();
-    return propias.map((c) => {
+    const lista = propias.map((c) => {
       if (c.logo) return c;
       const d = CUENTAS_DEFECTO.find((x) => x.cuenta === c.cuenta);
       if (d && d.logo) return Object.assign({}, c, { logo: d.logo });
@@ -285,6 +285,13 @@
       if (logo) extra.logo = logo;
       if (!c.emoji && b.emoji) extra.emoji = b.emoji;
       return Object.keys(extra).length ? Object.assign({}, c, extra) : c;
+    });
+    // Un apartado («TR – Fondo pareja» dentro de Trade Republic) es el mismo
+    // banco: sin marca propia, lleva la de su cuenta.
+    return lista.map((c) => {
+      if (!c.dentro_de || c.logo || c.emoji) return c;
+      const padre = lista.find((x) => x.cuenta === c.dentro_de);
+      return padre && (padre.logo || padre.emoji) ? Object.assign({}, c, { logo: padre.logo, emoji: padre.emoji }) : c;
     });
   };
   // El ticker se completa igual que el logo de una cuenta: si tu activo no trae

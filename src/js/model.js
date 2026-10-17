@@ -60,6 +60,33 @@
    */
   const SIN_EFECTIVO = new Set(["Traspaso", "Herencia"]);
 
+  // ── Cuentas compartidas ──────────────────────────────────────────────────
+  // Una cuenta puede no ser entera tuya —un fondo común con tu pareja—. Su
+  // saldo se enseña entero, porque es lo que dice el banco, pero en tu
+  // patrimonio cuenta solo tu parte (`titularidad`, en %; sin ella, 100).
+  //
+  // Y con sus movimientos, lo mismo: un gasto común pagado desde ella es gasto
+  // tuyo solo en tu parte, y lo que aporta tu pareja no es un ingreso tuyo
+  // —se registra como Ingreso «Aportación pareja» para que el saldo cuadre con
+  // el banco, pero no cuenta en Ingresos y gastos ni en el Presupuesto—.
+  const titularidades = () => {
+    const t = {};
+    CFG.cuentas().forEach((c) => {
+      const v = num(c.titularidad);
+      t[c.cuenta] = isFinite(v) && v >= 0 && v < 100 ? v / 100 : 1;
+    });
+    return t;
+  };
+  const RE_APORTACION_AJENA = /^aportaci[oó]n (de )?(mi |la )?pareja/i;
+  const esAportacionAjena = (m) => m.tipo === "Ingreso" && RE_APORTACION_AJENA.test(String(m.tipo_ingreso || "").trim());
+  // Qué parte de un gasto o un ingreso es tuya: 0 si es dinero de tu pareja,
+  // tu % si sale de (o entra en) una cuenta compartida, y entero si no.
+  function partePropia(m, tit) {
+    if (esAportacionAjena(m)) return 0;
+    const cuenta = String((m.tipo === "Gasto" ? m.cuenta_origen : m.cuenta_destino) || "").trim();
+    return tit && tit[cuenta] != null ? tit[cuenta] : 1;
+  }
+
   function computeSaldos(movimientos, inversiones) {
     const bal = {};
     CFG.cuentas().forEach((c) => (bal[c.cuenta] = 0));
@@ -86,9 +113,16 @@
       const cuenta = String(r.cuenta || "").trim();
       if (isFinite(coste) && isC(cuenta)) bal[cuenta] -= coste; // Compra(+coste)→resta, Venta(−coste)→suma
     }
+    const tit = titularidades();
+    const nombres = new Set(CFG.cuentas().map((c) => c.cuenta));
     const saldos = CFG.cuentas().map((c) => ({
       cuenta: c.cuenta, accent: c.accent, logo: c.logo, emoji: c.emoji,
       cartera: c.cartera || null, saldo: round2(bal[c.cuenta]),
+      // Un apartado vive dentro de otra cuenta: el mismo dinero en el banco,
+      // separado aquí para saber qué parte es para qué.
+      dentroDe: c.dentro_de && c.dentro_de !== c.cuenta && nombres.has(c.dentro_de) ? c.dentro_de : null,
+      titularidad: Math.round(tit[c.cuenta] * 100),
+      propio: round2(bal[c.cuenta] * tit[c.cuenta]),
     }));
     // TODO el efectivo es Caja, esté donde esté. El saldo de un bróker es dinero
     // que puedes sacar, no una inversión: contarlo como Cartera deformaba su
@@ -103,7 +137,10 @@
     saldos.sort((a, b) => b.saldo - a.saldo);
     saldosCaja.sort((a, b) => b.saldo - a.saldo);
     saldosBroker.sort((a, b) => b.saldo - a.saldo);
-    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker };
+    // La caja que es tuya: lo mismo que la de arriba salvo en las cuentas
+    // compartidas, que entran por tu parte. Es la que suma al patrimonio.
+    const liquidoPropio = round2(saldos.reduce((s, x) => s + x.propio, 0));
+    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, efectivoBroker };
   }
 
   // ── Registro de activos: conocidos + derivados de los datos ──
@@ -455,7 +492,7 @@
 
   // ── Modelo completo ──
   function build(db, prices) {
-    const { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker } =
+    const { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, efectivoBroker } =
       computeSaldos(db.movimientos, db.inversiones);
     const inv = valuate(db, prices);
     // Los inmuebles y el resto de bienes se valoran igual, pero son dos clases
@@ -469,12 +506,13 @@
     const pas = valuatePasivos(db.pasivos, db.movimientos);
     // Patrimonio NETO = lo que tienes menos lo que debes.
     const cobrar = porCobrar(db);
-    const patrimonioNeto = round2(patrimonioLiquido + carteraTotal + inm.total + otros.total + cobrar.total - pas.total);
+    // De las cuentas compartidas, solo tu parte.
+    const patrimonioNeto = round2(liquidoPropio + carteraTotal + inm.total + otros.total + cobrar.total - pas.total);
     // El BRUTO es lo que tienes, sin descontar lo que debes. Los pesos de caja,
     // cartera y propiedades se miden sobre él y no sobre el neto: son la leyenda
     // del reparto de los activos, y unas partes que no suman 100 % en un reparto
     // no son un matiz, son un error de lectura.
-    const patrimonioBruto = round2(patrimonioLiquido + carteraTotal + inm.total + otros.total + cobrar.total);
+    const patrimonioBruto = round2(liquidoPropio + carteraTotal + inm.total + otros.total + cobrar.total);
     const ratioInv = patrimonioBruto ? carteraTotal / patrimonioBruto * 100 : 0;
     const ratioInm = patrimonioBruto ? inm.total / patrimonioBruto * 100 : 0;
     const ratioOtros = patrimonioBruto ? otros.total / patrimonioBruto * 100 : 0;
@@ -483,7 +521,7 @@
     // tienes, que es la cifra que importa de una deuda.
     const ratioPas = patrimonioBruto ? pas.total / patrimonioBruto * 100 : 0;
     const pctLiquidez = 100 - ratioInv - ratioInm - ratioOtros - ratioCobrar;
-    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, efectivoBroker,
+    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, efectivoBroker,
              inv, inm, otros, pas, cobrar, carteraTotal, patrimonioNeto, patrimonioBruto,
              ratioInv, ratioInm, ratioOtros, ratioPas, ratioCobrar, pctLiquidez };
   }
@@ -824,10 +862,12 @@
 
     const fueraG = {}, fueraI = {};
     let gastoReal = 0, ingresoReal = 0;
+    const tit = titularidades();
     for (const m of (db && db.movimientos) || []) {
       if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") continue;
       if (!enPeriodo(parseFechaES(m.fecha))) continue;
-      const imp = Math.abs(num(m.importe)) || 0;
+      const imp = round2((Math.abs(num(m.importe)) || 0) * partePropia(m, tit));
+      if (!(imp > 0)) continue;
       if (m.tipo === "Gasto") {
         gastoReal += imp;
         const l = mejor(gastos.concat(ocio), m, "tipo_gasto");
@@ -1049,12 +1089,13 @@
   // vivienda y su garaje a la vez, que es como se piensa en un inmueble.
   function resumenCentros(movimientos, desde, hasta) {
     const gastos = {}, ingresos = {};
+    const tit = titularidades();
     for (const m of movimientos || []) {
       if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") continue;
       if (esAjuste(m) || esMovInversion(m)) continue;
       const f = parseFechaES(m.fecha);
       if (!f || (desde && f < desde) || (hasta && f > hasta)) continue;
-      const imp = Math.abs(num(m.importe) || 0);
+      const imp = Math.abs(num(m.importe) || 0) * partePropia(m, tit);
       if (!isFinite(imp) || imp <= 0) continue;
       const c = String(m.centro || "").trim() || "Sin imputar";
       const donde = m.tipo === "Gasto" ? gastos : ingresos;
@@ -1459,11 +1500,12 @@
       const d = parseFechaES(f);
       return d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : null;
     };
+    const tit = titularidades();
     for (const m of db.movimientos || []) {
       if (m.tipo !== "Gasto" && m.tipo !== "Ingreso") continue;   // fuera traspasos y préstamos
       if (esAjuste(m) || esMovInversion(m)) continue;
       const ym = mesDe(m.fecha);
-      const imp = num(m.importe);
+      const imp = round2(num(m.importe) * partePropia(m, tit));
       if (!ym || !isFinite(imp) || imp <= 0) continue;
       const mes = porMes[ym] || (porMes[ym] = { ym, ingresos: 0, gastos: 0, catGasto: {}, catIngreso: {},
                                                 cenGasto: {}, cenIngreso: {} });
@@ -1715,23 +1757,29 @@
     // Deltas de líquido por fecha (mismas cuentas que el saldo) + acumulado
     const cuentas = new Set(CFG.cuentas().map((c) => c.cuenta));
     const isC = (c) => c && c !== "-" && cuentas.has(c);
-    const deltaByDate = {};
+    // Dos acumulados: la caja como la ve el banco y la parte tuya, que es la
+    // que entra en el patrimonio (en una cuenta compartida, solo tu %).
+    const tit = titularidades();
+    const deltaByDate = {}, propioByDate = {};
+    const mover = (t, cuenta, v) => {
+      deltaByDate[t] = (deltaByDate[t] || 0) + v;
+      propioByDate[t] = (propioByDate[t] || 0) + v * (tit[cuenta] != null ? tit[cuenta] : 1);
+    };
     for (const m of db.movimientos || []) {
       if (esMovInversion(m)) continue; // el efectivo lo mueve la operación
       const f = parseFechaES(m.fecha); if (!f) continue;
       const t = f.getTime(); const imp = num(m.importe) || 0;
       const o = String(m.cuenta_origen || "").trim(), d = String(m.cuenta_destino || "").trim();
-      let delta = 0;
+      deltaByDate[t] = deltaByDate[t] || 0;
       switch (m.tipo) {
-        case "Ingreso":  if (isC(d)) delta = imp; break;
-        case "Gasto":    if (isC(o)) delta = -imp; break;
-        case "Traspaso": if (isC(o)) delta -= imp; if (isC(d)) delta += imp; break;
+        case "Ingreso":  if (isC(d)) mover(t, d, imp); break;
+        case "Gasto":    if (isC(o)) mover(t, o, -imp); break;
+        case "Traspaso": if (isC(o)) mover(t, o, -imp); if (isC(d)) mover(t, d, imp); break;
         case "Préstamo":
-          if (m.tipo_prestamo === "Dinero prestado" && isC(o)) delta -= imp;
-          else if (m.tipo_prestamo === "Devolución" && isC(d)) delta += imp;
+          if (m.tipo_prestamo === "Dinero prestado" && isC(o)) mover(t, o, -imp);
+          else if (m.tipo_prestamo === "Devolución" && isC(d)) mover(t, d, imp);
           break;
       }
-      deltaByDate[t] = (deltaByDate[t] || 0) + delta;
     }
     // Efecto en efectivo de las operaciones (Compra resta, Venta suma; traspaso y
     // herencia, neutros): mantiene la continuidad del patrimonio.
@@ -1739,10 +1787,8 @@
       if (SIN_EFECTIVO.has(r.tipo_movimiento || "Compra")) continue;
       const f = parseFechaES(r.fecha); if (!f) continue;
       const coste = num(r.coste);
-      if (isFinite(coste) && isC(String(r.cuenta || "").trim())) {
-        const t = f.getTime();
-        deltaByDate[t] = (deltaByDate[t] || 0) - coste;
-      }
+      const cuenta = String(r.cuenta || "").trim();
+      if (isFinite(coste) && isC(cuenta)) mover(f.getTime(), cuenta, -coste);
     }
     // Lo que te deben, a lo largo del tiempo. Se lleva por persona y se suman
     // solo los saldos positivos, igual que en la tabla: a quien te ha devuelto
@@ -1832,14 +1878,15 @@
     // única de las tres que no se podía ver por separado. Es la que dice si el
     // mes se cerró con más dinero disponible o con menos, que es otra pregunta
     // distinta de cuánto vale todo lo que tienes.
-    let liq = 0; const caja = [], cartera = [], patrimonio = [];
+    let liq = 0, liqPropio = 0; const caja = [], cartera = [], patrimonio = [];
     const punto = (t, cv) => {
       caja.push([t, round2(liq)]);
       cartera.push([t, round2(cv)]);
-      patrimonio.push([t, round2(liq + cv + bienesEn(t) + cobrarEn(t) - deudasEn(t))]);
+      patrimonio.push([t, round2(liqPropio + cv + bienesEn(t) + cobrarEn(t) - deudasEn(t))]);
     };
     for (const t of dates) {
       liq += deltaByDate[t];
+      liqPropio += propioByDate[t] || 0;
       punto(t, invEn(t));
     }
     // Y el último punto, hoy, con la cartera a precio de hoy —el mismo que usa

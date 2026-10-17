@@ -294,7 +294,9 @@
       return `<div style="border-left:3px solid ${color};padding-left:1rem;"><div style="font-size:0.72rem;color:${color};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:0.35rem;">Rentabilidad ${esc(cat)}</div>${rentHtml}</div>`;
     }).join("");
     return `<div class="v2-wrap"><div class="dashboard-panel">
-      <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin-bottom:1.25rem;">Asignación · actual vs objetivo</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+        <div style="font-size:0.82rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Asignación · actual vs objetivo</div>
+        <button class="solo-editor" onclick="v2CfgObjetivo()" style="background:var(--f4);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:0.8rem;font-weight:600;padding:0.4rem 0.75rem;cursor:pointer;font-family:inherit;white-space:nowrap;">Editar objetivo</button></div>
       <div style="display:grid;grid-template-columns:64px 1fr;gap:1.1rem 1.25rem;align-items:center;margin-bottom:1.75rem;">
         <span style="font-size:0.72rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Objetivo</span><div>${barra("obj")}</div>
         <span style="font-size:0.72rem;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Actual</span><div>${barra("pct")}</div>
@@ -585,14 +587,16 @@
     return header("Patrimonio", fmtEur(m.patrimonioNeto)) +
       cabeceraBloque("Activos", fmtEur(m.patrimonioBruto), GREEN, "", true) +
       vistaPanel("patrimonio", "Distribución de los activos",
-        [{ label: "Caja", value: m.patrimonioLiquido, accent: "var(--azul)" },
+        [{ label: "Caja", value: m.liquidoPropio, accent: "var(--azul)" },
          { label: "Cartera", value: m.carteraTotal, accent: "var(--verde)" },
          { label: "Inmuebles", value: m.inm.total, accent: "#a16207" }]
           .concat(m.otros.n ? [{ label: "Otros", value: m.otros.total, accent: OTROS_COLOR }] : [])
           .concat(hayCobrar ? [{ label: "Por cobrar", value: cob.total, accent: COBRAR_COLOR }] : []),
         fmtEur(m.patrimonioBruto), "Activos", null, { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-hub-grid" style="margin-top:1.5rem;">
-        ${hubCard("Caja", fmtEur(m.patrimonioLiquido), m.pctLiquidez, "var(--azul)", m.saldosCaja.length + " cuentas", null, "caja", "patrimonio", "de tus activos")}
+        ${hubCard("Caja", fmtEur(m.liquidoPropio), m.pctLiquidez, "var(--azul)",
+                  m.saldosCaja.length + " cuentas" + (Math.abs(m.patrimonioLiquido - m.liquidoPropio) > 0.005 ? " · tu parte" : ""),
+                  null, "caja", "patrimonio", "de tus activos")}
         ${hubCard("Cartera", fmtEur(m.carteraTotal), m.ratioInv, "var(--verde)", m.inv.hayRentabilidad ? fmtPct(m.inv.rentPct) : "—", rc(m.inv.rentPct), "cartera", "patrimonio", "de tus activos")}
         ${hubCard("Inmuebles", fmtEur(m.inm.total), m.ratioInm, "#a16207", m.inm.n + (m.inm.n === 1 ? " inmueble" : " inmuebles"), null, "propiedades", "patrimonio", "de tus activos")}
         ${m.otros.n ? hubCard("Otros", fmtEur(m.otros.total), m.ratioOtros, OTROS_COLOR, m.otros.n + (m.otros.n === 1 ? " bien" : " bienes"), null, "otros", "patrimonio", "de tus activos") : ""}
@@ -915,9 +919,19 @@
   function pageCaja(m) {
     const cuentas = m.saldosCaja || m.saldos;
     const items = cuentas.filter((s) => s.saldo !== 0).map((s) => ({ label: s.cuenta, value: s.saldo, accent: s.accent }));
-    const rows = cuentas.map((s) => {
+    // Los apartados cuelgan de su cuenta: la cuenta enseña el total que da el
+    // banco, y debajo, lo que hay sin apartar y cada apartado.
+    const apartadosDe = (nombre) => cuentas.filter((x) => x.dentroDe === nombre);
+    const enBanco = (s) => Math.round((s.saldo + apartadosDe(s.cuenta).reduce((t, x) => t + x.saldo, 0)) * 100) / 100;
+    const propio = (s) => s.titularidad < 100
+      ? `<div style="font-size:0.74rem;color:var(--t2);margin-top:0.2rem;padding-left:1.55rem;">
+           ${s.titularidad} % tuyo · <b style="color:var(--t1b);">${esc(fmtEur(s.propio))}</b> en tu patrimonio</div>`
+      : "";
+    const fila = (s, hijo) => {
       const icon = iconoCuenta(s);
       const cuentaJs = String(s.cuenta).replace(/'/g, "\\'");
+      const hijos = hijo ? [] : apartadosDe(s.cuenta);
+      const total = hijo ? s.saldo : enBanco(s);
       // Las deudas vinculadas a esta cuenta cuelgan de ella: una tarjeta de
       // crédito no es una cuenta, pero se paga desde una y conviene verla ahí.
       const deudas = ((m.pas && m.pas.items) || []).filter((d) => d.cuenta === s.cuenta);
@@ -928,8 +942,20 @@
                ${deudas.length} ${deudas.length === 1 ? "deuda" : "deudas"}</button>
              · <span style="color:var(--rojo);font-weight:600;">−${esc(fmtEur(deudas.reduce((t, d) => t + d.importe, 0)).replace("-", ""))}</span></div>`
         : "";
-      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;"><div style="display:flex;align-items:center;gap:0.6rem;"><span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:var(--t0);font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>${colgando ? "" : ""}</div>${colgando}</td><td style="text-align:right;color:var(--t0);font-weight:600;white-space:nowrap;">${fmtEur(s.saldo)}</td><td class="col-secundaria" style="text-align:right;color:var(--t1b);">${s.pct.toFixed(2)}%</td><td style="text-align:right;width:1%;"><button class="solo-editor fila-acc" onclick="v2Cuadrar('${cuentaJs}',${s.saldo})" title="Cuadrar con el saldo real del banco" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button></td></tr>`;
-    }).join("");
+      // Con apartados, el saldo de la fila es el del banco, y lo que queda sin
+      // apartar —el colchón— se dice aparte: es la cifra que se viene a mirar.
+      const resto = hijos.length
+        ? `<div style="font-size:0.74rem;color:var(--t2);margin-top:0.2rem;padding-left:1.55rem;">
+             en el banco · <b style="color:var(--t1b);">colchón sin apartar ${esc(fmtEur(s.saldo))}</b></div>`
+        : "";
+      const nombre = `<button onclick="v2VerCuenta('${cuentaJs}')" title="Ver los movimientos de ${esc(s.cuenta)}" style="background:none;border:none;padding:0;color:${hijo ? "var(--t1)" : "var(--t0)"};font-weight:600;font-family:inherit;font-size:inherit;cursor:pointer;text-align:left;">${esc(s.cuenta)}</button>`;
+      // Un apartado se cuadra desde su cuenta: el banco no lo ve por separado.
+      const cuadrar = hijo ? "" : `<button class="solo-editor fila-acc" onclick="v2Cuadrar('${cuentaJs}',${total})" title="Cuadrar con el saldo real del banco${hijos.length ? " (cuenta y apartados juntos)" : ""}" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:0.9rem;padding:0.2rem 0.4rem;">⚖️</button>`;
+      return `<tr class="table-row" onmouseenter="v2Reparto('caja','${cuentaJs}',true)" onmouseleave="v2Reparto('caja',null)"><td style="text-align:left;${hijo ? "padding-left:1.6rem;" : ""}"><div style="display:flex;align-items:center;gap:0.6rem;">${hijo ? `<span style="color:var(--t3);">↳</span>` : ""}<span style="width:9px;height:9px;border-radius:50%;background:${s.accent};flex-shrink:0;"></span>${icon}${nombre}</div>${resto}${propio(s)}${colgando}</td><td style="text-align:right;color:${hijo ? "var(--t1)" : "var(--t0)"};font-weight:600;white-space:nowrap;">${fmtEur(total)}</td><td class="col-secundaria" style="text-align:right;color:var(--t1b);">${(m.patrimonioLiquido ? total / m.patrimonioLiquido * 100 : 0).toFixed(2)}%</td><td style="text-align:right;width:1%;">${cuadrar}</td></tr>` +
+        hijos.map((h) => fila(h, true)).join("");
+    };
+    const arriba = cuentas.filter((s) => !s.dentroDe).sort((a, b) => enBanco(b) - enBanco(a));
+    const rows = arriba.map((s) => fila(s, false)).join("");
     // Una cuenta recién creada no tiene bancos: enseñarle una tabla vacía es
     // dejarla mirando el hueco donde debería estar lo que aún no ha hecho.
     if (!m.saldosCaja.length) {
@@ -942,7 +968,11 @@
           ${addBtn("＋ Añadir una cuenta", "v2Tab('ajustes');v2AjSec('cuentas')")}
         </div></div>` + movimientosList();
     }
-    return header("Caja", fmtEur(m.patrimonioLiquido)) +
+    const compartida = Math.abs(m.patrimonioLiquido - m.liquidoPropio) > 0.005
+      ? `<div class="v2-wrap" style="margin-top:-0.5rem;margin-bottom:0.75rem;font-size:0.8rem;color:var(--t2);">
+           Tuyo: <b style="color:var(--t1);">${esc(fmtEur(m.liquidoPropio))}</b> — de las cuentas compartidas solo cuenta tu parte.</div>`
+      : "";
+    return header("Caja", fmtEur(m.patrimonioLiquido)) + compartida +
       vistaPanel("caja", "Distribución de la caja", items, fmtEur(m.patrimonioLiquido), "Total", null,
                  { sinLeyenda: true, desnudo: true }) +
       `<div class="v2-wrap"><div class="table-container"><table class="minimal-table"><thead><tr><th style="text-align:left;">Cuenta</th><th style="text-align:right;">Saldo</th><th class="col-secundaria" style="text-align:right;">Peso</th><th></th></tr></thead><tbody>${rows}</tbody></table>

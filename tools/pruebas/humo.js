@@ -481,6 +481,39 @@ comprobar("la TIR del bien sale con sentido y sin precio de compra no se inventa
   rb.tir > 10 && rb.tir < 20 && M.rentabilidadBien({ valor: "5" }, { importe: 5 }, [], {}).falta.length === 2,
   rb.tir);
 
+// ── Una cuenta compartida dentro de otra ────────────────────────────────────
+// Un fondo a medias con la pareja, apartado dentro de un banco: su saldo se
+// enseña entero (cuadra con el banco), pero al patrimonio va la mitad; lo que
+// aporta la pareja no es ingreso tuyo y un gasto común es tuyo a medias.
+C.usarDoc(doc);
+var conFondo = JSON.parse(JSON.stringify(doc));
+conFondo.config = conFondo.config || {};
+var banco = C.cuentas()[0].cuenta;
+conFondo.config.cuentas = C.cuentas().map(function (c) { return { cuenta: c.cuenta, accent: c.accent }; })
+  .concat([{ cuenta: "Fondo pareja", accent: "#fff", dentro_de: banco, titularidad: 50 }]);
+conFondo.movimientos = conFondo.movimientos.concat([
+  { id: "fp1", tipo: "Traspaso", importe: "300", fecha: "01/10/2026", cuenta_origen: banco, cuenta_destino: "Fondo pareja" },
+  { id: "fp2", tipo: "Ingreso", importe: "50", fecha: "02/10/2026", cuenta_destino: "Fondo pareja", tipo_ingreso: "Aportación pareja" },
+  { id: "fp3", tipo: "Gasto", importe: "40", fecha: "03/10/2026", cuenta_origen: "Fondo pareja", tipo_gasto: "Ocio > Cenas" },
+]);
+C.usarDoc(conFondo);
+var mf = M.build(conFondo, precios);
+var fondo = mf.saldos.filter(function (x) { return x.cuenta === "Fondo pareja"; })[0];
+comprobar("una cuenta compartida se ve entera y cuenta en el patrimonio solo por tu parte",
+  fondo && fondo.saldo === 310 && fondo.propio === 155 && fondo.dentroDe === banco && fondo.titularidad === 50 &&
+  cerca(mf.patrimonioLiquido - mf.liquidoPropio, 155),
+  JSON.stringify(fondo));
+var gf = M.buildGastos(conFondo), oct = gf.meses.filter(function (x) { return x.ym === "2026-10"; })[0];
+var gOct = M.buildGastos(doc).meses.filter(function (x) { return x.ym === "2026-10"; })[0] || { ingresos: 0, gastos: 0 };
+comprobar("lo que aporta la pareja no es ingreso tuyo y un gasto común es tuyo a medias",
+  oct && cerca(oct.ingresos, gOct.ingresos) && cerca(oct.gastos, gOct.gastos + 20),
+  oct && JSON.stringify([oct.ingresos, gOct.ingresos, oct.gastos, gOct.gastos]));
+var sf = M.buildSeries(conFondo, precios);
+comprobar("la curva del patrimonio acaba en el patrimonio también con cuentas compartidas",
+  cerca(sf.patrimonio[sf.patrimonio.length - 1][1], mf.patrimonioNeto) && cerca(sf.caja[sf.caja.length - 1][1], mf.patrimonioLiquido),
+  sf.patrimonio[sf.patrimonio.length - 1][1] + " vs " + mf.patrimonioNeto);
+C.usarDoc(doc);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

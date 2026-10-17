@@ -219,7 +219,7 @@ ${hojas.map((h, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Con
     try {
       const m = M().build(doc, window.__PRICES || {});
       const filas = m.saldos.map((s) => [s.cuenta, s.saldo]);
-      filas.push([], ["Caja", m.patrimonioLiquido], ["Cartera", m.carteraTotal],
+      filas.push([], ["Caja (tu parte)", m.liquidoPropio], ["Cartera", m.carteraTotal],
                  ["Inmuebles", m.inm.total], ["Otros", (m.otros || {}).total || 0], ["Por cobrar", (m.cobrar || {}).total || 0],
                  ["Pasivos", -m.pas.total], [], ["Patrimonio neto", m.patrimonioNeto]);
       mete("Saldos", ["Concepto", "Importe (€)"], [0, 2], filas);

@@ -717,8 +717,8 @@
       miniBtn("✎", `v2CfgActivo(${i})`) + miniBtn("✕", `v2CfgDelActivo(${i})`)
     )).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir activo", "v2CfgActivo(-1)", "var(--azul)")}</div>`;
 
-    const objetivo = filaAjuste("Renta variable / Renta fija",
-      `${(+obj["Renta variable"] || 0).toFixed(0)}% / ${(+obj["Renta fija"] || 0).toFixed(0)}%`,
+    const objetivo = filaAjuste(Object.keys(obj).map(esc).join(" / "),
+      Object.keys(obj).map((k) => `${(+obj[k] || 0).toFixed(0)}%`).join(" / "),
       miniBtn("✎", "v2CfgObjetivo()"));
 
     const categorias = catalogoArbol(categoriasCfg(), {
@@ -973,7 +973,19 @@
       field("c-cartera", "¿Aparece en la pestaña Cartera?",
         selectKV("c-cartera", [["no", "No"], ["efectivo", "Sí, con su efectivo"], ["cero", "Sí, pero sin efectivo propio"]],
                  e.cartera || "no")) +
-      field("c-etiqueta", "Etiqueta en Cartera", input("c-etiqueta", "text", e.etiquetaEfectivo, 'placeholder="Cuenta Broker"'));
+      field("c-etiqueta", "Etiqueta en Cartera", input("c-etiqueta", "text", e.etiquetaEfectivo, 'placeholder="Cuenta Broker"')) +
+      // Un apartado es dinero que está en otra cuenta del banco pero que se
+      // lleva aparte: el fondo común dentro de Trade Republic. En Caja sale
+      // colgando de ella, y la cuenta enseña el total que da el banco.
+      field("c-dentro", "Es un apartado de", selectKV("c-dentro",
+        [["", "— Ninguna: es una cuenta propia —"]].concat(c.cuentas.filter((x, k) => k !== i && !x.dentro_de).map((x) => [x.cuenta, x.cuenta])),
+        e.dentro_de || "")) +
+      // Qué parte del saldo es tuya. Un fondo a medias con tu pareja es un 50:
+      // el saldo se enseña entero, pero en tu patrimonio cuenta la mitad.
+      field("c-tit", "Es tuyo (%)", input("c-tit", "number", e.titularidad != null ? e.titularidad : 100, 'step="1" min="0" max="100"')) +
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.4rem;">Si es compartida, registra lo que aporte la otra persona
+         como <b>Ingreso</b> con la categoría <b>Aportación pareja</b>: cuadra el saldo con el banco sin contar como ingreso tuyo.
+         Los gastos que salgan de ella cuentan como tuyos solo en tu parte.</div>`;
     shell(i >= 0 ? "Editar cuenta" : "Nueva cuenta", body, () => {
       const nombre = G("c-nombre");
       if (!nombre) return "Indica el nombre de la cuenta";
@@ -992,6 +1004,14 @@
         etiquetaEfectivo: cartera === "no" ? undefined : (G("c-etiqueta") || undefined),
       });
       delete rec.broker;
+      const tit = parseFloat(G("c-tit"));
+      if (!isFinite(tit) || tit < 0 || tit > 100) return "El porcentaje tuyo va de 0 a 100";
+      if (tit < 100) rec.titularidad = tit; else delete rec.titularidad;
+      const dentro = G("c-dentro");
+      if (dentro && dentro !== nombre) rec.dentro_de = dentro; else delete rec.dentro_de;
+      // Una cuenta que ya tiene apartados no puede ser a su vez apartado de otra.
+      if (rec.dentro_de && c.cuentas.some((x, k) => k !== i && x.dentro_de === (i >= 0 ? c.cuentas[i].cuenta : nombre)))
+        return "Esta cuenta tiene apartados dentro: no puede ser a su vez un apartado";
       if (i >= 0) {
         // Si se renombra, arrastrar el cambio a los datos que la referencian
         const antes = c.cuentas[i].cuenta;
@@ -1007,9 +1027,17 @@
   function wireCuentaVisibility() {
     const sel = document.getElementById("c-cartera");
     const fila = document.querySelector('.ff[data-for="c-etiqueta"]');
-    if (!sel || !fila) return;
-    const upd = () => { fila.style.display = sel.value === "no" ? "none" : ""; };
-    sel.addEventListener("change", upd); upd();
+    if (sel && fila) {
+      const upd = () => { fila.style.display = sel.value === "no" ? "none" : ""; };
+      sel.addEventListener("change", upd); upd();
+    }
+    // Un apartado lleva el color de su cuenta: es el mismo banco. Se propone
+    // al elegirla, y se puede cambiar después.
+    const dentro = document.getElementById("c-dentro"), col = document.getElementById("c-color");
+    if (dentro && col) dentro.addEventListener("change", () => {
+      const padre = CFG.cuentas().find((x) => x.cuenta === dentro.value);
+      if (padre && /^#[0-9a-f]{6}$/i.test(String(padre.accent || ""))) col.value = padre.accent;
+    });
   }
 
   function elegirBanco(b) {
@@ -1028,6 +1056,8 @@
     });
     (doc.inversiones || []).forEach((r) => { if (r.cuenta === antes) r.cuenta = ahora; });
     ((doc.config && doc.config.activos) || []).forEach((a) => { if (a.banco === antes) a.banco = ahora; });
+    ((doc.config && doc.config.cuentas) || []).forEach((x) => { if (x.dentro_de === antes) x.dentro_de = ahora; });
+    (doc.pasivos || []).forEach((d) => { if (d.cuenta === antes) d.cuenta = ahora; if (d.entidad === antes) d.entidad = ahora; });
   }
 
   function borrarCuentaCfg(i) {
@@ -1073,20 +1103,39 @@
     if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
   }
 
+  // El objetivo de asignación: un % por categoría, sean las que sean (Renta
+  // variable y Renta fija, y cualquier otra que tenga tu objetivo). Se abre
+  // desde Ajustes y desde el panel de asignación de Cartera, y al guardar se
+  // repinta todo: la barra del objetivo y la desviación cambian en el acto.
   function openObjetivoCfg() {
     const c = cfgEditable();
-    const o = c.objetivo;
-    const body =
-      field("o-rv", "Renta variable (%)", input("o-rv", "number", o["Renta variable"], 'step="1" min="0" max="100"')) +
-      field("o-rf", "Renta fija (%)", input("o-rf", "number", o["Renta fija"], 'step="1" min="0" max="100"')) +
-      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Es el reparto al que quieres tender. La página Cartera te muestra cuánto te desvías.</div>`;
+    const o = c.objetivo || {};
+    const cats = Object.keys(o).length ? Object.keys(o) : Object.keys(CFG.OBJETIVO_DEFECTO);
+    const body = cats.map((cat, k) =>
+      field("o-" + k, cat + " (%)", input("o-" + k, "number", o[cat] != null ? o[cat] : 0, 'step="1" min="0" max="100"'))).join("") +
+      `<div id="o-suma" style="font-size:0.8rem;font-weight:600;margin-top:0.6rem;"></div>
+       <div style="font-size:0.75rem;color:var(--t2);margin-top:0.4rem;">Es el reparto al que quieres tender. La página Cartera te muestra cuánto te desvías.</div>`;
     shell("Objetivo de asignación", body, () => {
-      const rv = parseFloat(G("o-rv")), rf = parseFloat(G("o-rf"));
-      if (!isFinite(rv) || !isFinite(rf)) return "Introduce ambos porcentajes";
-      if (Math.abs(rv + rf - 100) > 0.01) return `Los dos deben sumar 100 % (ahora suman ${(rv + rf).toFixed(0)} %)`;
-      c.objetivo = { "Renta variable": rv, "Renta fija": rf };
+      const vals = cats.map((cat, k) => parseFloat(G("o-" + k)));
+      if (vals.some((v) => !isFinite(v) || v < 0)) return "Introduce un porcentaje para cada categoría";
+      const suma = vals.reduce((t, v) => t + v, 0);
+      if (Math.abs(suma - 100) > 0.01) return `Los porcentajes deben sumar 100 % (ahora suman ${suma.toLocaleString("es-ES", { maximumFractionDigits: 2 })} %)`;
+      const nuevo = {};
+      cats.forEach((cat, k) => { nuevo[cat] = vals[k]; });
+      c.objetivo = nuevo;
       return null;
     }, refrescarAjustes);
+    // La suma, a la vista mientras se escribe: así el error no llega por sorpresa.
+    const pintarSuma = () => {
+      const suma = cats.reduce((t, cat, k) => t + (parseFloat(document.getElementById("o-" + k).value) || 0), 0);
+      const el = document.getElementById("o-suma");
+      if (!el) return;
+      const ok = Math.abs(suma - 100) < 0.01;
+      el.style.color = ok ? "var(--verde)" : "var(--ambar)";
+      el.textContent = `Suman ${suma.toLocaleString("es-ES", { maximumFractionDigits: 2 })} %${ok ? " ✓" : " · tienen que sumar 100 %"}`;
+    };
+    cats.forEach((cat, k) => document.getElementById("o-" + k).addEventListener("input", pintarSuma));
+    pintarSuma();
   }
 
   // ── Categorías de gasto (con subcategorías) ──────────────────────────
