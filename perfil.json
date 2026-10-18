@@ -33,6 +33,17 @@
         "branch": "main",
         "path": "hafsa-data.enc"
       }
+    },
+    {
+      "usuario": "paula",
+      "nombre": "Paula",
+      "tipo": "persona",
+      "almacen": {
+        "owner": "acasadovadillo",
+        "repo": "Solvento",
+        "branch": "main",
+        "path": "paula-data.enc"
+      }
     }
   ]
 }
