@@ -53,6 +53,8 @@
   // Las llaves del navegador. La primera cuenta usa las de toda la vida: si
   // cambiaran, el bloque cifrado que ya está guardado dejaría de encontrarse.
   const sufijo = () => (actualId === PRINCIPAL ? "" : ":" + actualId);
+  // Cualquier otra llave de este navegador que sea de una cuenta y no de todas.
+  const claveDe = (base) => base + sufijo();
   const claveBlob = () => "solvento_data_enc" + sufijo();
   const claveToken = () => "solvento_gh_token" + sufijo();
   const claveSha = () => "solvento_data_sha" + sufijo();
@@ -118,7 +120,7 @@
 
   window.SolventoPerfil = {
     cargar, aplicar, entrar, usar, cuentas, actual, porUsuario, esOrganizacion,
-    claveBlob, claveToken, claveSha,
+    claveBlob, claveToken, claveSha, claveDe,
     datos: () => actual(),
     PRINCIPAL,
   };

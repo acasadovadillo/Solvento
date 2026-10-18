@@ -16,10 +16,10 @@
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
   <!-- El tema, antes que el CSS: si se aplicara después de pintar, quien use
        el tema claro vería un fogonazo oscuro en cada carga. -->
-  <script src="src/js/tema.js?v=p203"></script>
-  <link rel="stylesheet" href="src/css/base.css?v=p203" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p203" />
-  <link rel="stylesheet" href="src/css/components.css?v=p203" />
+  <script src="src/js/tema.js?v=p204"></script>
+  <link rel="stylesheet" href="src/css/base.css?v=p204" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p204" />
+  <link rel="stylesheet" href="src/css/components.css?v=p204" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -380,8 +380,15 @@
       <button id="sync-token-quitar" type="button" style="flex:1;">Quitar de este dispositivo</button>
     </div>
 
+    <!-- Autoguardado: de cada cuenta y de este navegador, apagado de entrada. -->
+    <label style="display:flex;gap:0.6rem;align-items:flex-start;cursor:pointer;margin:0 0 0.4rem;">
+      <input type="checkbox" id="sync-auto" style="width:17px;height:17px;margin:0.1rem 0 0;accent-color:var(--azul);cursor:pointer;flex-shrink:0;">
+      <span style="font-size:0.88rem;font-weight:600;color:var(--t1);">Autoguardado en GitHub</span>
+    </label>
+    <small id="sync-auto-nota" style="display:block;margin:0 0 1rem 1.75rem;"></small>
+
     <div style="display:flex;gap:0.6rem;margin-bottom:0.75rem;">
-      <button id="sync-push" style="flex:1;">⬆️ Guardar en GitHub</button>
+      <button id="sync-push" style="flex:1;" title="También con ⌘S / Ctrl+S">⬆️ Guardar en GitHub</button>
       <button id="sync-pull" style="flex:1;">⬇️ Traer de GitHub</button>
     </div>
                 <div id="sync-status" style="font-size:0.82rem;font-weight:600;margin-top:1rem;text-align:center;display:none;"></div>
@@ -426,19 +433,19 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p203"></script>
-<script src="src/js/config.js?v=p203"></script>
-<script src="src/js/model.js?v=p203"></script>
-<script src="src/js/charts.js?v=p203"></script>
-<script src="src/js/render.js?v=p203"></script>
-<script src="src/js/db.js?v=p203"></script>
-<script src="src/js/sync.js?v=p203"></script>
-<script src="src/js/nav.js?v=p203"></script>
-<script src="src/js/plan.js?v=p203"></script>
-<script src="src/js/forms.js?v=p203"></script>
-<script src="src/js/perfil.js?v=p203"></script>
-<script src="src/js/exportar.js?v=p203"></script>
-<script src="src/js/boot.js?v=p203"></script>
+<script src="src/js/crypto.js?v=p204"></script>
+<script src="src/js/config.js?v=p204"></script>
+<script src="src/js/model.js?v=p204"></script>
+<script src="src/js/charts.js?v=p204"></script>
+<script src="src/js/render.js?v=p204"></script>
+<script src="src/js/db.js?v=p204"></script>
+<script src="src/js/sync.js?v=p204"></script>
+<script src="src/js/nav.js?v=p204"></script>
+<script src="src/js/plan.js?v=p204"></script>
+<script src="src/js/forms.js?v=p204"></script>
+<script src="src/js/perfil.js?v=p204"></script>
+<script src="src/js/exportar.js?v=p204"></script>
+<script src="src/js/boot.js?v=p204"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

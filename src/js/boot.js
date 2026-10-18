@@ -125,7 +125,8 @@
     pintarLectura();
     if (!DB.state.token) pintarEstado("sintoken", "Añade tu token en ⚙ Ajustes → Sincronización y el guardado será automático");
     else if (hayPendiente()) reintentarPendiente();
-    else pintarEstado("ok", "Tus cambios se guardan solos en GitHub");
+    else pintarEstado("ok", autoguardado() ? "Tus cambios se guardan solos en GitHub"
+                                           : "Autoguardado apagado: tus cambios se suben con ⌘S / Ctrl+S o desde Ajustes");
     avisarCopiaSiToca();
   }
   function render() {
@@ -180,12 +181,44 @@
   // ── Estado del guardado (visible en la navbar) ──
   // "pendiente" se recuerda entre sesiones: si una subida falla, el aviso no se
   // pierde al recargar y se reintenta sola en cuanto se pueda.
-  const PENDIENTE_KEY = "solvento_sync_pendiente";
-  const hayPendiente = () => localStorage.getItem(PENDIENTE_KEY) === "1";
+  //
+  // Es de cada cuenta: lo pendiente de una no puede hacer que otra intente
+  // subir, ni que avise de cambios que no son suyos. La primera cuenta conserva
+  // la llave de siempre (claveDe no le añade nada).
+  const clave = (base) => (P() && P().claveDe ? P().claveDe(base) : base);
+  const PENDIENTE_KEY = () => clave("solvento_sync_pendiente");
+  const hayPendiente = () => localStorage.getItem(PENDIENTE_KEY()) === "1";
   const marcarPendiente = (v) => {
-    if (v) localStorage.setItem(PENDIENTE_KEY, "1");
-    else localStorage.removeItem(PENDIENTE_KEY);
+    if (v) localStorage.setItem(PENDIENTE_KEY(), "1");
+    else localStorage.removeItem(PENDIENTE_KEY());
   };
+
+  // ── Autoguardado ─────────────────────────────────────────────────────────
+  // Con el token puesto, cada cambio podía subirse solo. Ahora eso es una
+  // elección, y viene APAGADA: cada cuenta y cada navegador la enciende a
+  // propósito en Ajustes → Sincronización. Apagado, todo se guarda cifrado en
+  // este navegador y se sube cuando tú quieras —el botón de Ajustes o ⌘S /
+  // Ctrl+S—; y si intentas salir con cambios sin subir, se avisa.
+  const AUTO_KEY = () => clave("solvento_autoguardado");
+  const autoguardado = () => { try { return localStorage.getItem(AUTO_KEY()) === "1"; } catch (e) { return false; } };
+  function ponerAutoguardado(v) {
+    try { if (v) localStorage.setItem(AUTO_KEY(), "1"); else localStorage.removeItem(AUTO_KEY()); } catch (e) { /* nada */ }
+    pintarAutoguardado();
+    if (v && DB.state.token && hayPendiente()) subirAhora("Solvento: subir cambios pendientes");
+    else if (!v && DB.state.token && !hayPendiente()) pintarEstado("ok", "Autoguardado desactivado: lo que cambies se sube cuando tú digas");
+  }
+  function pintarAutoguardado() {
+    const chk = $("sync-auto");
+    if (chk) { chk.checked = autoguardado(); chk.disabled = !DB.state.token; }
+    const nota = $("sync-auto-nota");
+    if (nota) {
+      nota.textContent = !DB.state.token
+        ? "Hace falta el token para poder subir nada."
+        : autoguardado()
+          ? "Cada cambio se sube solo. Si haces varios seguidos, se suben en orden: ninguno se pierde."
+          : "Tus cambios se guardan en este navegador. Súbelos con «⬆️ Guardar en GitHub» o con ⌘S / Ctrl+S.";
+    }
+  }
   let _estado = { estado: "", detalle: "" };
   function pintarEstado(estado, detalle) {
     _estado = { estado, detalle: detalle || "" };
@@ -196,6 +229,7 @@
       guardando: ["⏳ Guardando…", "var(--t1b)"],
       ok:        ["✓ Sincronizado", "var(--verde)"],
       pendiente: ["⚠ Sin subir", "var(--ambar-2)"],
+      local:     ["⬆ Sin subir · ⌘S", "var(--ambar-2)"],
       sintoken:  ["⚠ Sin sincronizar", "var(--ambar-2)"],
       dudoso:    ["⚠ Sin comprobar", "var(--ambar-2)"],
       roto:      ["✗ Guardado ilegible", "var(--rojo)"],
@@ -206,7 +240,7 @@
     el.title = detalle || "Estado del guardado";
     // Punto de aviso sobre el avatar: así se ve que algo pasa sin abrir el menú
     const badge = $("user-badge");
-    if (badge) badge.hidden = !(estado === "pendiente" || estado === "sintoken" ||
+    if (badge) badge.hidden = !(estado === "pendiente" || estado === "local" || estado === "sintoken" ||
                                 estado === "dudoso" || estado === "roto");
     const btn = $("user-btn");
     if (btn) btn.title = txt ? "Tu cuenta · " + txt : "Tu cuenta";
@@ -234,8 +268,11 @@
     roto: ["var(--rojo)", "Guardado ilegible",
            "Se subió, pero al volver a leerlo falla. No borres nada y comprueba una copia antes de seguir guardando."],
     pendiente: ["var(--ambar-2)", "Sin subir",
-                "Hay cambios guardados en este dispositivo que no han llegado a GitHub. Se reintenta solo, " +
-                "y también puedes forzarlo con «⬆️ Guardar en GitHub»."],
+                "Hay cambios guardados en este dispositivo que no han llegado a GitHub. Con el autoguardado " +
+                "encendido se reintenta solo; si no, súbelos con «⬆️ Guardar en GitHub» o con ⌘S / Ctrl+S."],
+    local: ["var(--ambar-2)", "Sin subir · autoguardado apagado",
+            "Tus cambios están guardados y cifrados en este navegador, pero no en GitHub. Súbelos con " +
+            "«⬆️ Guardar en GitHub» o con ⌘S / Ctrl+S cuando quieras. Si sales antes, se te avisa."],
     sintoken: ["var(--ambar-2)", "Sin sincronizar",
                "Sin token no se sube nada: lo que cambies vive solo en este navegador. Pega el token aquí abajo."],
     guardando: ["var(--t1b)", "Guardando…", "Subiendo el bloque cifrado a GitHub."],
@@ -349,12 +386,26 @@
     try { DB.storeBlob(await C.encryptDoc(DB.state.doc, DB.state.password)); } catch (_) {}
   }
 
-  // Sube a GitHub. Devuelve true si lo consiguió.
+  // Cada cambio guardado sube el número de versión. Una subida apunta el que
+  // había al empezar: si al terminar sigue siendo el mismo, lo subido es lo
+  // último y ya no queda nada pendiente; si no, hay más que subir.
+  let version = 0;
+
+  // Sube a GitHub. Devuelve true si lo consiguió. No se llama directamente:
+  // se pasa por la cola (subirEnCola), que no deja que dos subidas se pisen.
   async function subir(mensaje) {
     if (!DB.state.token) return false;
     pintarEstado("guardando");
+    const v0 = version;
     try {
       const r = await SYNC.push(DB.state.doc, DB.state.password, DB.state.token, mensaje || "Solvento: cambios desde la web");
+      if (version !== v0) {
+        // Llegó otro cambio mientras subía: ya está guardado aquí y es más
+        // nuevo que lo subido. Sigue pendiente, y la cola lo sube a continuación.
+        pintarEstado("guardando", "Hay un cambio más reciente esperando turno");
+        return true;
+      }
+      if (r && r.blob) DB.storeBlob(r.blob);   // la copia de aquí, idéntica a la de GitHub
       marcarPendiente(false);
       pintarEstado("ok", "Guardado en GitHub · comprobando que se puede releer…");
       // Que GitHub acepte los bytes no prueba nada; que se vuelvan a leer, sí.
@@ -427,28 +478,97 @@
     } catch (e) { /* se reintentará en el siguiente guardado */ }
   }
 
-  // Guardar el documento tras una edición: cifra, guarda local y sube si se puede.
+  /* ── La cola de subidas ────────────────────────────────────────────────────
+   * Cada guardado subía el documento entero por su cuenta. Con dos cambios
+   * seguidos, las dos subidas corrían a la vez contra el mismo archivo: una
+   * chocaba, pedía el estado nuevo y volvía a subir... SU documento, que podía
+   * ser el viejo. Lo último en llegar a GitHub no era lo último que hiciste.
+   *
+   * Ahora sube una sola cada vez. Si mientras tanto llegan más cambios, no se
+   * lanzan: se apunta que hay que volver a subir y, al terminar, se sube UNA
+   * vez más con el documento de ese momento, que ya los lleva todos. Diez
+   * cambios seguidos son, como mucho, dos subidas, y la última es la buena.
+   */
+  let enCurso = null, otraVez = false;
+  function subirEnCola(mensaje) {
+    if (enCurso) { otraVez = true; return enCurso; }
+    enCurso = (async () => {
+      let ok = false;
+      do {
+        otraVez = false;
+        ok = await subir(mensaje);
+      } while (ok && (otraVez || hayPendiente()) && DB.state.doc && DB.state.token);
+      return ok && !hayPendiente();
+    })().finally(() => { enCurso = null; });
+    return enCurso;
+  }
+
+  // Guardar el documento tras una edición: cifra y guarda aquí SIEMPRE, y sube
+  // solo si el autoguardado está encendido.
   async function saveDoc() {
     if (!DB.state.doc || !DB.state.password) return;
     // Los formularios ya no se abren en modo lectura, pero alguna acción suelta
     // podría llegar hasta aquí: que no se guarde ni se suba nada.
     if (esInvitado()) { render(); avisoLectura(); return; }
+    version++;
     render();
     await guardarLocal();
+    // Pendiente desde YA, no solo si falla la subida: si se cierra la pestaña a
+    // media subida, lo que no llegó a GitHub tiene que seguir constando.
+    marcarPendiente(true);
     if (!DB.state.token) {
-      marcarPendiente(true);
-      pintarEstado("sintoken", "Guardado en este dispositivo. Añade tu token en ⚙ Ajustes para subirlo solo.");
+      pintarEstado("sintoken", "Guardado en este dispositivo. Añade tu token en ⚙ Ajustes para subirlo.");
       toast("Guardado en este dispositivo · añade tu token para subirlo", "var(--ambar-2)");
       return;
     }
-    if (await subir()) { toast("Guardado y sincronizado ✓", "var(--verde)"); sincronizarTickers(); }
+    if (!autoguardado()) {
+      pintarEstado("local", "Guardado en este navegador · súbelo con ⌘S / Ctrl+S o desde Ajustes");
+      toast("Guardado aquí · ⌘S para subirlo a GitHub", "var(--t1b)");
+      return;
+    }
+    if (await subirEnCola()) { toast("Guardado y sincronizado ✓", "var(--verde)"); sincronizarTickers(); }
+  }
+
+  // Subir ya, a mano: el botón de Ajustes y ⌘S / Ctrl+S. Por la misma cola.
+  async function subirAhora(mensaje) {
+    if (!DB.state.doc || esInvitado()) return false;
+    if (!DB.state.token) { toast("Para subir a GitHub hace falta el token: ponlo en ⚙ Ajustes → Sincronización", "var(--ambar-2)"); return false; }
+    if (!hayPendiente() && !enCurso) { toast("No hay nada que subir: GitHub ya tiene lo último ✓", "var(--verde)"); return true; }
+    const ok = await subirEnCola(mensaje || "Solvento: cambios desde la web");
+    if (ok) { toast("Subido a GitHub ✓", "var(--verde)"); sincronizarTickers(); }
+    return ok;
   }
 
   // Si quedaron cambios sin subir (fallo de red, token caducado, sha obsoleto),
-  // se reintenta al desbloquear, al recuperar la conexión y al volver a la pestaña.
+  // se reintenta al desbloquear, al recuperar la conexión y al volver a la
+  // pestaña... solo con el autoguardado encendido. Apagado, subir es cosa tuya.
   async function reintentarPendiente() {
     if (!hayPendiente() || !DB.state.doc || !DB.state.token) return;
-    if (await subir("Solvento: subir cambios pendientes")) toast("Cambios pendientes subidos ✓", "var(--verde)");
+    if (!autoguardado()) {
+      pintarEstado("local", "Hay cambios en este navegador sin subir · ⌘S / Ctrl+S para subirlos");
+      return;
+    }
+    if (await subirEnCola("Solvento: subir cambios pendientes")) toast("Cambios pendientes subidos ✓", "var(--verde)");
+  }
+
+  // ── Salir con cambios sin subir ──────────────────────────────────────────
+  // Bloquear o cambiar de cuenta con cambios que solo están aquí no los pierde
+  // —siguen cifrados en este navegador—, pero los deja fuera de GitHub sin que
+  // te enteres. Se pregunta antes.
+  async function salirConCuidado(accion) {
+    if (DB.state.doc && hayPendiente() && !esInvitado()) {
+      if (DB.state.token) {
+        if (confirm("Tienes cambios sin subir a GitHub.\n\nAceptar: subirlos ahora y salir.\nCancelar: decidir otra cosa.")) {
+          const ok = await subirAhora("Solvento: cambios desde la web");
+          if (!ok && !confirm("No se han podido subir. ¿Salir igualmente? Se quedan guardados en este navegador.")) return;
+        } else if (!confirm("¿Salir sin subirlos?\n\nSe quedan guardados en este navegador y podrás subirlos la próxima vez que entres.")) {
+          return;
+        }
+      } else if (!confirm("Tus cambios están guardados solo en este navegador: sin token no se pueden subir a GitHub. ¿Salir?")) {
+        return;
+      }
+    }
+    accion();
   }
   function lock() {
     if (P()) P().entrar(false);
@@ -499,7 +619,7 @@
 
     // 5. Subir, para que los demás dispositivos usen ya la nueva
     let subido = false;
-    if (token) subido = await subir("Solvento: cambio de contraseña");
+    if (token) { marcarPendiente(true); subido = await subirEnCola("Solvento: cambio de contraseña"); }
     else marcarPendiente(true);
     return { subido };
   }
@@ -683,6 +803,7 @@
 
   // ── Sincronización (UI) ──
   function updateSyncUi() {
+    pintarAutoguardado();
     const has = SYNC.hasToken();
     const st = $("sync-token-status");
     if (st) { st.textContent = has ? "✅ Token guardado (cifrado) en este dispositivo" : "Sin token — necesario para guardar en GitHub"; st.style.color = has ? "var(--verde)" : "var(--t2)"; }
@@ -766,18 +887,18 @@
     updateSyncUi();
     pintarLectura();                     // con token ya no es un invitado
     render();                            // y vuelven los botones de editar
-    setError("sync-status", "Token guardado ✓ · a partir de ahora se guarda solo", "var(--verde)");
+    setError("sync-status", autoguardado() ? "Token guardado ✓ · a partir de ahora se guarda solo"
+                                           : "Token guardado ✓ · enciende el autoguardado o sube con ⌘S / Ctrl+S", "var(--verde)");
     if (hayPendiente()) await reintentarPendiente(); else pintarEstado("ok");
   }
+  // El botón de Ajustes sube por la misma cola que todo lo demás: si ya había
+  // una subida en marcha, espera a que termine en vez de cruzarse con ella.
   async function doPush() {
     if (!DB.state.token) { setError("sync-status", "Primero añade tu token"); return; }
     setError("sync-status", "Subiendo a GitHub…", "var(--t1b)");
-    try {
-      await SYNC.push(DB.state.doc, DB.state.password, DB.state.token);
-      setError("sync-status", "Guardado en GitHub ✓", "var(--verde)");
-    } catch (e) {
-      setError("sync-status", e.code === "CONFLICT" ? "El fichero cambió en el repo; usa 'Traer de GitHub' primero" : ("Error: " + e.message));
-    }
+    marcarPendiente(true);   // a mano se sube aunque no conste nada pendiente
+    const ok = await subirEnCola("Solvento: cambios desde la web");
+    setError("sync-status", ok ? "Guardado en GitHub ✓" : "No se pudo subir: mira el estado de arriba", ok ? "var(--verde)" : "var(--ambar-2)");
   }
   async function doPull() {
     setError("sync-status", "Trayendo de GitHub…", "var(--t1b)");
@@ -913,9 +1034,24 @@
     $("pass-form").addEventListener("submit", handlePassword);
     $("pw-cancelar").addEventListener("click", cerrarCambioPassword);
     $("login-ver").addEventListener("click", alternarVerPass);
-    $("cuenta-btn").addEventListener("click", () => { $("login-user").value = ""; lock(); });
+    $("cuenta-btn").addEventListener("click", () => salirConCuidado(() => { $("login-user").value = ""; lock(); }));
     $("import-form").addEventListener("submit", handleImport);
-    $("logout-btn").addEventListener("click", lock);
+    $("logout-btn").addEventListener("click", () => salirConCuidado(lock));
+    const auto = $("sync-auto");
+    if (auto) auto.addEventListener("change", () => ponerAutoguardado(auto.checked));
+    // ⌘S / Ctrl+S: subir lo que haya. Dentro de la app, nunca «guardar la página».
+    document.addEventListener("keydown", (ev) => {
+      if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && String(ev.key).toLowerCase() === "s") {
+        if (!DB.state.doc) return;
+        ev.preventDefault();
+        subirAhora();
+      }
+    });
+    // Cerrar la pestaña, recargar o irse a otra web con cambios sin subir: el
+    // navegador pregunta. Su texto no se puede cambiar, pero sí que salga.
+    window.addEventListener("beforeunload", (ev) => {
+      if (DB.state.doc && hayPendiente() && !esInvitado()) { ev.preventDefault(); ev.returnValue = ""; }
+    });
     $("sync-save-token").addEventListener("click", saveToken);
     $("sync-token-ver").addEventListener("click", alternarVerToken);
     $("sync-token-cambiar").addEventListener("click", cambiarToken);

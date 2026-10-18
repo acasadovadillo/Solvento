@@ -185,10 +185,13 @@
     const blob = await C.encryptDoc(doc, password);
     const contentStr = JSON.stringify(blob);
 
+    // La copia local ya NO se pisa aquí. Mientras esto subía, pudo llegar otro
+    // cambio que ya está guardado en este navegador; escribir encima el bloque
+    // que se acaba de subir —más viejo— lo perdía en cuanto se recargaba. Quien
+    // llama decide si el bloque subido es el último y puede quedarse de copia.
     async function intentar(sha) {
       const newSha = await ghPut(token, contentStr, sha, message);
       setSha(newSha);
-      window.SolventoDB.storeBlob(blob); // cache local al día
       return newSha;
     }
 
@@ -208,7 +211,7 @@
     // comprobar se cuenta como no comprobado, no como roto.
     const verificacion = verificarGuardado(contentStr, doc, password)
       .catch((e) => ({ ok: false, grave: false, motivo: e.message || "no se pudo comprobar" }));
-    return { sha: nuevoSha, verificacion };
+    return { sha: nuevoSha, verificacion, blob };
   }
 
 
