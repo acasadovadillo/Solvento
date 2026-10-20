@@ -508,6 +508,29 @@ var gOct = M.buildGastos(doc).meses.filter(function (x) { return x.ym === "2026-
 comprobar("lo que aporta la pareja no es ingreso tuyo y un gasto común es tuyo a medias",
   oct && cerca(oct.ingresos, gOct.ingresos) && cerca(oct.gastos, gOct.gastos + 20),
   oct && JSON.stringify([oct.ingresos, gOct.ingresos, oct.gastos, gOct.gastos]));
+// La caja por uso: colchón, otra liquidez y no líquido son otra forma de
+// agrupar la misma caja. Marcar una cuenta como no líquida (una fianza
+// depositada) o como colchón no cambia ni un céntimo del patrimonio neto.
+var conUso = JSON.parse(JSON.stringify(conFondo));
+conUso.config.cuentas[0].colchon = true;
+conUso.config.cuentas.push({ cuenta: "Fianza depositada", accent: "#888", liquida: false, colchon: true });
+conUso.config.colchon_objetivo = 4500;
+conUso.movimientos.push({ id: "fd1", tipo: "Traspaso", importe: "1500", fecha: "04/10/2026", cuenta_origen: banco, cuenta_destino: "Fianza depositada" });
+var sinMarcas = JSON.parse(JSON.stringify(conUso));
+sinMarcas.config.cuentas.forEach(function (c) { delete c.liquida; delete c.colchon; });
+C.usarDoc(sinMarcas); var mSin = M.build(sinMarcas, precios);
+C.usarDoc(conUso); var mUso = M.build(conUso, precios);
+var fianzaDep = mUso.saldos.filter(function (x) { return x.cuenta === "Fianza depositada"; })[0];
+comprobar("agrupar la caja por uso no cambia el patrimonio neto",
+  cerca(mUso.patrimonioNeto, mSin.patrimonioNeto) &&
+  cerca(mUso.caja.colchon + mUso.caja.otraLiquidez + mUso.caja.noLiquida, mUso.liquidoPropio) &&
+  cerca(mUso.caja.noLiquida, 1500) && !fianzaDep.colchon && cerca(mSin.caja.noLiquida, 0),
+  JSON.stringify(mUso.caja));
+comprobar("el colchón no lleva el apartado de la pareja y se mide contra su objetivo",
+  cerca(mUso.caja.colchon, mUso.saldos.filter(function (x) { return x.cuenta === banco; })[0].propio) &&
+  mUso.caja.objetivo === 4500 && cerca(mUso.caja.cumplido, mUso.caja.colchon / 45),
+  mUso.caja.colchon + " · " + mUso.caja.cumplido);
+C.usarDoc(conFondo);
 var sf = M.buildSeries(conFondo, precios);
 comprobar("la curva del patrimonio acaba en el patrimonio también con cuentas compartidas",
   cerca(sf.patrimonio[sf.patrimonio.length - 1][1], mf.patrimonioNeto) && cerca(sf.caja[sf.caja.length - 1][1], mf.patrimonioLiquido),

@@ -123,6 +123,12 @@
       dentroDe: c.dentro_de && c.dentro_de !== c.cuenta && nombres.has(c.dentro_de) ? c.dentro_de : null,
       titularidad: Math.round(tit[c.cuenta] * 100),
       propio: round2(bal[c.cuenta] * tit[c.cuenta]),
+      // Para qué sirve el dinero de la cuenta. Líquida es la que se puede usar
+      // ya; una fianza depositada en la Agencia de Vivienda es tuya y suma al
+      // patrimonio, pero no está disponible. Colchón es la reserva para
+      // imprevistos, y solo puede serlo lo que es líquido.
+      liquida: c.liquida !== false,
+      colchon: c.liquida !== false && c.colchon === true,
     }));
     // TODO el efectivo es Caja, esté donde esté. El saldo de un bróker es dinero
     // que puedes sacar, no una inversión: contarlo como Cartera deformaba su
@@ -140,7 +146,19 @@
     // La caja que es tuya: lo mismo que la de arriba salvo en las cuentas
     // compartidas, que entran por tu parte. Es la que suma al patrimonio.
     const liquidoPropio = round2(saldos.reduce((s, x) => s + x.propio, 0));
-    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, efectivoBroker };
+    // La misma caja, por uso: el colchón, el resto de lo disponible y lo que
+    // no se puede tocar. Las tres suman liquidoPropio: es otra forma de
+    // agruparla, no otra cifra. Un apartado (el fondo de pareja) tiene su
+    // propio saldo y su propia marca, así que no se cuela en el colchón de la
+    // cuenta en la que vive.
+    const sumaDe = (f) => round2(saldos.filter(f).reduce((s, x) => s + x.propio, 0));
+    const caja = {
+      colchon: sumaDe((x) => x.colchon),
+      otraLiquidez: sumaDe((x) => x.liquida && !x.colchon),
+      noLiquida: sumaDe((x) => !x.liquida),
+    };
+    caja.disponible = round2(caja.colchon + caja.otraLiquidez);
+    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, caja, efectivoBroker };
   }
 
   // ── Registro de activos: conocidos + derivados de los datos ──
@@ -492,7 +510,7 @@
 
   // ── Modelo completo ──
   function build(db, prices) {
-    const { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, efectivoBroker } =
+    const { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, caja, efectivoBroker } =
       computeSaldos(db.movimientos, db.inversiones);
     const inv = valuate(db, prices);
     // Los inmuebles y el resto de bienes se valoran igual, pero son dos clases
@@ -517,11 +535,18 @@
     const ratioInm = patrimonioBruto ? inm.total / patrimonioBruto * 100 : 0;
     const ratioOtros = patrimonioBruto ? otros.total / patrimonioBruto * 100 : 0;
     const ratioCobrar = patrimonioBruto ? cobrar.total / patrimonioBruto * 100 : 0;
+    // Lo de las cuentas no líquidas va aparte en el reparto: es tuyo, pero no
+    // es caja disponible. El patrimonio no cambia; solo dónde se cuenta.
+    const ratioNoLiquido = patrimonioBruto ? caja.noLiquida / patrimonioBruto * 100 : 0;
     // Este no es una parte del reparto: dice cuánto pesa la deuda sobre lo que
     // tienes, que es la cifra que importa de una deuda.
     const ratioPas = patrimonioBruto ? pas.total / patrimonioBruto * 100 : 0;
-    const pctLiquidez = 100 - ratioInv - ratioInm - ratioOtros - ratioCobrar;
-    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, efectivoBroker,
+    const pctLiquidez = 100 - ratioInv - ratioInm - ratioOtros - ratioCobrar - ratioNoLiquido;
+    // El objetivo del colchón vive en tu configuración, como el de reparto.
+    const objColchon = num(db.config && db.config.colchon_objetivo);
+    caja.objetivo = isFinite(objColchon) && objColchon > 0 ? objColchon : null;
+    caja.cumplido = caja.objetivo ? caja.colchon / caja.objetivo * 100 : NaN;
+    return { saldos, saldosCaja, saldosBroker, patrimonioLiquido, liquidoPropio, caja, ratioNoLiquido, efectivoBroker,
              inv, inm, otros, pas, cobrar, carteraTotal, patrimonioNeto, patrimonioBruto,
              ratioInv, ratioInm, ratioOtros, ratioPas, ratioCobrar, pctLiquidez };
   }

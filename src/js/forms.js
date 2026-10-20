@@ -707,7 +707,10 @@
     const cuentas = c.cuentas.map((x, i) => filaAjuste(
       `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${esc(x.accent || "var(--t2)")};margin-right:0.4rem;"></span>${esc(x.cuenta)}`,
       [x.cartera === "cero" ? "aparece en Cartera sin efectivo propio"
-                            : (x.cartera ? "agrupa posiciones en Cartera" : "")].filter(Boolean).join(" · ") || "cuenta de efectivo",
+                            : (x.cartera ? "agrupa posiciones en Cartera" : ""),
+       x.liquida === false ? "no líquida" : (x.colchon ? "colchón" : ""),
+       x.dentro_de ? "apartado de " + esc(x.dentro_de) : "",
+       x.titularidad != null && x.titularidad < 100 ? x.titularidad + " % tuya" : ""].filter(Boolean).join(" · ") || "cuenta de efectivo",
       miniBtn("✎", `v2CfgCuenta(${i})`) + miniBtn("✕", `v2CfgDelCuenta(${i})`)
     )).join("") + `<div style="margin-top:0.9rem;">${miniBtn("＋ Añadir cuenta", "v2CfgCuenta(-1)", "var(--azul)")}</div>`;
 
@@ -983,6 +986,15 @@
       // Qué parte del saldo es tuya. Un fondo a medias con tu pareja es un 50:
       // el saldo se enseña entero, pero en tu patrimonio cuenta la mitad.
       field("c-tit", "Es tuyo (%)", input("c-tit", "number", e.titularidad != null ? e.titularidad : 100, 'step="1" min="0" max="100"')) +
+      // Para qué sirve su dinero. Por defecto, líquida y no colchón.
+      `<label style="display:flex;gap:0.55rem;align-items:center;font-size:0.86rem;color:var(--t1);margin-top:0.9rem;cursor:pointer;">
+         <input type="checkbox" id="c-liquida" ${e.liquida === false ? "" : "checked"} style="width:16px;height:16px;margin:0;accent-color:var(--azul);"> Líquida</label>
+       <div style="font-size:0.74rem;color:var(--t2);margin:0.2rem 0 0 1.6rem;">Dinero que puedes usar ya. Desmárcala para lo que es tuyo pero está inmovilizado
+         —una fianza depositada—: sigue sumando a tu patrimonio, pero no a tu caja disponible.</div>
+       <label style="display:flex;gap:0.55rem;align-items:center;font-size:0.86rem;color:var(--t1);margin-top:0.7rem;cursor:pointer;">
+         <input type="checkbox" id="c-colchon" ${e.colchon === true && e.liquida !== false ? "checked" : ""} style="width:16px;height:16px;margin:0;accent-color:var(--azul);"> Cuenta como colchón</label>
+       <div style="font-size:0.74rem;color:var(--t2);margin:0.2rem 0 0 1.6rem;">Tu reserva para imprevistos. En Caja se compara con tu objetivo de colchón.
+         Solo puede serlo una cuenta líquida.</div>` +
       `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.4rem;">Si es compartida, registra lo que aporte la otra persona
          como <b>Ingreso</b> con la categoría <b>Aportación pareja</b>: cuadra el saldo con el banco sin contar como ingreso tuyo.
          Los gastos que salgan de ella cuentan como tuyos solo en tu parte.</div>`;
@@ -1009,6 +1021,11 @@
       if (tit < 100) rec.titularidad = tit; else delete rec.titularidad;
       const dentro = G("c-dentro");
       if (dentro && dentro !== nombre) rec.dentro_de = dentro; else delete rec.dentro_de;
+      // Solo se guarda lo que se aparta de lo normal: líquida y no colchón.
+      const liquida = document.getElementById("c-liquida").checked;
+      const colchon = liquida && document.getElementById("c-colchon").checked;
+      if (liquida) delete rec.liquida; else rec.liquida = false;
+      if (colchon) rec.colchon = true; else delete rec.colchon;
       // Una cuenta que ya tiene apartados no puede ser a su vez apartado de otra.
       if (rec.dentro_de && c.cuentas.some((x, k) => k !== i && x.dentro_de === (i >= 0 ? c.cuentas[i].cuenta : nombre)))
         return "Esta cuenta tiene apartados dentro: no puede ser a su vez un apartado";
@@ -1030,6 +1047,16 @@
     if (sel && fila) {
       const upd = () => { fila.style.display = sel.value === "no" ? "none" : ""; };
       sel.addEventListener("change", upd); upd();
+    }
+    // Sin «Líquida» no hay colchón posible: la casilla se apaga y se desmarca.
+    const liq = document.getElementById("c-liquida"), col2 = document.getElementById("c-colchon");
+    if (liq && col2) {
+      const updCol = () => {
+        col2.disabled = !liq.checked;
+        if (!liq.checked) col2.checked = false;
+        col2.closest("label").style.opacity = liq.checked ? "" : "0.5";
+      };
+      liq.addEventListener("change", updCol); updCol();
     }
     // Un apartado lleva el color de su cuenta: es el mismo banco. Se propone
     // al elegirla, y se puede cambiar después.
@@ -1101,6 +1128,23 @@
     if (!a || !confirm(`¿Quitar "${a.nombre}" de tus activos? Las operaciones que ya tengas registradas no se borran.`)) return;
     c.activos.splice(i, 1);
     if (window.SolventoBoot) window.SolventoBoot.saveDoc().then(refrescarAjustes);
+  }
+
+  // El objetivo del colchón: cuánto quieres tener de reserva. Se guarda en tu
+  // configuración, cifrada como el resto; vacío, no se compara con nada.
+  function openColchonObjetivo() {
+    const c = cfgEditable();
+    const body = field("cc-obj", "Objetivo de colchón (€)", input("cc-obj", "number", c.colchon_objetivo, 'step="1" min="0" placeholder="4500"')) +
+      `<div style="font-size:0.75rem;color:var(--t2);margin-top:0.5rem;">Lo que quieres tener a mano para imprevistos. Se suma lo de
+         las cuentas marcadas como colchón. Déjalo vacío para no fijar ninguno.</div>`;
+    shell("Objetivo de colchón", body, () => {
+      const t = G("cc-obj");
+      if (!t) { delete c.colchon_objetivo; return null; }
+      const v = parseFloat(t);
+      if (!isFinite(v) || v <= 0) return "Introduce un importe mayor que cero";
+      c.colchon_objetivo = v;
+      return null;
+    }, refrescarAjustes);
   }
 
   // El objetivo de asignación: un % por categoría, sean las que sean (Renta
@@ -1927,7 +1971,7 @@
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
     fragmentosAjustes, verPagina, wireMenuOrden, ordenarPaginas, wireNav, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
-    openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, elegirBanco, openActivoCfg, borrarActivoCfg, openObjetivoCfg,
+    openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, elegirBanco, openActivoCfg, borrarActivoCfg, openObjetivoCfg, openColchonObjetivo,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),
     editInversion: (id) => openInversion(findById("inversiones", id)),
     editPropiedad: (id) => openPropiedad(findById("propiedades", id) || findById("inmuebles", id)),
