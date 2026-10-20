@@ -537,6 +537,13 @@ comprobar("la curva del patrimonio acaba en el patrimonio también con cuentas c
   sf.patrimonio[sf.patrimonio.length - 1][1] + " vs " + mf.patrimonioNeto);
 C.usarDoc(doc);
 
+// Un activo guardado con un ticker que se sustituyó (el Fidelity S&P 500 en
+// Stuttgart, que Yahoo dejó de actualizar) se lleva el nuevo sin editarlo.
+C.usarDoc({ config: { activos: [{ nombre: "Fidelity S&P 500 Index Fund P-ACC-EUR", isin: "IE00BYX5MX67", yf: "IE00BYX5MX67.SG" }] } });
+comprobar("un ticker sustituido se cambia solo por el bueno",
+  C.activos()[0].yf === "0P0001CLDM.F", C.activos()[0].yf);
+C.usarDoc(doc);
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

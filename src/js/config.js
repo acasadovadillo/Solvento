@@ -43,7 +43,7 @@
     { nombre: "Renta 4 Multigestión Numantia Patrimonio Global FI", isin: "ES0173311103", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "MyInvestor", yf: "0P000168OI.F" },
     // Cotiza en Stuttgart: da precio del día, pero no serie histórica. La
     // valoración de hoy sale de ahí y la gráfica sigue apoyándose en el NAV.
-    { nombre: "Fidelity S&P 500 Index Fund P-ACC-EUR",              isin: "IE00BYX5MX67", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "MyInvestor", yf: "IE00BYX5MX67.SG" },
+    { nombre: "Fidelity S&P 500 Index Fund P-ACC-EUR",              isin: "IE00BYX5MX67", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "MyInvestor", yf: "0P0001CLDM.F" },
     { nombre: "Bankinter Horizonte 2028 Cl R",                      isin: "ES0159038001", categoria: "Renta fija",     tipo: "Fondo de inversión", banco: "Bankinter",  yf: "0P0001M4BN.F" },
     { nombre: "Bankinter Premium Moderado R",                       isin: "ES0164586036", categoria: "Renta variable", tipo: "Fondo de inversión", banco: "Bankinter",  yf: "0P0001MV1P.F" },
     { nombre: "MSCI ACWI USD (Acc)",             isin: "IE00B6R52259", categoria: "Renta variable", tipo: "ETF",                banco: "Trade Republic", yf: "SSAC.AS" },
@@ -304,12 +304,14 @@
     const a = ACTIVOS_DEFECTO.find((x) => x.isin === s);
     return (a && a.yf) || null;
   };
-  // Tickers que se cambiaron por la cotización EN EUROS del mismo fondo. Los
-  // de Londres cotizan en dólares y había que convertirlos con el cambio del
-  // día, que no es el del bróker: Trade Republic opera en euros y su cifra no
-  // cuadraba con la de aquí. Un activo guardado con el ticker viejo se lleva
-  // el nuevo sin tener que editarlo.
-  const TICKER_EN_EUROS = { "HEMA.L": "HEMA.MI", "IGLN.L": "PPFB.DE" };
+  // Tickers que se cambiaron por otro mejor del mismo fondo. Los de Londres
+  // cotizan en dólares y había que convertirlos con el cambio del día, que no
+  // es el del bróker: Trade Republic opera en euros y su cifra no cuadraba.
+  // El Fidelity S&P 500 se cotizaba en Stuttgart, un listado que Yahoo dejó de
+  // actualizar el 08/09/2026; su ficha de fondo (0P…) da el valor liquidativo
+  // de cada día, idéntico al de la gestora. Un activo guardado con el ticker
+  // viejo se lleva el nuevo sin tener que editarlo.
+  const TICKER_EN_EUROS = { "HEMA.L": "HEMA.MI", "IGLN.L": "PPFB.DE", "IE00BYX5MX67.SG": "0P0001CLDM.F" };
   const activos = () => {
     const propios = cfgDoc().activos || activosDeducidos();
     return propios.map((a) => {

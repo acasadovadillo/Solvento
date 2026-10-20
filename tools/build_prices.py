@@ -5,7 +5,7 @@ Solvento — Genera prices.json PÚBLICO (sin datos personales).
 Descarga el precio actual (en EUR) de cada activo con ticker de Yahoo Finance y
 lo escribe en prices.json. Los precios NO son secretos: este fichero se versiona
 en el repo y la web lo lee sin autenticación, evitando el CORS de Yahoo en el
-navegador. Los fondos sin ticker (Bankinter, Fidelity) se valoran con su NAV, que
+navegador. Los fondos sin ticker se valoran con su NAV, que
 ya viaja dentro del documento cifrado (db.nav), así que no aparecen aquí.
 
 En la Fase 2 esto se ejecuta a mano; en una fase posterior lo hará la GitHub
@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 
 # yf_ticker → moneda de cotización (el resto cotiza en EUR)
 YF_TICKERS = ["IUAA.L", "IWDA.AS", "CSPX.AS", "HEMA.MI", "PPFB.DE",
-              "BTC-EUR", "AAPL", "0P000168OI.F", "SSAC.AS"]
+              "BTC-EUR", "AAPL", "0P000168OI.F", "SSAC.AS", "0P0001CLDM.F"]
 
 # La app escribe tickers.json cuando das de alta un activo desde Ajustes, para
 # que sus precios se descarguen sin tocar este fichero. Si no existe (o está
