@@ -349,7 +349,7 @@
   // es lo que significa zero-knowledge— sino una señal: esto no es tuyo, no lo
   // toques. Contra el despiste, no contra nadie.
   const EDITAR_IGUAL = "solvento_editar_sin_token";
-  const esInvitado = () => !SYNC.hasToken() && localStorage.getItem(EDITAR_IGUAL) !== "1";
+  const esInvitado = () => esperandoDatos || (!SYNC.hasToken() && localStorage.getItem(EDITAR_IGUAL) !== "1");
   function editarIgualmente() {
     localStorage.setItem(EDITAR_IGUAL, "1");
     pintarLectura();
@@ -373,6 +373,13 @@
         "color:var(--ambar-2);font-size:0.8rem;padding:0.55rem 1rem;display:flex;gap:0.75rem;align-items:center;justify-content:center;flex-wrap:wrap;";
       document.body.appendChild(b);
     }
+    if (esperandoDatos) {
+      b.innerHTML = '<span>Tus datos aún no están en este dispositivo · añade tu token para bajarlos.</span>' +
+        '<button onclick="window.SolventoBoot.irAlToken()" style="background:none;border:1px solid var(--ambar);border-radius:6px;' +
+        'color:var(--ambar-2);font-family:inherit;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;cursor:pointer;">Ir a Ajustes</button>';
+      if (nav) nav.style.bottom = b.offsetHeight + "px";
+      return;
+    }
     b.innerHTML = '<span>Modo lectura · estás viendo unos datos que no se guardan en este dispositivo.</span>' +
       '<button onclick="window.SolventoBoot.editarIgualmente()" style="background:none;border:1px solid var(--ambar);border-radius:6px;' +
       'color:var(--ambar-2);font-family:inherit;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;cursor:pointer;">Son míos, quiero editar aquí</button>';
@@ -385,6 +392,7 @@
 
   // Cifra y guarda en este dispositivo (siempre, pase lo que pase con la red).
   async function guardarLocal() {
+    if (esperandoDatos) return;          // sin datos todavía: nada que guardar
     try { DB.storeBlob(await C.encryptDoc(DB.state.doc, DB.state.password)); } catch (_) {}
   }
 
@@ -396,7 +404,7 @@
   // Sube a GitHub. Devuelve true si lo consiguió. No se llama directamente:
   // se pasa por la cola (subirEnCola), que no deja que dos subidas se pisen.
   async function subir(mensaje) {
-    if (!DB.state.token) return false;
+    if (!DB.state.token || esperandoDatos) return false;
     pintarEstado("guardando");
     const v0 = version;
     try {
@@ -511,6 +519,7 @@
     if (!DB.state.doc || !DB.state.password) return;
     // Los formularios ya no se abren en modo lectura, pero alguna acción suelta
     // podría llegar hasta aquí: que no se guarde ni se suba nada.
+    if (esperandoDatos) { render(); toast("Aún no tienes tus datos aquí: añade tu token en ⚙ Ajustes → Sincronización", "var(--ambar-2)"); return; }
     if (esInvitado()) { render(); avisoLectura(); return; }
     version++;
     render();
@@ -579,7 +588,7 @@
     // pasa siempre.
     const tk = $("sync-token");
     if (tk) { tk.value = ""; tk.type = "password"; tk.readOnly = false; }
-    ocultarToken(); tokenDelLogin = null;
+    esperandoDatos = false; cuentaEsperando = null;
     const menu = $("user-menu"); if (menu) menu.hidden = true;
     pintarEstado("");
     quitarBandaCopia();
@@ -678,36 +687,31 @@
     setError("login-error", "Entrando…", "var(--t1b)");
     let blob = DB.getStoredBlob();
     // Los datos en un repositorio PRIVADO: sin token no se puede leer ni el
-    // bloque cifrado. El token está aquí cifrado con esta contraseña (si ya se
-    // usó este dispositivo) o se pega en el login.
-    let tokenNuevo = null;
+    // bloque cifrado. El login no lo pide nunca: si este dispositivo ya lo
+    // tiene (cifrado con esta contraseña), se usa; si no, se entra igual y se
+    // pide después, en Ajustes (entrarSinDatos).
     if (SYNC.privado()) {
-      const escrito = $("login-token") ? $("login-token").value.trim() : "";
-      const guardado = await SYNC.loadToken(pw).catch(() => null);
-      const token = escrito || guardado;
+      const token = await SYNC.loadToken(pw).catch(() => null);
       if (blob && token) await refrescarBlobRemoto(token);        // lo último del repositorio, como antes del login
       blob = DB.getStoredBlob();
       if (!blob) {
-        if (!token) { pedirToken("Este dispositivo aún no tiene tu token de GitHub: pégalo para bajar tus datos."); return; }
+        if (!token) { entrarSinDatos(cuenta, pw, null); return; }
         setError("login-error", "Bajando tus datos…", "var(--t1b)");
         try {
           const r = await SYNC.fetchRemoteBlob(token);
           if (r) { blob = r.blob; DB.storeBlob(r.blob); }
           else await SYNC.acceso(token);       // 404: ¿cuenta nueva, o un token que no llega al repositorio?
         } catch (e) {
-          if (e.code === "AUTH" || e.code === "SIN_ACCESO") pedirToken(e.message);
-          else setError("login-error", "No se puede hablar con GitHub: " + e.message);
+          entrarSinDatos(cuenta, pw, e.code === "AUTH" || e.code === "SIN_ACCESO" ? e.message : "No se puede hablar con GitHub (" + e.message + ")");
           return;
         }
       }
-      if (escrito) tokenNuevo = escrito;
     } else if (!blob) {
       // Primera vez con esta cuenta en este dispositivo: su bloque se lee de su
       // sitio (si es público, sin token). No descifra nada: sin la contraseña, ruido.
       try { const r = await SYNC.fetchRemoteBlob(null); if (r) { blob = r.blob; DB.storeBlob(r.blob); } }
       catch (e) { blob = null; }
     }
-    tokenDelLogin = tokenNuevo;
     if (!blob) {
       // Cuenta dada de alta que todavía no tiene bloque: es su primera vez, no
       // un error. Se le ofrece elegir contraseña y empezar.
@@ -716,24 +720,71 @@
     }
     try {
       const doc = await C.decryptDoc(blob, pw);
-      // El token pegado se queda aquí, cifrado con la contraseña ya comprobada.
-      if (tokenNuevo) { await SYNC.storeToken(tokenNuevo, pw); ocultarToken(); }
       unlock(doc, pw);
     } catch (e) {
       if (e.code === "BAD_PASSWORD") malos();
       else setError("login-error", "Error: " + e.message);
     }
   }
-  // El campo del token en el login: solo aparece cuando hace falta.
-  let tokenDelLogin = null;
-  function pedirToken(texto) {
-    const t = $("login-token");
-    if (t) { t.style.display = ""; t.focus(); }
-    setError("login-error", texto, "var(--ambar-2)");
+  // ── Entrar sin datos todavía ───────────────────────────────────────────
+  // Un dispositivo nuevo, sin copia local y sin token: el archivo cifrado
+  // está en un repositorio privado y no hay forma de bajarlo. Se entra igual
+  // —con la contraseña en memoria— y se lleva a Ajustes → Sincronización para
+  // poner el token. Al guardarlo, se baja el archivo y se abre con esa
+  // contraseña (traerConToken).
+  //
+  // Mientras tanto no hay datos, y no se guarda NADA: ni aquí ni en GitHub.
+  // Un documento vacío que llegara a subirse pisaría los datos de verdad.
+  let esperandoDatos = false, cuentaEsperando = null;
+  function docVacio() {
+    return { movimientos: [], inversiones: [], propiedades: [], pasivos: [], cobros: [],
+             config: { cuentas: [Object.assign({}, window.SolventoConfig.EFECTIVO)], activos: [] } };
   }
-  function ocultarToken() {
-    const t = $("login-token");
-    if (t) { t.value = ""; t.style.display = "none"; }
+  async function entrarSinDatos(cuenta, pw, motivo) {
+    esperandoDatos = true; cuentaEsperando = cuenta;
+    await unlock(docVacio(), pw);
+    pintarEstado("sintoken", "Tus datos aún no están en este dispositivo: añade tu token en ⚙ Ajustes → Sincronización para bajarlos");
+    showPageSync();
+    setError("sync-status", motivo ? motivo + ". Pega un token que dé acceso a tus datos."
+      : "Este dispositivo aún no tiene tus datos. Pega tu token de GitHub y se bajarán aquí, cifrados.", "var(--ambar-2)");
+  }
+  function showPageSync() {
+    if (window.v2UserIr) window.v2UserIr("ajustes");
+    if (window.v2AjSec) window.v2AjSec("sync");
+  }
+  async function traerConToken(t) {
+    const pw = DB.state.password, cuenta = cuentaEsperando;
+    setError("sync-status", "Bajando tus datos…", "var(--t1b)");
+    let r;
+    try {
+      r = await SYNC.fetchRemoteBlob(t);
+      if (!r) await SYNC.acceso(t);
+    } catch (e) {
+      setError("sync-status", e.code === "AUTH" || e.code === "SIN_ACCESO" ? e.message : "No se puede hablar con GitHub: " + e.message);
+      return;
+    }
+    if (!r) {
+      // El token vale pero no hay archivo: es una cuenta que empieza. Se
+      // elige la contraseña con calma, en su panel de siempre.
+      await SYNC.storeToken(t, pw);
+      lock();
+      empezarCuenta(cuenta, pw);
+      return;
+    }
+    let doc;
+    try { doc = await C.decryptDoc(r.blob, pw); }
+    catch (e) {
+      setError("sync-status", e.code === "BAD_PASSWORD"
+        ? "Tu contraseña no abre estos datos. Bloquea (menú de la cuenta) y vuelve a entrar con la buena."
+        : "Error al abrir tus datos: " + e.message);
+      return;
+    }
+    DB.storeBlob(r.blob);
+    await SYNC.storeToken(t, pw);
+    esperandoDatos = false; cuentaEsperando = null;
+    await unlock(doc, pw);
+    if (window.v2Tab) window.v2Tab("patrimonio");
+    toast("Tus datos ya están en este dispositivo ✓", "var(--verde)");
   }
   // Primera vez de una cuenta: se pasa al panel de empezar con su nombre puesto
   // y, si ya venía escrita una contraseña en el login, se aprovecha.
@@ -777,8 +828,6 @@
                     config: { cuentas: [Object.assign({}, window.SolventoConfig.EFECTIVO)], activos: [] } };
       const blob = await C.encryptDoc(doc, p1);
       DB.storeBlob(blob);
-      // Si el token se pegó en el login, se guarda ya con la contraseña nueva.
-      if (tokenDelLogin) { await SYNC.storeToken(tokenDelLogin, p1); DB.state.token = tokenDelLogin; tokenDelLogin = null; ocultarToken(); }
       unlock(doc, p1);
       // Existe en este navegador, pero todavía en ningún otro sitio: sin token,
       // lo que registre se queda aquí, y eso hay que decirlo el primer día.
@@ -930,6 +979,7 @@
   async function saveToken() {
     const t = $("sync-token").value.trim();
     if (!t) { setError("sync-status", "Pega tu token de GitHub"); return; }
+    if (esperandoDatos) { await traerConToken(t); return; }
     await SYNC.storeToken(t, DB.state.password);
     DB.state.token = t;
     rellenarToken();                     // se queda puesto, oculto y bloqueado
@@ -1136,6 +1186,6 @@
     startBoot();
   }
 
-  window.SolventoBoot = { lock, openSync, saveDoc, toast, cambiarPassword, abrirCambioPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken, pintarComprobacion, comprobarAhora, cargarNav, activosParaNav, precios: () => PRICES };
+  window.SolventoBoot = { irAlToken: () => showPageSync(), lock, openSync, saveDoc, toast, cambiarPassword, abrirCambioPassword, esInvitado, editarIgualmente, avisoLectura, pintarLectura, rellenarToken, pintarComprobacion, comprobarAhora, cargarNav, activosParaNav, precios: () => PRICES };
   document.addEventListener("DOMContentLoaded", init);
 })();
