@@ -17,10 +17,10 @@
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
   <!-- El tema, antes que el CSS: si se aplicara después de pintar, quien use
        el tema claro vería un fogonazo oscuro en cada carga. -->
-  <script src="src/js/tema.js?v=p215"></script>
-  <link rel="stylesheet" href="src/css/base.css?v=p215" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p215" />
-  <link rel="stylesheet" href="src/css/components.css?v=p215" />
+  <script src="src/js/tema.js?v=p216"></script>
+  <link rel="stylesheet" href="src/css/base.css?v=p216" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p216" />
+  <link rel="stylesheet" href="src/css/components.css?v=p216" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -117,7 +117,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="src/css/openclaw.css?v=p215" />
+  <link rel="stylesheet" href="src/css/openclaw.css?v=p216" />
 </head>
 <body>
 
@@ -357,15 +357,22 @@
 
           <section class="aj-sec" id="aj-sec-apariencia">
             <h3>Apariencia</h3>
+            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--t2);font-weight:700;margin-bottom:0.5rem;">Tema</div>
             <p>Es una preferencia de este dispositivo, como el token: no viaja con tus datos.
                Con «Automático», Solvento sigue al sistema y cambia con él.</p>
-            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--t2);font-weight:700;margin-bottom:0.5rem;">Tema</div>
             <div id="aj-tema" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
               <label class="tema-opcion"><input type="radio" name="tema" value="claro"  onchange="v2Tema(this.value)"><span>☀️ Claro</span></label>
               <label class="tema-opcion"><input type="radio" name="tema" value="oscuro" onchange="v2Tema(this.value)"><span>🌙 Oscuro</span></label>
               <label class="tema-opcion"><input type="radio" name="tema" value="auto"   onchange="v2Tema(this.value)"><span>🖥 Automático</span></label>
             </div>
             <small id="aj-tema-nota" style="display:block;margin-top:0.6rem;"></small>
+
+            <!-- El acento, en cambio, es de la cuenta: se guarda con los datos
+                 cifrados (config.acento) y se pinta en render.js. -->
+            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--t2);font-weight:700;margin:1.75rem 0 0.5rem;">Color de acento</div>
+            <p>Elige un color de acento para botones, elementos resaltados y otros controles.</p>
+            <div id="aj-acento" class="muestras" role="radiogroup" aria-label="Color de acento"></div>
+            <small id="aj-acento-nota" style="display:block;margin-top:0.6rem;"></small>
           </section>
 
           <section class="aj-sec" id="aj-sec-menu">
@@ -458,20 +465,20 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/entorno.js?v=p215"></script>
-<script src="src/js/crypto.js?v=p215"></script>
-<script src="src/js/config.js?v=p215"></script>
-<script src="src/js/model.js?v=p215"></script>
-<script src="src/js/charts.js?v=p215"></script>
-<script src="src/js/render.js?v=p215"></script>
-<script src="src/js/db.js?v=p215"></script>
-<script src="src/js/sync.js?v=p215"></script>
-<script src="src/js/nav.js?v=p215"></script>
-<script src="src/js/plan.js?v=p215"></script>
-<script src="src/js/forms.js?v=p215"></script>
-<script src="src/js/perfil.js?v=p215"></script>
-<script src="src/js/exportar.js?v=p215"></script>
-<script src="src/js/boot.js?v=p215"></script>
+<script src="src/js/entorno.js?v=p216"></script>
+<script src="src/js/crypto.js?v=p216"></script>
+<script src="src/js/config.js?v=p216"></script>
+<script src="src/js/model.js?v=p216"></script>
+<script src="src/js/charts.js?v=p216"></script>
+<script src="src/js/render.js?v=p216"></script>
+<script src="src/js/db.js?v=p216"></script>
+<script src="src/js/sync.js?v=p216"></script>
+<script src="src/js/nav.js?v=p216"></script>
+<script src="src/js/plan.js?v=p216"></script>
+<script src="src/js/forms.js?v=p216"></script>
+<script src="src/js/perfil.js?v=p216"></script>
+<script src="src/js/exportar.js?v=p216"></script>
+<script src="src/js/boot.js?v=p216"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

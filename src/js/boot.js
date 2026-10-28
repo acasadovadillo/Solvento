@@ -588,6 +588,9 @@
   }
   function lock() {
     if (P()) P().entrar(false);
+    // Y el acento vuelve al de Solvento: era el de la cuenta que se va, y la
+    // pantalla de entrada no es de nadie todavía.
+    if (window.SolventoTema) window.SolventoTema.acento(null);
     // El campo del token no se vacía solo al cambiar de cuenta: lo que escribió
     // una seguiría ahí para la siguiente. Se limpia aquí, que es por donde se
     // pasa siempre.

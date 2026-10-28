@@ -2738,6 +2738,9 @@
     CURRENT_DOC = doc;
     window.__PRICES = prices;
     CFG.usarDoc(doc);          // cuentas/activos/objetivo salen de tus datos
+    // El acento de esta cuenta (o el de Solvento, si no eligió ninguno). Se
+    // repite en cada pintado: así llega también el que se cambió en otro sitio.
+    if (window.SolventoTema) window.SolventoTema.acento((doc.config || {}).acento);
     const m = window.SolventoModel.build(doc, prices);
     window.__MODEL = m;
     try { window.__ANALITICA = window.SolventoModel.buildAnalitica(doc, prices); }
@@ -2893,6 +2896,30 @@
       : "";
   }
   window.v2Tema = (v) => { if (window.SolventoTema) window.SolventoTema.poner(v); pintarTema(); };
+
+  // El acento sí es de la cuenta (config.acento): las muestras de OpenClaw, la
+  // del verde azulado de Solvento delante, y un cuentagotas para cualquier otro.
+  const ICONO_OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  const ICONO_PIPETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>';
+  function pintarAcento() {
+    const T = window.SolventoTema, caja = document.getElementById("aj-acento");
+    if (!T || !caja) return;
+    const actual = T.acentoActual();
+    const elegido = T.ACENTOS.find((a) => a.color === actual);
+    caja.innerHTML = T.ACENTOS.map((a) => `<button type="button" class="muestra ${a.color === actual ? "elegida" : ""}" style="--c:${a.color}"
+        onclick="v2Acento('${a.color}')" role="radio" aria-checked="${a.color === actual}" aria-label="${a.nombre}" title="${a.nombre}">${a.color === actual ? ICONO_OK : ""}</button>`).join("") +
+      `<label class="muestra ${elegido ? "" : "elegida"}" style="--c:${actual}" title="Personalizado">${ICONO_PIPETA}
+        <input type="color" value="${actual}" oninput="v2AcentoPrevio(this.value)" onchange="v2Acento(this.value)" aria-label="Color personalizado"></label>`;
+    const nota = document.getElementById("aj-acento-nota");
+    if (nota) nota.textContent = (elegido ? elegido.nombre + (actual === T.ACENTO_SOLVENTO ? " (el de Solvento)" : "") : "Color personalizado " + actual) +
+      " · Se guarda con tus datos cifrados: te acompaña en todos tus dispositivos.";
+  }
+  // Mientras se arrastra en el cuentagotas solo se pinta; al soltar, se guarda
+  window.v2AcentoPrevio = (c) => { if (window.SolventoTema && window.SolventoTema.acentoValido(c)) window.SolventoTema.acento(c); };
+  window.v2Acento = async (c) => {
+    if (F() && F().ponerAcento) await F().ponerAcento(c);
+    pintarAcento();
+  };
   // El recibo del mes, ya escrito: la tarjeta sabe cuánto debe y por qué cuenta
   // se cobra, así que lo único que queda por confirmar es la fecha.
   window.v2Liquidar = (nombre) => {
@@ -2925,6 +2952,7 @@
     poner("aj-valores", fr.nav);
     if (F().wireNav) F().wireNav();
     poner("aj-revision", panelRevision());
+    pintarAcento();
     const B = window.SolventoBoot;
     if (B && B.rellenarToken) B.rellenarToken();
     if (B && B.pintarComprobacion) B.pintarComprobacion();
@@ -2935,7 +2963,7 @@
     // El token vive cifrado y solo boot.js lo tiene en la mano: se le pide que
     // lo ponga en su campo cuando esta sección se abre, venga uno por donde venga.
     const B = window.SolventoBoot;
-    if (sec === "apariencia") pintarTema();
+    if (sec === "apariencia") { pintarTema(); pintarAcento(); }
     if (sec === "sync" && B) {
       if (B.rellenarToken) B.rellenarToken();
       // Y el estado del guardado al día: si se abre esta pestaña media hora

@@ -923,6 +923,20 @@
     if (window.SolventoBoot && window.SolventoBoot.saveDoc) await window.SolventoBoot.saveDoc();
   }
 
+  // El color de acento de la cuenta (Ajustes › Apariencia). Como el menú: se
+  // aplica en el acto y se guarda, para que sea el mismo en todos tus
+  // dispositivos. El de Solvento no se guarda: es lo que hay cuando no hay nada.
+  async function ponerAcento(color) {
+    const T = window.SolventoTema;
+    if (!T || !T.acentoValido(color)) return;
+    if (soloLectura()) { T.acento((DB.state.doc && DB.state.doc.config || {}).acento); return; }
+    const c = cfgEditable();
+    const nuevo = String(color).toLowerCase();
+    if (nuevo === T.ACENTO_SOLVENTO) delete c.acento; else c.acento = nuevo;
+    T.acento(nuevo);
+    if (window.SolventoBoot && window.SolventoBoot.saveDoc) await window.SolventoBoot.saveDoc();
+  }
+
   // Cuando el logo todavía no está en img/, en vez de una imagen rota se pinta
   // la inicial sobre el color de la marca. Así el catálogo funciona desde el
   // primer día y cada PNG que llega mejora lo que ya había.
@@ -1969,7 +1983,7 @@
   window.SolventoForms = {
     openPlanLinea, openPlanProducto, openPlanAportacion, borrarPlan, ponerPctAhorro, importarPlanXlsx, atarPlan,
     openMovimiento, openInversion, openPropiedad, openNav, openCuadrar, openPasivo, openImputarCentro,
-    fragmentosAjustes, verPagina, wireMenuOrden, ordenarPaginas, wireNav, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
+    fragmentosAjustes, verPagina, ponerAcento, wireMenuOrden, ordenarPaginas, wireNav, marcarRevisado, restaurarRevisiones, arreglarTextos, openCobro, cobrarCobro, marcarIncobrable, darPrestamoPorIncobrable, openPartida, openPresupuesto, openRegla, openCategoriaNueva, borrarCategoriaCfg, renombrarCategoriaCfg,
     openCategoriaIngresoNueva, borrarCategoriaIngresoCfg, renombrarCategoriaIngresoCfg,
     openCentroNuevo, borrarCentroCfg, renombrarCentroCfg, openCuentaCfg, borrarCuentaCfg, elegirBanco, openActivoCfg, borrarActivoCfg, openObjetivoCfg, openColchonObjetivo,
     editMovimiento: (id) => openMovimiento(findById("movimientos", id)),

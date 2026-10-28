@@ -233,6 +233,21 @@ a { color: var(--acento); }
 .tema-opcion span { background: var(--f1); border-color: var(--b1); border-radius: 12px; font-weight: 500; color: var(--t0); }
 .tema-opcion input:checked + span { background: var(--acento-fondo); border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
 .tema-opcion input:focus-visible + span { outline-color: var(--acento); }
+/* Color de acento: las muestras de OpenClaw (36 px, separadas 12), las mismas
+   que en Ironrack. La elegida lleva un anillo de su color y una marca. Cuelgan de
+   #aj-acento para ganar a las reglas generales de los botones de Ajustes. */
+#aj-acento.muestras {
+  display: flex; flex-wrap: wrap; gap: 12px; padding: 16px;
+  background: var(--f2); border: 1px solid var(--b1); border-radius: 12px;
+}
+#aj-acento .muestra {
+  position: relative; width: 36px; height: 36px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+  background: var(--c); display: grid; place-items: center; color: #0e1015; flex: none;
+}
+#aj-acento .muestra.elegida { box-shadow: 0 0 0 2px var(--f2), 0 0 0 4px var(--c); }
+#aj-acento .muestra svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+#aj-acento .muestra input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; margin: 0; }
+#aj-acento .muestra:focus-visible, #aj-acento .muestra:has(input:focus-visible) { outline: 2px solid var(--t0); outline-offset: 4px; }
 /* Los interruptores de Ajustes, como los de OpenClaw: 32 × 18, rojo encendido. */
 .aj-sec input[type="checkbox"] {
   -webkit-appearance: none; appearance: none; flex-shrink: 0; cursor: pointer;
