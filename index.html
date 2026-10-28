@@ -16,10 +16,10 @@
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
   <!-- El tema, antes que el CSS: si se aplicara después de pintar, quien use
        el tema claro vería un fogonazo oscuro en cada carga. -->
-  <script src="src/js/tema.js?v=p210"></script>
-  <link rel="stylesheet" href="src/css/base.css?v=p210" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p210" />
-  <link rel="stylesheet" href="src/css/components.css?v=p210" />
+  <script src="src/js/tema.js?v=p211"></script>
+  <link rel="stylesheet" href="src/css/base.css?v=p211" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p211" />
+  <link rel="stylesheet" href="src/css/components.css?v=p211" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -112,7 +112,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="src/css/openclaw.css?v=p210" />
+  <link rel="stylesheet" href="src/css/openclaw.css?v=p211" />
 </head>
 <body>
 
@@ -193,25 +193,9 @@
       </span>
     </div>
     <div style="display:flex;align-items:center;gap:0.85rem;">
-      <!-- El icono dice en qué modo estás, no qué va a pasar al pulsar: ojo
-           abierto mientras solo miras, lápiz mientras puedes editar. -->
-      <button type="button" class="nb-menu solo-editor" id="edit-btn" onclick="v2ModoEdicion()"
-              title="Modo visualización · pulsa para editar y borrar"
-              aria-label="Modo edición" aria-pressed="false">
-        <svg class="icono-ojo" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-        <svg class="icono-lapiz" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-      </button>
+      <!-- El menú de la cuenta. Se abre desde la cuenta del menú lateral; vive
+           aquí, en la barra, para colocarse encima de todo. -->
       <div class="user-wrap">
-        <button id="user-btn" title="Tu cuenta" aria-haspopup="true" aria-expanded="false" onclick="v2UserMenu()">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
-            <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.5-8 5.5V21h16v-1.5c0-3-3.6-5.5-8-5.5Z"/>
-          </svg>
-          <span id="user-badge" hidden></span>
-        </button>
         <div id="user-menu" hidden role="menu">
           <div class="um-head">
             <div class="um-title">Solvento</div>
@@ -231,6 +215,18 @@
     <div class="sn-head">
       <img src="img/logo-solvento.png" alt="" />
       <span class="sn-name">Solvento</span>
+      <!-- Ver o editar, como el selector de modo de Claude: el que está
+           encendido es el modo en que estás. -->
+      <div class="sn-modo solo-editor" role="group" aria-label="Modo">
+        <button type="button" class="sn-modo-btn activo" data-modo="ver" onclick="v2ModoEdicion(false)"
+                title="Modo visualización: solo mirar" aria-label="Modo visualización" aria-pressed="true">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button type="button" class="sn-modo-btn" data-modo="editar" onclick="v2ModoEdicion(true)"
+                title="Modo edición: cada fila enseña editar y borrar" aria-label="Modo edición" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+      </div>
       <button type="button" class="sn-close" onclick="v2Sidebar(false)" aria-label="Cerrar el menú" title="Cerrar">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
       </button>
@@ -279,7 +275,7 @@
       <button class="sn-item" data-page="ajustes" onclick="v2UserIr('ajustes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Ajustes</span></button>
       <button class="sn-item" onclick="document.getElementById('logout-btn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Bloquear</span></button>
     </nav>
-    <div class="sn-pie"><span id="sn-estado"></span><span class="sn-version">p210</span></div>
+    <div class="sn-pie"><span id="sn-estado"></span><span class="sn-version">p211</span></div>
   </aside>
 
   <nav class="bottom-nav" id="v2-bottom-nav" aria-label="Secciones">
@@ -457,20 +453,20 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/entorno.js?v=p210"></script>
-<script src="src/js/crypto.js?v=p210"></script>
-<script src="src/js/config.js?v=p210"></script>
-<script src="src/js/model.js?v=p210"></script>
-<script src="src/js/charts.js?v=p210"></script>
-<script src="src/js/render.js?v=p210"></script>
-<script src="src/js/db.js?v=p210"></script>
-<script src="src/js/sync.js?v=p210"></script>
-<script src="src/js/nav.js?v=p210"></script>
-<script src="src/js/plan.js?v=p210"></script>
-<script src="src/js/forms.js?v=p210"></script>
-<script src="src/js/perfil.js?v=p210"></script>
-<script src="src/js/exportar.js?v=p210"></script>
-<script src="src/js/boot.js?v=p210"></script>
+<script src="src/js/entorno.js?v=p211"></script>
+<script src="src/js/crypto.js?v=p211"></script>
+<script src="src/js/config.js?v=p211"></script>
+<script src="src/js/model.js?v=p211"></script>
+<script src="src/js/charts.js?v=p211"></script>
+<script src="src/js/render.js?v=p211"></script>
+<script src="src/js/db.js?v=p211"></script>
+<script src="src/js/sync.js?v=p211"></script>
+<script src="src/js/nav.js?v=p211"></script>
+<script src="src/js/plan.js?v=p211"></script>
+<script src="src/js/forms.js?v=p211"></script>
+<script src="src/js/perfil.js?v=p211"></script>
+<script src="src/js/exportar.js?v=p211"></script>
+<script src="src/js/boot.js?v=p211"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

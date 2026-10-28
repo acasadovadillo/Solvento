@@ -66,7 +66,23 @@ a { color: var(--acento); }
 .sn-head { gap: 8px; padding: 2px 9px 30px; }
 .sn-head img { width: 18px; height: 18px; }
 .sn-name { font-size: 13px; font-weight: 500; color: var(--t2); }
-.sn-close { width: 26px; height: 22px; border-radius: 6px; border-color: var(--b2); }
+.sn-close { width: 26px; height: 22px; border-radius: 6px; border-color: var(--b2); margin-left: 6px; }
+/* Ver | editar, como el selector de modo de Claude: una cápsula con los dos
+   iconos y el encendido en relieve. */
+.sn-modo {
+  margin-left: auto; display: flex; gap: 2px; padding: 2px;
+  background: var(--f1); border: 1px solid var(--b1); border-radius: 9px;
+}
+.sn-modo-btn {
+  width: 28px; height: 22px; padding: 0; border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent; color: var(--t2);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sn-modo-btn:hover { color: var(--t0); }
+.sn-modo-btn.activo { background: var(--f4); border-color: var(--b3); color: var(--t0); }
+.sn-modo-btn[data-modo="editar"].activo { color: var(--acento); }
+.sn-modo-btn:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
 .sn-titulo {
   font-size: 21px; font-weight: 700; color: var(--t0); letter-spacing: 0;
   padding: 0 9px; margin-bottom: 22px; line-height: 1.15;

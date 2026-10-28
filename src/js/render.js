@@ -2496,7 +2496,8 @@
       m.style.left = r.left + "px"; m.style.top = (r.bottom + 6) + "px"; m.style.width = r.width + "px";
     } else { m.style.left = m.style.top = m.style.width = ""; }
     m.hidden = !abrir;
-    b.setAttribute("aria-expanded", String(abrir));
+    if (b) b.setAttribute("aria-expanded", String(abrir));
+    if (desde) desde.setAttribute("aria-expanded", String(abrir));
   };
   window.v2UserIr = (pagina) => { cerrarUserMenu(); showPage(pagina); };
   document.addEventListener("click", (ev) => {
@@ -3008,15 +3009,19 @@
   // su aspa. Empieza apagado en cada arranque a propósito —lo peligroso no es
   // editar, es tener el botón de borrar debajo del dedo sin haberlo pedido— y no
   // se recuerda entre sesiones por lo mismo.
-  window.v2ModoEdicion = () => {
-    const on = !document.body.classList.contains("modo-edicion");
+  //
+  // Sin argumento alterna; con true/false, pone ese modo. El selector del
+  // menú lateral marca el que está encendido.
+  window.v2ModoEdicion = (forzar) => {
+    const antes = document.body.classList.contains("modo-edicion");
+    const on = forzar == null ? !antes : !!forzar;
+    if (on === antes && forzar != null) return;
     document.body.classList.toggle("modo-edicion", on);
-    const b = document.getElementById("edit-btn");
-    if (b) {
-      b.setAttribute("aria-pressed", on ? "true" : "false");
-      b.title = on ? "Modo edición · pulsa para volver a solo mirar"
-                   : "Modo visualización · pulsa para editar y borrar";
-    }
+    document.querySelectorAll(".sn-modo-btn").forEach((b) => {
+      const activo = (b.dataset.modo === "editar") === on;
+      b.classList.toggle("activo", activo);
+      b.setAttribute("aria-pressed", activo ? "true" : "false");
+    });
     const B = window.SolventoBoot;
     if (B && B.toast) B.toast(on ? "Modo edición · cada fila enseña editar y borrar" : "Modo visualización · solo mirar", on ? "var(--azul)" : "var(--t1b)");
   };
