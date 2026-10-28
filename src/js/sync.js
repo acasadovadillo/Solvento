@@ -69,6 +69,9 @@
     });
     if (r.status === 409 || r.status === 422) { const e = new Error("conflicto: el fichero cambió en el repo"); e.code = "CONFLICT"; throw e; }
     if (r.status === 401 || r.status === 403) { const e = new Error("token inválido o sin permisos"); e.code = "AUTH"; throw e; }
+    // En un repositorio privado, un token que no llega a él recibe 404, no 403:
+    // es el token de antes, de cuando los datos estaban en Solvento.
+    if (r.status === 404 && privado()) throw fallo("el token no da acceso al repositorio de tus datos", "AUTH");
     if (!r.ok) throw new Error("GitHub PUT " + r.status);
     const j = await r.json();
     return j.content && j.content.sha;
