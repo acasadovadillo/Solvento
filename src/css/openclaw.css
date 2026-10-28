@@ -64,7 +64,7 @@ a { color: var(--acento); }
   padding: 14px 12px calc(12px + env(safe-area-inset-bottom));
 }
 .sn-head { gap: 8px; padding: 2px 9px 30px; }
-.sn-head img { width: 18px; height: 18px; }
+.sn-head img { width: 25px; height: 15px; object-fit: contain; }   /* la escalera de monedas es apaisada */
 .sn-name { font-size: 13px; font-weight: 500; color: var(--t2); }
 .sn-close { width: 26px; height: 22px; border-radius: 6px; border-color: var(--b2); margin-left: 6px; }
 /* Ver | editar, como el selector de modo de Claude: una cápsula con los dos
