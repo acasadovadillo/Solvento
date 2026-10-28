@@ -267,3 +267,15 @@ a { color: var(--acento); }
 
 /* El subtítulo gris bajo el título de una página. */
 .pagina-sub { font-size: 11.5px; color: var(--t2); margin: 0 0 1.75rem; }
+
+/* Las curvas de nivel de fondo en la pantalla de entrada, como en Ironrack.
+   El dibujo (img/contornos.svg) se usa de máscara y el color lo pone el tema:
+   blanco tenue en oscuro, casi negro tenue en claro. */
+#boot-overlay::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-color: var(--contorno);
+  -webkit-mask: url("../../img/contornos.svg") right center / auto 120% no-repeat;
+  mask: url("../../img/contornos.svg") right center / auto 120% no-repeat;
+}
+:root { --contorno: #ffffff; }
+:root[data-tema="claro"] { --contorno: #0e1015; }
