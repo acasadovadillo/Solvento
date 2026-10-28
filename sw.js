@@ -15,11 +15,11 @@
  *   4. prices.json     → primero la red (los precios interesan frescos), con la
  *      última copia como respaldo.
  */
-const VERSION = "solvento-v3";
+const VERSION = "solvento-v4";     // v4: logo nuevo (los iconos no llevan ?v=)
 // perfil.json dice DÓNDE guarda esta copia de Solvento. Sin conexión y sin
 // él, la aplicación volvería a la configuración del código, que apunta a otro
 // sitio: por eso se precarga como cualquier otro cimiento.
-const BASE = ["./", "./index.html", "./perfil.json", "./img/logo-solvento.png",
+const BASE = ["./", "./index.html", "./perfil.json", "./img/logo-solvento.svg", "./img/icono-solvento.svg",
               "./img/app/icon-192.png", "./img/app/icon-512.png"];
 
 // Los CSS y JS llevan ?v=NN en la URL, que cambia en cada despliegue. En vez de
