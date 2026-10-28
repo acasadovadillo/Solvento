@@ -311,7 +311,7 @@
     const b = $("sync-comprobar");
     if (b) { b.disabled = true; b.textContent = "Comprobando…"; }
     try {
-      const v = await SYNC.comprobarPublicado(DB.state.doc, DB.state.password);
+      const v = await SYNC.comprobarPublicado(DB.state.doc, DB.state.password, DB.state.token);
       if (v.ok) {
         pintarEstado("ok", "Comprobado ahora mismo: lo publicado se relee y coincide" +
                      (v.movimientos ? " (" + v.movimientos + " movimientos)" : ""));
@@ -577,6 +577,7 @@
     // pasa siempre.
     const tk = $("sync-token");
     if (tk) { tk.value = ""; tk.type = "password"; tk.readOnly = false; }
+    ocultarToken(); tokenDelLogin = null;
     const menu = $("user-menu"); if (menu) menu.hidden = true;
     pintarEstado("");
     quitarBandaCopia();
@@ -674,12 +675,37 @@
 
     setError("login-error", "Entrando…", "var(--t1b)");
     let blob = DB.getStoredBlob();
-    if (!blob) {
+    // Los datos en un repositorio PRIVADO: sin token no se puede leer ni el
+    // bloque cifrado. El token está aquí cifrado con esta contraseña (si ya se
+    // usó este dispositivo) o se pega en el login.
+    let tokenNuevo = null;
+    if (SYNC.privado()) {
+      const escrito = $("login-token") ? $("login-token").value.trim() : "";
+      const guardado = await SYNC.loadToken(pw).catch(() => null);
+      const token = escrito || guardado;
+      if (blob && token) await refrescarBlobRemoto(token);        // lo último del repositorio, como antes del login
+      blob = DB.getStoredBlob();
+      if (!blob) {
+        if (!token) { pedirToken("Este dispositivo aún no tiene tu token de GitHub: pégalo para bajar tus datos."); return; }
+        setError("login-error", "Bajando tus datos…", "var(--t1b)");
+        try {
+          const r = await SYNC.fetchRemoteBlob(token);
+          if (r) { blob = r.blob; DB.storeBlob(r.blob); }
+          else await SYNC.acceso(token);       // 404: ¿cuenta nueva, o un token que no llega al repositorio?
+        } catch (e) {
+          if (e.code === "AUTH" || e.code === "SIN_ACCESO") pedirToken(e.message);
+          else setError("login-error", "No se puede hablar con GitHub: " + e.message);
+          return;
+        }
+      }
+      if (escrito) tokenNuevo = escrito;
+    } else if (!blob) {
       // Primera vez con esta cuenta en este dispositivo: su bloque se lee de su
       // sitio. Es lectura pública y no descifra nada: sin la contraseña, ruido.
       try { const r = await SYNC.fetchRemoteBlob(null); if (r) { blob = r.blob; DB.storeBlob(r.blob); } }
       catch (e) { blob = null; }
     }
+    tokenDelLogin = tokenNuevo;
     if (!blob) {
       // Cuenta dada de alta que todavía no tiene bloque: es su primera vez, no
       // un error. Se le ofrece elegir contraseña y empezar.
@@ -688,11 +714,24 @@
     }
     try {
       const doc = await C.decryptDoc(blob, pw);
+      // El token pegado se queda aquí, cifrado con la contraseña ya comprobada.
+      if (tokenNuevo) { await SYNC.storeToken(tokenNuevo, pw); ocultarToken(); }
       unlock(doc, pw);
     } catch (e) {
       if (e.code === "BAD_PASSWORD") malos();
       else setError("login-error", "Error: " + e.message);
     }
+  }
+  // El campo del token en el login: solo aparece cuando hace falta.
+  let tokenDelLogin = null;
+  function pedirToken(texto) {
+    const t = $("login-token");
+    if (t) { t.style.display = ""; t.focus(); }
+    setError("login-error", texto, "var(--ambar-2)");
+  }
+  function ocultarToken() {
+    const t = $("login-token");
+    if (t) { t.value = ""; t.style.display = "none"; }
   }
   // Primera vez de una cuenta: se pasa al panel de empezar con su nombre puesto
   // y, si ya venía escrita una contraseña en el login, se aprovecha.
@@ -736,6 +775,8 @@
                     config: { cuentas: [Object.assign({}, window.SolventoConfig.EFECTIVO)], activos: [] } };
       const blob = await C.encryptDoc(doc, p1);
       DB.storeBlob(blob);
+      // Si el token se pegó en el login, se guarda ya con la contraseña nueva.
+      if (tokenDelLogin) { await SYNC.storeToken(tokenDelLogin, p1); DB.state.token = tokenDelLogin; tokenDelLogin = null; ocultarToken(); }
       unlock(doc, p1);
       // Existe en este navegador, pero todavía en ningún otro sitio: sin token,
       // lo que registre se queda aquí, y eso hay que decirlo el primer día.
@@ -757,7 +798,7 @@
   //
   // Lo local manda si hay algo sin subir: un cambio hecho aquí y todavía no
   // publicado vale más que la copia del repo, y adoptarla lo borraría.
-  async function refrescarBlobRemoto() {
+  async function refrescarBlobRemoto(token) {
     // Un dispositivo con cambios sin subir se queda con los suyos, pero dejar
     // eso en silencio es lo que convierte «no se actualiza» en un misterio: si
     // además no hay token, esos cambios no se van a poder subir nunca y esta
@@ -769,8 +810,11 @@
         "var(--ambar-2)");
       return;
     }
+    // En un repositorio privado, sin token no se puede mirar: se hará en el
+    // login, con el token que se descifra con la contraseña.
+    if (SYNC.privado() && !token) return;
     let remote = null;
-    try { remote = await SYNC.fetchRemoteBlob(null); } catch (e) { return; }
+    try { remote = await SYNC.fetchRemoteBlob(token || null); } catch (e) { return; }
     if (!remote) return;
     const local = DB.getStoredBlob();
     if (local && JSON.stringify(local) === JSON.stringify(remote.blob)) return;
@@ -789,6 +833,9 @@
       refrescarBlobRemoto();          // en segundo plano, mientras escribes
       return;
     }
+    // Sin bloque local y con los datos en un repositorio privado: no se puede
+    // mirar sin token, así que al login, que lo pide si hace falta.
+    if (SYNC.privado()) { panel("login"); $("login-user").focus(); return; }
     // Sin bloque local: ¿existe en el repo? (lectura pública, sin token)
     panel("checking");
     let remote = null;

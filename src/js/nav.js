@@ -93,7 +93,8 @@
   // ── Cargar lo que hay publicado ────────────────────────────────────────────
   // Un archivo por activo, en paralelo. El que no exista da 404 y no pasa nada:
   // ese activo sigue con Yahoo o con lo escrito a mano.
-  const rawBase = () => `https://raw.githubusercontent.com/${CFG.SYNC.owner}/${CFG.SYNC.repo}/${CFG.SYNC.branch}/`;
+  // Del repositorio de la app (público), no del de los datos: ver sync.js.
+  const rawBase = () => window.SolventoSync.rawApp();
   let CARGADO = {};      // clave → { serie, ultimo, n, archivo, activo }
   async function cargar(activos) {
     const lista = (activos || []).filter((a) => claveDe(a));

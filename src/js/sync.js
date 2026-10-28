@@ -1,11 +1,17 @@
 /*
  * Solvento — Sincronización con GitHub (Fase 3).
  *
- * El bloque cifrado (data.enc) vive en el repo. LEERLO es público (no requiere
- * token); ESCRIBIRLO usa un token fine-grained (Contents: Read/Write en este
- * repo) que se guarda CIFRADO en localStorage con la contraseña del usuario y
+ * El bloque cifrado de cada cuenta vive en un repositorio. Si es público, LEERLO
+ * no requiere token; si es PRIVADO («privado»: true en perfil.json, que es como
+ * está ahora: datos-cifrados), hace falta el token hasta para leer, y se lee
+ * siempre por la API. ESCRIBIRLO usa un token fine-grained (Contents: Read and
+ * write) que se guarda CIFRADO en localStorage con la contraseña del usuario y
  * solo se descifra a memoria tras el login. El token nunca se versiona ni se
  * registra en logs.
+ *
+ * Lo que es de la app y no de una cuenta —la lista de símbolos para los precios
+ * y los valores liquidativos subidos— va al repositorio de la app (perfil.json
+ * → «app»), que es público, no al de los datos.
  */
 (function () {
   "use strict";
@@ -16,7 +22,11 @@
   const TOKEN_KEY = () => (window.SolventoPerfil ? window.SolventoPerfil.claveToken() : "solvento_gh_token");
   const SHA_KEY = () => (window.SolventoPerfil ? window.SolventoPerfil.claveSha() : "solvento_data_sha");
 
-  const apiUrl = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${SYNC.path}`;
+  // Las direcciones pasan por entorno.js: en desarrollo van al servidor local y
+  // una de GitHub se bloquea antes de salir.
+  const E = window.SolventoEntorno;
+  const privado = () => !!SYNC.privado;
+  const apiUrl = () => E.url(`${E.base.api}/repos/${SYNC.owner}/${SYNC.repo}/contents/${SYNC.path}`);
   // La API de contenidos NO devuelve el cuerpo de un fichero de más de 1 MB:
   // contesta con encoding "none" y content vacío. El bloque cifrado pasó de ese
   // tamaño al reconstruir la contabilidad, así que la lectura pública dejó de
@@ -24,16 +34,25 @@
   // dispositivo nuevo se encontraba la pantalla de importar. El contenido se
   // lee por «raw», que no tiene ese límite; la API se sigue usando para el sha,
   // que es lo que hace falta para escribir.
-  const rawUrl = () => `https://raw.githubusercontent.com/${SYNC.owner}/${SYNC.repo}/${SYNC.branch}/${SYNC.path}`;
+  // En un repositorio privado, raw no sirve: se pide en bruto a la API, con el
+  // token (leerPublicado).
+  const rawUrl = () => E.url(`${E.base.raw}/${SYNC.owner}/${SYNC.repo}/${SYNC.branch}/${SYNC.path}`);
+  // El repositorio de la app (perfil.json → «app»); sin él, el de los datos.
+  const app = () => (window.SolventoPerfil && window.SolventoPerfil.app && window.SolventoPerfil.app()) || SYNC;
+  const rawApp = () => { const a = app(); return E.url(`${E.base.raw}/${a.owner}/${a.repo}/${a.branch || "main"}/`); };
+  const fallo = (msg, code) => { const e = new Error(msg); e.code = code; return e; };
 
   // JSON (ASCII/UTF-8) ⇄ base64 respetando UTF-8
   const b64enc = (str) => btoa(unescape(encodeURIComponent(str)));
   const b64dec = (b64) => decodeURIComponent(escape(atob(String(b64).replace(/\s/g, ""))));
 
   async function ghGet(token) {
+    if (privado() && !token) throw fallo("Falta el token de GitHub: tus datos están en un repositorio privado", "SIN_TOKEN");
     const headers = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
     if (token) headers.Authorization = "Bearer " + token;
-    const r = await fetch(apiUrl() + "?ref=" + encodeURIComponent(SYNC.branch) + "&_=" + Date.now(), { headers });
+    const r = await fetch(apiUrl() + "?ref=" + encodeURIComponent(SYNC.branch) + "&_=" + Date.now(), { headers, cache: "no-store" });
+    if (r.status === 401) throw fallo("El token de GitHub no vale o ha caducado", "AUTH");
+    if (r.status === 403) throw fallo("El token de GitHub no tiene permiso sobre el repositorio de datos", "AUTH");
     if (r.status === 404) return null;
     if (!r.ok) throw new Error("GitHub GET " + r.status);
     const j = await r.json();
@@ -78,18 +97,45 @@
     setSha(res.sha);
     let blob = null;
     if (res.content) { try { blob = JSON.parse(res.content); } catch (e) { blob = null; } }
-    if (!blob) blob = await fetchBlobRaw();
+    if (!blob) blob = await fetchBlobRaw(token);
     if (!blob) throw new Error("No se ha podido leer el bloque cifrado del repositorio");
     return { blob, sha: res.sha };
   }
 
-  // Lectura pública sin límite de tamaño. Sirve para cualquier repo público;
-  // si el tuyo fuera privado, esta vía no responde y la única sería la API.
-  async function fetchBlobRaw() {
+  // El texto del archivo tal como está publicado, sin límite de tamaño. En un
+  // repositorio público, por raw; en uno privado, por la API pidiéndolo en
+  // bruto, con el token. Devuelve { status, texto }.
+  async function leerPublicado(token) {
+    if (privado()) {
+      if (!token) return { status: 0, texto: null };
+      const r = await fetch(apiUrl() + "?ref=" + encodeURIComponent(SYNC.branch) + "&_=" + Date.now(), {
+        cache: "no-store",
+        headers: { Accept: "application/vnd.github.raw", Authorization: "Bearer " + token, "X-GitHub-Api-Version": "2022-11-28" },
+      });
+      return { status: r.status, texto: r.ok ? await r.text() : null };
+    }
+    const r = await fetch(rawUrl() + "?_=" + Date.now(), { cache: "no-store" });
+    return { status: r.status, texto: r.ok ? await r.text() : null };
+  }
+
+  // ¿Llega este token al repositorio de datos? En uno privado, GitHub responde
+  // 404 tanto si el archivo no existe como si el token no tiene acceso: antes
+  // de dar una cuenta por nueva, se pregunta aquí. true, o lanza AUTH/SIN_ACCESO.
+  async function acceso(token) {
+    const r = await fetch(E.url(`${E.base.api}/repos/${SYNC.owner}/${SYNC.repo}`) + "?_=" + Date.now(), {
+      cache: "no-store", headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + token, "X-GitHub-Api-Version": "2022-11-28" },
+    });
+    if (r.status === 401) throw fallo("El token de GitHub no vale o ha caducado", "AUTH");
+    if (r.status === 403 || r.status === 404) throw fallo("El token no da acceso al repositorio de tus datos (" + SYNC.owner + "/" + SYNC.repo + ")", "SIN_ACCESO");
+    if (!r.ok) throw new Error("GitHub respondió " + r.status);
+    return true;
+  }
+
+  // El bloque, sin límite de tamaño (ver leerPublicado).
+  async function fetchBlobRaw(token) {
     try {
-      const r = await fetch(rawUrl() + "?_=" + Date.now(), { cache: "no-store" });
-      if (!r.ok) return null;
-      return JSON.parse(await r.text());
+      const r = await leerPublicado(token);
+      return r.texto ? JSON.parse(r.texto) : null;
     } catch (e) { return null; }
   }
 
@@ -104,14 +150,14 @@
   // durante unos segundos. Eso NO es un fallo del guardado, así que se
   // distingue: si el texto no coincide se reintenta, y si sigue sin coincidir se
   // dice que no se ha podido comprobar (grave: false), no que esté roto.
-  async function verificarGuardado(contentStr, doc, password) {
+  async function verificarGuardado(contentStr, doc, password, token) {
     for (let intento = 0; intento < 3; intento++) {
       if (intento) await new Promise((r) => setTimeout(r, 1500 * intento));
       let texto;
       try {
-        const r = await fetch(rawUrl() + "?_=" + Date.now(), { cache: "no-store" });
-        if (!r.ok) continue;
-        texto = await r.text();
+        const r = await leerPublicado(token);
+        if (!r.texto) continue;
+        texto = r.texto;
       } catch (e) { continue; }
       if (texto !== contentStr) continue;      // el CDN va con retraso; se reintenta
       try {
@@ -143,13 +189,14 @@
    * dispositivo.
    */
   const CONTENIDOS = ["movimientos", "inversiones", "propiedades", "pasivos", "cobros"];
-  async function comprobarPublicado(doc, password) {
+  async function comprobarPublicado(doc, password, token) {
     let texto;
     try {
-      const r = await fetch(rawUrl() + "?_=" + Date.now(), { cache: "no-store" });
+      if (privado() && !token) return { ok: false, grave: false, motivo: "sin token no se puede leer tu repositorio privado" };
+      const r = await leerPublicado(token);
       if (r.status === 404) return { ok: false, grave: false, motivo: "en GitHub todavía no hay nada guardado" };
-      if (!r.ok) return { ok: false, grave: false, motivo: "GitHub respondió " + r.status };
-      texto = await r.text();
+      if (!r.texto) return { ok: false, grave: false, motivo: "GitHub respondió " + r.status };
+      texto = r.texto;
     } catch (e) {
       return { ok: false, grave: false, motivo: "no se pudo hablar con GitHub" };
     }
@@ -209,7 +256,7 @@
     // segundos, y el guardado ya está hecho. Va en segundo plano y la pantalla
     // se actualiza cuando termine. Nunca falla hacia fuera: lo que no se pudo
     // comprobar se cuenta como no comprobado, no como roto.
-    const verificacion = verificarGuardado(contentStr, doc, password)
+    const verificacion = verificarGuardado(contentStr, doc, password, token)
       .catch((e) => ({ ok: false, grave: false, motivo: e.message || "no se pudo comprobar" }));
     return { sha: nuevoSha, verificacion, blob };
   }
@@ -221,7 +268,8 @@
   // en tickers.json, que no es información nueva: prices.json ya expone
   // exactamente los mismos símbolos. Sin valores, sin cantidades.
   const TICKERS_PATH = "tickers.json";
-  const tickersUrl = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${TICKERS_PATH}`;
+  // Va al repositorio de la app (público), donde corre el proceso de precios.
+  const tickersUrl = () => { const a = app(); return E.url(`${E.base.api}/repos/${a.owner}/${a.repo}/contents/${TICKERS_PATH}`); };
 
   async function pushTickers(tickers, token) {
     const contenido = JSON.stringify(
@@ -229,9 +277,10 @@
     const headers = { Accept: "application/vnd.github+json", Authorization: "Bearer " + token,
                       "X-GitHub-Api-Version": "2022-11-28" };
     let sha = null;
-    const cur = await fetch(tickersUrl() + "?ref=" + encodeURIComponent(SYNC.branch) + "&_=" + Date.now(), { headers });
+    const rama = app().branch || "main";
+    const cur = await fetch(tickersUrl() + "?ref=" + encodeURIComponent(rama) + "&_=" + Date.now(), { headers });
     if (cur.ok) sha = (await cur.json()).sha;
-    const body = { message: "Solvento: actualizar lista de activos", content: b64enc(contenido), branch: SYNC.branch };
+    const body = { message: "Solvento: actualizar lista de activos", content: b64enc(contenido), branch: rama };
     if (sha) body.sha = sha;
     const r = await fetch(tickersUrl(), {
       method: "PUT",
@@ -242,17 +291,18 @@
     return true;
   }
 
-  // Escribir un archivo cualquiera del repositorio —los valores liquidativos
-  // subidos, por ejemplo—. Mismo token, misma rama: si ya existe se pisa con
-  // su sha, y si no, se crea.
+  // Escribir un archivo cualquiera del repositorio de la app —los valores
+  // liquidativos subidos, que son públicos—. Si ya existe se pisa con su sha,
+  // y si no, se crea.
   async function ghPutArchivo(token, ruta, contentStr, message) {
-    const url = `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${ruta}`;
+    const a = app(), rama = a.branch || "main";
+    const url = E.url(`${E.base.api}/repos/${a.owner}/${a.repo}/contents/${ruta}`);
     const headers = { Accept: "application/vnd.github+json", Authorization: "Bearer " + token,
                       "X-GitHub-Api-Version": "2022-11-28" };
     let sha = null;
-    const cur = await fetch(url + "?ref=" + encodeURIComponent(SYNC.branch) + "&_=" + Date.now(), { headers });
+    const cur = await fetch(url + "?ref=" + encodeURIComponent(rama) + "&_=" + Date.now(), { headers });
     if (cur.ok) sha = (await cur.json()).sha;
-    const body = { message: message || "Solvento: actualizar " + ruta, content: b64enc(contentStr), branch: SYNC.branch };
+    const body = { message: message || "Solvento: actualizar " + ruta, content: b64enc(contentStr), branch: rama };
     if (sha) body.sha = sha;
     const r = await fetch(url, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, headers), body: JSON.stringify(body) });
     if (r.status === 401 || r.status === 403) { const e = new Error("el token no vale o no puede escribir"); e.code = "AUTH"; throw e; }
@@ -264,5 +314,6 @@
     ghPutArchivo,
     ghGet, ghPut, storeToken, loadToken, hasToken, clearToken,
     fetchRemoteBlob, fetchBlobRaw, push, pushTickers, getSha, setSha, verificarGuardado, comprobarPublicado,
+    acceso, privado, rawApp,
   };
 })();

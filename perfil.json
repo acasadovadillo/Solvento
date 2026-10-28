@@ -1,5 +1,10 @@
 {
-  "_": "Quién entra en este Solvento y dónde guarda cada uno. El login solo pide usuario y contraseña; esto dice qué abre cada usuario. Cada cuenta tiene SU archivo cifrado: sin su contraseña, el de otro es ruido. El día que haya servidor, esta tabla la contesta el backend.",
+  "_": "Quién entra en este Solvento y dónde guarda cada uno. El login solo pide usuario y contraseña (y, la primera vez en cada dispositivo, el token de GitHub). Los datos NO están en este repositorio, que es público: cada cuenta tiene su archivo cifrado en el repositorio PRIVADO datos-cifrados, carpeta Solvento/. Sin token no se lee ni el texto cifrado; sin su contraseña, el archivo es ruido. «app» es este repositorio: ahí se publica la lista de símbolos para el proceso de precios.",
+  "app": {
+    "owner": "acasadovadillo",
+    "repo": "Solvento",
+    "branch": "main"
+  },
   "cuentas": [
     {
       "usuario": "alberto",
@@ -7,9 +12,10 @@
       "tipo": "persona",
       "almacen": {
         "owner": "acasadovadillo",
-        "repo": "Solvento",
+        "repo": "datos-cifrados",
         "branch": "main",
-        "path": "alberto-data.enc"
+        "path": "Solvento/alberto-data.enc",
+        "privado": true
       }
     },
     {
@@ -18,9 +24,10 @@
       "tipo": "organizacion",
       "almacen": {
         "owner": "acasadovadillo",
-        "repo": "Solvento",
+        "repo": "datos-cifrados",
         "branch": "main",
-        "path": "abies-data.enc"
+        "path": "Solvento/abies-data.enc",
+        "privado": true
       }
     },
     {
@@ -29,9 +36,10 @@
       "tipo": "persona",
       "almacen": {
         "owner": "acasadovadillo",
-        "repo": "Solvento",
+        "repo": "datos-cifrados",
         "branch": "main",
-        "path": "hafsa-data.enc"
+        "path": "Solvento/hafsa-data.enc",
+        "privado": true
       }
     },
     {
@@ -40,9 +48,10 @@
       "tipo": "persona",
       "almacen": {
         "owner": "acasadovadillo",
-        "repo": "Solvento",
+        "repo": "datos-cifrados",
         "branch": "main",
-        "path": "paula-data.enc"
+        "path": "Solvento/paula-data.enc",
+        "privado": true
       }
     }
   ]

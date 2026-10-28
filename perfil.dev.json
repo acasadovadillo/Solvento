@@ -1,0 +1,63 @@
+{
+  "_": "Cuentas de DESARROLLO. Solo se usan cuando Solvento corre fuera de acasadovadillo.github.io. Sus datos viven en un repositorio PRIVADO simulado (datos-cifrados-dev, en dev-data/), con datos ficticios y la contraseña «desarrollo»; hace falta token (en desarrollo, «dev») hasta para leer. Todas llevan dev: true; ninguna puede apuntar a producción.",
+  "app": {
+    "owner": "dev",
+    "repo": "solvento-dev",
+    "branch": "main",
+    "dev": true
+  },
+  "cuentas": [
+    {
+      "usuario": "alberto",
+      "nombre": "Alberto (pruebas)",
+      "tipo": "persona",
+      "almacen": {
+        "owner": "dev",
+        "repo": "datos-cifrados-dev",
+        "branch": "main",
+        "path": "Solvento/alberto-data.enc",
+        "privado": true,
+        "dev": true
+      }
+    },
+    {
+      "usuario": "abies",
+      "nombre": "ABIES (pruebas)",
+      "tipo": "organizacion",
+      "almacen": {
+        "owner": "dev",
+        "repo": "datos-cifrados-dev",
+        "branch": "main",
+        "path": "Solvento/abies-data.enc",
+        "privado": true,
+        "dev": true
+      }
+    },
+    {
+      "usuario": "hafsa",
+      "nombre": "Hafsa (pruebas)",
+      "tipo": "persona",
+      "almacen": {
+        "owner": "dev",
+        "repo": "datos-cifrados-dev",
+        "branch": "main",
+        "path": "Solvento/hafsa-data.enc",
+        "privado": true,
+        "dev": true
+      }
+    },
+    {
+      "usuario": "paula",
+      "nombre": "Paula (pruebas)",
+      "tipo": "persona",
+      "almacen": {
+        "owner": "dev",
+        "repo": "datos-cifrados-dev",
+        "branch": "main",
+        "path": "Solvento/paula-data.enc",
+        "privado": true,
+        "dev": true
+      }
+    }
+  ]
+}

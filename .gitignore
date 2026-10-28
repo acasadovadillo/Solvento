@@ -39,3 +39,8 @@ _datos-prueba.json
 # apunta el destino aquí dentro, que no puedan subirse igualmente.
 Solvento_COPIAS/
 copias/
+
+# ── Entorno de desarrollo (tools/dev/) ──────────────────────────────────────
+# Los datos del servidor local: ficticios, pero de esta máquina.
+dev-data/
+.env.dev

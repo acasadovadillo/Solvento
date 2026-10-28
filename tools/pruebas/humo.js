@@ -544,6 +544,32 @@ comprobar("un ticker sustituido se cambia solo por el bueno",
   C.activos()[0].yf === "0P0001CLDM.F", C.activos()[0].yf);
 C.usarDoc(doc);
 
+// ── El entorno y dónde viven los datos ──────────────────────────────────────
+// Producción es solo la web publicada; en local no sale ni una llamada a
+// GitHub. Y los datos de las cuentas viven en el repositorio PRIVADO
+// datos-cifrados (carpeta Solvento/), no en este, que es público.
+eval(leer(base + "src/js/entorno.js"));
+var E = window.SolventoEntorno;
+var bloquea = function (u) { try { E.url(u); return false; } catch (e) { return e.code === "PRODUCCION_BLOQUEADA"; } };
+comprobar("producción es solo acasadovadillo.github.io; lo demás es desarrollo",
+  !E.prod && E.esProduccion("acasadovadillo.github.io") && !E.esProduccion("localhost") &&
+  !E.esProduccion("acasadovadillo.github.io.evil.com") && E.perfil === "perfil.dev.json");
+comprobar("en desarrollo no sale ni una llamada a GitHub",
+  bloquea("https://api.github.com/repos/acasadovadillo/datos-cifrados/contents/Solvento/alberto-data.enc") &&
+  bloquea("https://raw.githubusercontent.com/acasadovadillo/Solvento/main/x") &&
+  !bloquea("http://localhost:4400/__dev/api/repos/dev/datos-cifrados-dev/contents/a") && E.base.api.indexOf("/__dev/api") > 0);
+var perfilDev = JSON.parse(leer(base + "perfil.dev.json"));
+comprobar("las cuentas de desarrollo lo son, y una que apunte a producción se rechaza",
+  perfilDev.cuentas.length === 4 && perfilDev.cuentas.every(function (c) { return E.almacenNoValido(c.almacen) === null; }) &&
+  E.almacenNoValido({ owner: "acasadovadillo", repo: "datos-cifrados", dev: true }) !== null &&
+  E.almacenNoValido({ owner: "acasadovadillo", repo: "Solvento", dev: true }) !== null);
+var perfilProd = JSON.parse(leer(base + "perfil.json"));
+comprobar("en producción, cada cuenta lee de datos-cifrados/Solvento/ (privado) y la app es Solvento",
+  perfilProd.cuentas.length === 4 && perfilProd.cuentas.every(function (c) {
+    var a = c.almacen || {};
+    return a.repo === "datos-cifrados" && a.privado === true && a.path === "Solvento/" + c.usuario + "-data.enc";
+  }) && perfilProd.app && perfilProd.app.repo === "Solvento");
+
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }
 print("todo en orden");

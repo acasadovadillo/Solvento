@@ -28,12 +28,23 @@
   "use strict";
 
   const CFG = window.SolventoConfig;
+  const E = window.SolventoEntorno;
   const K_ACTUAL = "solvento_cuenta";
   const PRINCIPAL = "principal";
 
+  // En desarrollo, una cuenta que no se puede abrir: la que queda si falta
+  // perfil.dev.json o si ninguna de sus cuentas es de desarrollo. No apunta a
+  // ningún sitio real y ningún nombre de usuario la abre.
+  const CERRADA = { id: PRINCIPAL, usuario: "\u0000sin-cuenta-de-desarrollo", nombre: "", tipo: "persona",
+                    almacen: { owner: "dev", repo: "sin-perfil-dev", branch: "dev", path: "ninguna.enc", privado: false, dev: true } };
   // Sin perfil.json: una cuenta, la de siempre, con la configuración del código.
-  let catalogo = [{ id: PRINCIPAL, usuario: "", nombre: "", tipo: "persona",
-                    almacen: Object.assign({}, CFG.SYNC) }];
+  // En desarrollo, nunca: la de siempre es la de producción.
+  let catalogo = E && !E.prod ? [CERRADA]
+    : [{ id: PRINCIPAL, usuario: "", nombre: "", tipo: "persona", almacen: Object.assign({}, CFG.SYNC) }];
+  // El repositorio de la app: donde se publica la lista de símbolos para el
+  // proceso de precios. Los datos ya no viven ahí, sino en un repositorio
+  // privado; sin decir nada, el mismo de los datos, como antes.
+  let app = null;
   let actualId = PRINCIPAL;
   let cargado = false;
 
@@ -66,7 +77,9 @@
       usuario: c.usuario || "",
       nombre: c.nombre || c.usuario || "",
       tipo: c.tipo === "organizacion" ? "organizacion" : "persona",
-      almacen: Object.assign({}, CFG.SYNC, c.almacen || {}),
+      // «privado» siempre explícito: SYNC se reutiliza entre cuentas y no
+      // puede quedarse con el de la anterior.
+      almacen: Object.assign({}, CFG.SYNC, { privado: false }, c.almacen || {}),
     };
   }
 
@@ -74,15 +87,25 @@
     if (cargado) return actual();
     cargado = true;
     try {
-      const r = await fetch("perfil.json?" + Date.now(), { cache: "no-store" });
+      const r = await fetch((E ? E.perfil : "perfil.json") + "?" + Date.now(), { cache: "no-store" });
       if (r.ok) {
         const p = await r.json();
         if (p && typeof p === "object") {
           const lista = Array.isArray(p.cuentas) && p.cuentas.length
             ? p.cuentas
             : [{ usuario: p.usuario, nombre: p.nombre, tipo: p.tipo, almacen: p.almacen }];
-          catalogo = lista.map(normalizarCuenta);
+          // En desarrollo, solo valen las cuentas de desarrollo: una que diga
+          // otra cosa se descarta y se avisa, en vez de abrirla.
+          const validas = lista.filter((c) => {
+            const motivo = E && E.almacenNoValido(c.almacen);
+            if (motivo) E.aviso("cuenta «" + (c.usuario || "?") + "» descartada: " + motivo);
+            return !motivo;
+          });
+          if (validas.length) catalogo = validas.map(normalizarCuenta);
+          if (p.app && p.app.repo && !(E && E.almacenNoValido(p.app))) app = Object.assign({ branch: "main" }, p.app);
         }
+      } else if (E && !E.prod) {
+        E.aviso("falta " + E.perfil + ": no hay cuentas de desarrollo");
       }
     } catch (e) { /* sin perfil.json: la cuenta de siempre, y a trabajar */ }
     const guardada = localStorage.getItem(K_ACTUAL);
@@ -114,13 +137,14 @@
     const el = document.getElementById("perfil-nombre");
     const nombre = dentro ? (c.nombre || "") : "";
     if (el) { el.textContent = nombre; el.hidden = !nombre; }
-    document.title = nombre ? nombre + " · Solvento" : "Solvento";
+    document.title = (E && !E.prod ? "[DEV] " : "") + (nombre ? nombre + " · Solvento" : "Solvento");
   }
   function entrar(si) { dentro = si !== false; aplicar(); }
 
   window.SolventoPerfil = {
     cargar, aplicar, entrar, usar, cuentas, actual, porUsuario, esOrganizacion,
     claveBlob, claveToken, claveSha, claveDe,
+    app: () => app,
     datos: () => actual(),
     PRINCIPAL,
   };

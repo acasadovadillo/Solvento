@@ -16,10 +16,10 @@
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
   <!-- El tema, antes que el CSS: si se aplicara después de pintar, quien use
        el tema claro vería un fogonazo oscuro en cada carga. -->
-  <script src="src/js/tema.js?v=p206"></script>
-  <link rel="stylesheet" href="src/css/base.css?v=p206" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p206" />
-  <link rel="stylesheet" href="src/css/components.css?v=p206" />
+  <script src="src/js/tema.js?v=p207"></script>
+  <link rel="stylesheet" href="src/css/base.css?v=p207" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p207" />
+  <link rel="stylesheet" href="src/css/components.css?v=p207" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -132,6 +132,10 @@
           <path d="M6.5 7.6A17 17 0 0 0 1.5 12S5.5 18 12 18a9.9 9.9 0 0 0 4-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
       </button>
     </div>
+    <!-- Tus datos están en un repositorio privado: en un dispositivo nuevo, sin
+         el token no se pueden ni leer. Solo aparece cuando hace falta. -->
+    <input id="login-token" type="password" placeholder="Token de GitHub (github_pat_…)" autocomplete="off"
+           autocapitalize="none" autocorrect="off" spellcheck="false" style="display:none;" />
     <button type="submit" class="primary">Entrar</button>
     <div id="login-error" class="boot-err"></div>
   </form>
@@ -370,7 +374,7 @@
       <button id="sync-token-ver" type="button" title="Mostrar u ocultar el token"
         style="background:var(--f4);border:1px solid var(--b2);border-radius:8px;color:var(--t1b);font-size:0.9rem;padding:0 0.7rem;cursor:pointer;font-family:inherit;">👁</button>
     </div>
-    <small style="display:block;margin:0.4rem 0 0.5rem;">Token <b>fine-grained</b> con permiso <b>Contents: Read and write</b> solo en este repo. Se guarda cifrado con tu contraseña <b>en este dispositivo</b>, y no viaja con tus datos: en otro dispositivo hay que pegarlo otra vez.</small>
+    <small style="display:block;margin:0.4rem 0 0.5rem;">Token <b>fine-grained</b> con permiso <b>Contents: Read and write</b> en el repositorio de tus datos (y en el de la app, para la lista de precios). Se guarda cifrado con tu contraseña <b>en este dispositivo</b>, y no viaja con tus datos: en otro dispositivo hay que pegarlo otra vez.</small>
     <div id="sync-token-status" style="font-size:0.78rem;margin-bottom:0.5rem;"></div>
     <button id="sync-save-token" class="primary" style="width:100%;margin-bottom:1.25rem;">Guardar token</button>
     <!-- Con el token ya guardado, el campo se bloquea: cambiarlo o quitarlo es
@@ -433,24 +437,31 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/crypto.js?v=p206"></script>
-<script src="src/js/config.js?v=p206"></script>
-<script src="src/js/model.js?v=p206"></script>
-<script src="src/js/charts.js?v=p206"></script>
-<script src="src/js/render.js?v=p206"></script>
-<script src="src/js/db.js?v=p206"></script>
-<script src="src/js/sync.js?v=p206"></script>
-<script src="src/js/nav.js?v=p206"></script>
-<script src="src/js/plan.js?v=p206"></script>
-<script src="src/js/forms.js?v=p206"></script>
-<script src="src/js/perfil.js?v=p206"></script>
-<script src="src/js/exportar.js?v=p206"></script>
-<script src="src/js/boot.js?v=p206"></script>
+<script src="src/js/entorno.js?v=p207"></script>
+<script src="src/js/crypto.js?v=p207"></script>
+<script src="src/js/config.js?v=p207"></script>
+<script src="src/js/model.js?v=p207"></script>
+<script src="src/js/charts.js?v=p207"></script>
+<script src="src/js/render.js?v=p207"></script>
+<script src="src/js/db.js?v=p207"></script>
+<script src="src/js/sync.js?v=p207"></script>
+<script src="src/js/nav.js?v=p207"></script>
+<script src="src/js/plan.js?v=p207"></script>
+<script src="src/js/forms.js?v=p207"></script>
+<script src="src/js/perfil.js?v=p207"></script>
+<script src="src/js/exportar.js?v=p207"></script>
+<script src="src/js/boot.js?v=p207"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.
+    // En desarrollo no hay service worker: la copia en caché escondería los
+    // cambios que se están probando. Si quedó uno de antes, se quita.
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
+        if (window.SolventoEntorno && !window.SolventoEntorno.prod) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+          return;
+        }
         navigator.serviceWorker.register("sw.js").catch(function () {});
       });
     }
