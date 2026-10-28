@@ -569,6 +569,9 @@ comprobar("en producción, cada cuenta lee de datos-cifrados/Solvento/ (privado)
     var a = c.almacen || {};
     return a.repo === "datos-cifrados" && a.privado === true && a.path === "Solvento/" + c.usuario + "-data.enc";
   }) && perfilProd.app && perfilProd.app.repo === "Solvento");
+comprobar("ningún dato cifrado puede volver a este repositorio público",
+  /^\*\.enc$/m.test(leer(base + ".gitignore")) && /\\\.enc\$/.test(leer(base + ".githooks/pre-commit")) &&
+  window.SolventoConfig.SYNC.repo !== "Solvento" && window.SolventoConfig.SYNC.privado === true);
 
 print("");
 if (fallos.length) { print(fallos.length + " comprobación(es) fallidas"); salir(1); }

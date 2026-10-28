@@ -4,13 +4,16 @@
  * Una cuenta es un usuario, un nombre, un tipo (persona u organización) y un
  * almacén: el sitio del que se lee y al que se escribe su bloque cifrado.
  *
- * El catálogo vive en `perfil.json`, junto a los datos, NO en el código:
+ * El catálogo vive en `perfil.json` (en el repositorio de la app; los datos,
+ * en el privado datos-cifrados), NO en el código:
  *
  *   { "cuentas": [
  *       { "usuario": "alberto", "nombre": "Alberto", "tipo": "persona",
- *         "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "alberto-data.enc" } },
+ *         "almacen": { "owner": "…", "repo": "datos-cifrados", "branch": "main",
+ *                      "path": "Solvento/alberto-data.enc", "privado": true } },
  *       { "usuario": "abies", "nombre": "ABIES", "tipo": "organizacion",
- *         "almacen": { "owner": "…", "repo": "…", "branch": "main", "path": "abies-data.enc" } } ] }
+ *         "almacen": { "owner": "…", "repo": "datos-cifrados", "branch": "main",
+ *                      "path": "Solvento/abies-data.enc", "privado": true } } ] }
  *
  * El login solo pide usuario y contraseña, como cualquier login: el usuario dice
  * QUÉ cuenta abrir y la contraseña la abre. Dónde guarda cada una es

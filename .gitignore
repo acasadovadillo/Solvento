@@ -2,8 +2,11 @@ data/
 .DS_Store
 
 # v2: documento en CLARO producido por tools/csv_to_json.py — NUNCA subir.
-# El único artefacto que se versiona es data.enc (cifrado por el navegador).
 data.json
+
+# Los datos cifrados de las cuentas tampoco: viven en el repositorio PRIVADO
+# datos-cifrados (carpeta Solvento/), no en este, que es público.
+*.enc
 
 # Notas y utilidades locales (no forman parte de la app)
 .claude/
@@ -14,8 +17,8 @@ NEXT_STEPS.md
 
 # ── Nada personal entra aquí ─────────────────────────────────────────────
 # El repositorio es PÚBLICO. Los extractos del banco, los ficheros de trabajo
-# de la reconstrucción y cualquier export en claro se quedan fuera: lo único
-# tuyo que puede vivir aquí es data.enc, que va cifrado.
+# de la reconstrucción y cualquier export en claro se quedan fuera. Ni
+# siquiera los datos cifrados viven aquí (ver arriba).
 BANKINTER_DATOS/
 SANTANDER_DATOS/
 MYINVESTOR_DATOS/

@@ -3,8 +3,10 @@
  *
  * Arranque:
  *   · Hay bloque cifrado local → login (contraseña → descifra → desbloquea).
- *   · No hay local pero SÍ en el repo (data.enc, lectura pública) → se adopta y
- *     se pide la contraseña. Esto hace que funcione en cualquier dispositivo.
+ *   · No hay local pero SÍ en el repositorio de datos → se baja y se pide la
+ *     contraseña. Esto hace que funcione en cualquier dispositivo. Como ese
+ *     repositorio es privado (datos-cifrados), la primera vez en un dispositivo
+ *     el login pide también el token de la cuenta.
  *   · Nada en local ni en el repo → cuenta nueva: elige contraseña y empieza vacía.
  *
  * La contraseña y el token se guardan SOLO en memoria (DB.state) durante la
@@ -701,7 +703,7 @@
       if (escrito) tokenNuevo = escrito;
     } else if (!blob) {
       // Primera vez con esta cuenta en este dispositivo: su bloque se lee de su
-      // sitio. Es lectura pública y no descifra nada: sin la contraseña, ruido.
+      // sitio (si es público, sin token). No descifra nada: sin la contraseña, ruido.
       try { const r = await SYNC.fetchRemoteBlob(null); if (r) { blob = r.blob; DB.storeBlob(r.blob); } }
       catch (e) { blob = null; }
     }
@@ -836,7 +838,7 @@
     // Sin bloque local y con los datos en un repositorio privado: no se puede
     // mirar sin token, así que al login, que lo pide si hace falta.
     if (SYNC.privado()) { panel("login"); $("login-user").focus(); return; }
-    // Sin bloque local: ¿existe en el repo? (lectura pública, sin token)
+    // Sin bloque local y en un repositorio público: ¿existe allí? (sin token)
     panel("checking");
     let remote = null;
     try { remote = await SYNC.fetchRemoteBlob(null); } catch (e) { remote = null; }

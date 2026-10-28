@@ -11,8 +11,8 @@
 #   sh tools/publicar.sh ../ABIES-Solvento
 #
 # Lo que NO viaja, porque es de cada uno:
-#   data.enc      sus datos cifrados
-#   perfil.json   quién entra y dónde guarda
+#   perfil.json   quién entra y dónde guarda (sus datos cifrados no están en
+#                 el repositorio de la app, sino en uno privado)
 #   tools/reconstruccion  los lectores de MIS extractos bancarios
 #
 # Después, en el destino: git add -A && git commit && git push.
@@ -43,5 +43,5 @@ copiar index.html sw.js manifest.json src img tickers.json prices.json \
        tools/build_prices.py tools/csv_to_json.py tools/copia.py tools/instalar.sh tools/pruebas
 
 echo
-echo "Hecho. Lo suyo —data.enc y perfil.json— no se ha tocado."
+echo "Hecho. Lo suyo —perfil.json— no se ha tocado."
 echo "Ahora, en el destino:  git add -A && git commit -m 'Actualizar Solvento' && git push"

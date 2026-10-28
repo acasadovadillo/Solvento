@@ -188,10 +188,11 @@
     return f ? "img/" + f : null;
   }
 
-  // Sincronización: dónde vive el bloque cifrado (data.enc) en GitHub.
-  // El repo es público, así que LEER data.enc no necesita token; ESCRIBIR sí
-  // (token fine-grained con permiso Contents: Read/Write solo en este repo).
-  const SYNC = { owner: "acasadovadillo", repo: "Solvento", branch: "main", path: "alberto-data.enc" };
+  // Sincronización: dónde vive el bloque cifrado de la cuenta en GitHub. Lo
+  // dice perfil.json para cada cuenta; esto es solo lo de por defecto. Los
+  // datos están en un repositorio PRIVADO, así que hace falta el token hasta
+  // para leer (fine-grained, Contents: Read and write, personal de cada cuenta).
+  const SYNC = { owner: "acasadovadillo", repo: "datos-cifrados", branch: "main", path: "Solvento/alberto-data.enc", privado: true };
 
 
   // ── Configuración editable ──────────────────────────────────────────
