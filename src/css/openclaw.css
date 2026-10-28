@@ -8,33 +8,37 @@
      tarjeta        #161920   borde #1c1f27, radio 12
      campo          #14161d   (buscador) / #101218 (selectores, segmentado)
      texto          #f4f4f5   secundario #8b8b94
-     acento         #ff5c5c   botón principal #d23c3c
-     activo         fondo #25191e, borde #482428
+     acento         el verde azulado de Solvento, #1aac8c (OpenClaw usa un rojo,
+                    #ff5c5c; los tonos que salen de él se recalculan en la misma
+                    proporción). Botón principal #11806a, para que el texto
+                    blanco se lea (4,9:1).
+     activo         fondo #0f1f20, borde #113532
      tipografía     Albert Sans (la que mejor casa con la de las capturas)
 
-   Lo que es de Solvento se queda: el verde de lo que entra, el rojo de lo que
-   sale, los colores de cada banco y de las gráficas. */
+   Lo que es de Solvento se queda: el verde azulado como acento, el verde de lo
+   que entra, el rojo de lo que sale, los colores de cada banco y de las
+   gráficas. */
 
 :root {
   --f0: #0e1015;  --f1: #14161d;  --f1b: #14161d;  --f2: #161920;  --f3: #161920;  --f4: #1c1f27;
   --b1: #1c1f27;  --b2: #1e2028;  --b3: #2f3033;
   --t0: #f4f4f5;  --t1: #f4f4f5;  --t1b: #b4b4bc;  --t2: #8b8b94;  --t3: #62636b;  --t4: #3b3c42;
-  --primario-bg: #d23c3c;  --primario-t: #ffffff;
-  --acento: #ff5c5c;  --acento-fondo: #25191e;  --acento-borde: #482428;
-  --insignia-fondo: #2e1f26;  --insignia-borde: #763539;
+  --primario-bg: #11806a;  --primario-t: #ffffff;
+  --acento: #1aac8c;  --acento-fondo: #0f1f20;  --acento-borde: #113532;
+  --insignia-fondo: #102525;  --insignia-borde: #135348;
   --campo: #101218;  --campo-activo: #191c24;  --filo: #1a1c22;
   --lateral: 287px;
   --fuente: "Albert Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 /* Claro: las capturas son del modo oscuro; esto es su equivalente, con el
-   mismo acento algo más oscuro para que se lea sobre blanco. */
+   acento algo más oscuro para que se lea sobre blanco (4,8:1). */
 :root[data-tema="claro"] {
   --f0: #f6f6f7;  --f1: #ffffff;  --f1b: #ffffff;  --f2: #ffffff;  --f3: #ffffff;  --f4: #efeff1;
   --b1: #e6e6e9;  --b2: #dcdce0;  --b3: #c4c4ca;
   --t0: #0e1015;  --t1: #16181f;  --t1b: #45464e;  --t2: #6b6c75;  --t3: #9a9ba3;  --t4: #c4c4ca;
-  --primario-bg: #d23c3c;  --primario-t: #ffffff;
-  --acento: #d93b3b;  --acento-fondo: #fdeeee;  --acento-borde: #f4c7c7;
-  --insignia-fondo: #fdeeee;  --insignia-borde: #efb3b3;
+  --primario-bg: #11806a;  --primario-t: #ffffff;
+  --acento: #0f7c64;  --acento-fondo: #e7f5f1;  --acento-borde: #b5e2d6;
+  --insignia-fondo: #e7f5f1;  --insignia-borde: #9ed8c8;
   --campo: #f1f1f3;  --campo-activo: #ffffff;  --filo: #e6e6e9;
 }
 
