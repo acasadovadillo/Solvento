@@ -2479,17 +2479,46 @@
     if (m) m.hidden = true;
     if (b) b.setAttribute("aria-expanded", "false");
   }
-  window.v2UserMenu = () => {
+  // Se abre desde el botón de la barra o desde la cuenta del menú lateral. En
+  // escritorio, desde el lateral, sale debajo de la cuenta; en el móvil el
+  // lateral es un panel que tapa la barra, así que se cierra y el menú sale
+  // donde siempre.
+  const ESCRITORIO = () => window.matchMedia("(min-width: 1024px)").matches;
+  window.v2UserMenu = (desde) => {
     const m = document.getElementById("user-menu"), b = document.getElementById("user-btn");
     if (!m) return;
     const abrir = m.hidden;
+    const lateral = !!desde && abrir && ESCRITORIO();
+    if (desde && !ESCRITORIO() && window.v2Sidebar) window.v2Sidebar(false);
+    m.classList.toggle("desde-lateral", lateral);
+    if (lateral) {
+      const r = desde.getBoundingClientRect();
+      m.style.left = r.left + "px"; m.style.top = (r.bottom + 6) + "px"; m.style.width = r.width + "px";
+    } else { m.style.left = m.style.top = m.style.width = ""; }
     m.hidden = !abrir;
     b.setAttribute("aria-expanded", String(abrir));
   };
   window.v2UserIr = (pagina) => { cerrarUserMenu(); showPage(pagina); };
   document.addEventListener("click", (ev) => {
-    if (!ev.target.closest || !ev.target.closest(".user-wrap")) cerrarUserMenu();
+    if (!ev.target.closest || !ev.target.closest(".user-wrap, #sn-cuenta")) cerrarUserMenu();
   });
+  // El buscador del menú lateral: deja a la vista las secciones cuyo nombre
+  // contiene lo escrito (y abre los grupos para que se vean). Vacío, todo
+  // vuelve a como estaba.
+  const sinTildes = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  window.v2BuscarMenu = (q) => {
+    const sb = document.getElementById("sidebar");
+    if (!sb) return;
+    const t = sinTildes(q).trim();
+    sb.classList.toggle("buscando", !!t);
+    sb.querySelectorAll(".sn-item").forEach((it) => {
+      const casa = !t || sinTildes(it.textContent).includes(t);
+      it.classList.toggle("sn-no-casa", !casa);
+    });
+    sb.querySelectorAll(".sn-grupo").forEach((g) => {
+      g.classList.toggle("sn-casa-dentro", !!t && !!g.querySelector(".sn-item:not(.sn-no-casa)"));
+    });
+  };
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") cerrarUserMenu(); });
 
   // ── Navegación ──

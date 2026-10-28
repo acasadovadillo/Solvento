@@ -107,6 +107,12 @@
     .aj-sec .filebtn { display: inline-block; border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.55rem 0.9rem; cursor: pointer; border: 1px solid var(--b2); background: var(--f4); color: var(--t1); }
     .aj-sec small { color: var(--t2); font-size: 0.74rem; }
   </style>
+  <!-- El aspecto, a imagen de la interfaz de OpenClaw (ver la cabecera del
+       archivo). Va lo último, para que mande sobre lo de arriba. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="src/css/openclaw.css?v=p209" />
 </head>
 <body>
 
@@ -229,6 +235,18 @@
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
       </button>
     </div>
+    <div class="sn-titulo">Finanzas</div>
+    <!-- La cuenta abierta, como el selector de agente de OpenClaw: abre el
+         mismo menú que el botón de la barra (ajustes, cambiar de cuenta, bloquear). -->
+    <button type="button" class="sn-cuenta" id="sn-cuenta" onclick="v2UserMenu(this)" aria-haspopup="true">
+      <span class="sn-avatar" id="sn-avatar" aria-hidden="true"></span>
+      <span class="sn-cuenta-nombre" id="sn-cuenta-nombre"></span>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <label class="sn-buscar">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="sn-buscar" placeholder="Buscar en Solvento…" autocomplete="off" aria-label="Buscar una sección" oninput="v2BuscarMenu(this.value)" />
+    </label>
     <nav class="sn-list">
         <button class="sn-item active" data-page="patrimonio" onclick="v2Tab('patrimonio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg><span>Patrimonio</span></button>
         <!-- Activos: un grupo que se pliega. Sus páginas viven dentro, y
@@ -256,6 +274,12 @@
         <button class="sn-item" data-page="balance" onclick="v2Tab('balance')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v13"/><path d="M3.5 14 7 17.5 10.5 14"/><path d="M17 19.5v-13"/><path d="M13.5 10 17 6.5 20.5 10"/></svg><span>Ingresos y gastos</span></button>
         <button class="sn-item" data-page="presupuesto" onclick="v2Tab('presupuesto')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V9"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M2.5 20h19"/></svg><span>Presupuesto</span></button>
     </nav>
+    <div class="sn-etiqueta">Cuenta</div>
+    <nav class="sn-list sn-list-cuenta">
+      <button class="sn-item" data-page="ajustes" onclick="v2UserIr('ajustes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Ajustes</span></button>
+      <button class="sn-item" onclick="document.getElementById('logout-btn').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Bloquear</span></button>
+    </nav>
+    <div class="sn-pie"><span id="sn-estado"></span><span class="sn-version">p209</span></div>
   </aside>
 
   <nav class="bottom-nav" id="v2-bottom-nav" aria-label="Secciones">
@@ -278,8 +302,8 @@
   <div class="page" id="v2-page-presupuesto"></div>
   <div class="page" id="v2-page-ajustes">
     <div class="v2-wrap">
-      <div class="section-title" style="font-size:1.6rem;font-weight:800;color:var(--t0);margin-bottom:0.35rem;">Ajustes</div>
-      <div style="font-size:0.85rem;color:var(--t2);margin-bottom:1.5rem;">Todo lo tuyo se guarda cifrado con tu contraseña.</div>
+      <div class="section-title">Ajustes</div>
+      <div class="pagina-sub">Todo lo tuyo se guarda cifrado con tu contraseña.</div>
       <div class="aj-layout">
         <nav class="aj-nav" id="aj-nav">
           <button class="aj-tab active" data-sec="cuentas" onclick="v2AjSec('cuentas')">Cuentas</button>

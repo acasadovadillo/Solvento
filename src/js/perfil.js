@@ -140,6 +140,10 @@
     const el = document.getElementById("perfil-nombre");
     const nombre = dentro ? (c.nombre || "") : "";
     if (el) { el.textContent = nombre; el.hidden = !nombre; }
+    // La cuenta en el menú lateral, con sus iniciales en el círculo.
+    const cn = document.getElementById("sn-cuenta-nombre"), av = document.getElementById("sn-avatar");
+    if (cn) cn.textContent = nombre || c.usuario || "";
+    if (av) av.textContent = String(nombre || c.usuario || "").split(/\s+/).map((w) => w.replace(/[^\p{L}]/gu, "")).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
     document.title = (E && !E.prod ? "[DEV] " : "") + (nombre ? nombre + " · Solvento" : "Solvento");
   }
   function entrar(si) { dentro = si !== false; aplicar(); }

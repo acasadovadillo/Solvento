@@ -1,0 +1,253 @@
+/* ── El aspecto de OpenClaw, adaptado a Solvento ─────────────────────────────
+   Calcado de las capturas de la ventana de Configuración de OpenClaw (tema
+   «Claw», modo oscuro), medidas sobre la pantalla Retina: 1 px de aquí son 2
+   de la captura. Va la última y solo cambia el aspecto: los colores con nombre
+   (base.css) toman los valores de allí, y los componentes, sus medidas.
+
+     fondo          #0e1015   barra lateral, igual, con un filo #1a1c22
+     tarjeta        #161920   borde #1c1f27, radio 12
+     campo          #14161d   (buscador) / #101218 (selectores, segmentado)
+     texto          #f4f4f5   secundario #8b8b94
+     acento         #ff5c5c   botón principal #d23c3c
+     activo         fondo #25191e, borde #482428
+     tipografía     Albert Sans (la que mejor casa con la de las capturas)
+
+   Lo que es de Solvento se queda: el verde de lo que entra, el rojo de lo que
+   sale, los colores de cada banco y de las gráficas. */
+
+:root {
+  --f0: #0e1015;  --f1: #14161d;  --f1b: #14161d;  --f2: #161920;  --f3: #161920;  --f4: #1c1f27;
+  --b1: #1c1f27;  --b2: #1e2028;  --b3: #2f3033;
+  --t0: #f4f4f5;  --t1: #f4f4f5;  --t1b: #b4b4bc;  --t2: #8b8b94;  --t3: #62636b;  --t4: #3b3c42;
+  --primario-bg: #d23c3c;  --primario-t: #ffffff;
+  --acento: #ff5c5c;  --acento-fondo: #25191e;  --acento-borde: #482428;
+  --insignia-fondo: #2e1f26;  --insignia-borde: #763539;
+  --campo: #101218;  --campo-activo: #191c24;  --filo: #1a1c22;
+  --lateral: 287px;
+  --fuente: "Albert Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+/* Claro: las capturas son del modo oscuro; esto es su equivalente, con el
+   mismo acento algo más oscuro para que se lea sobre blanco. */
+:root[data-tema="claro"] {
+  --f0: #f6f6f7;  --f1: #ffffff;  --f1b: #ffffff;  --f2: #ffffff;  --f3: #ffffff;  --f4: #efeff1;
+  --b1: #e6e6e9;  --b2: #dcdce0;  --b3: #c4c4ca;
+  --t0: #0e1015;  --t1: #16181f;  --t1b: #45464e;  --t2: #6b6c75;  --t3: #9a9ba3;  --t4: #c4c4ca;
+  --primario-bg: #d23c3c;  --primario-t: #ffffff;
+  --acento: #d93b3b;  --acento-fondo: #fdeeee;  --acento-borde: #f4c7c7;
+  --insignia-fondo: #fdeeee;  --insignia-borde: #efb3b3;
+  --campo: #f1f1f3;  --campo-activo: #ffffff;  --filo: #e6e6e9;
+}
+
+body {
+  font-family: var(--fuente);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0;
+}
+button, input, select, textarea { font-family: inherit; }
+a { color: var(--acento); }
+
+/* Los arcos tenues de la esquina, detrás de todo, como en OpenClaw. */
+#app::before {
+  content: ""; position: fixed; z-index: -1; pointer-events: none;
+  top: -260px; right: -260px; width: 820px; height: 820px;
+  background:
+    radial-gradient(circle at center, transparent 0 239px, var(--arco) 240px 241px, transparent 242px 279px,
+      var(--arco) 280px 281px, transparent 282px 319px, var(--arco) 320px 321px, transparent 322px 359px,
+      var(--arco) 360px 361px, transparent 362px 399px, var(--arco) 400px 401px, transparent 402px);
+  --arco: rgba(255, 255, 255, 0.035);
+}
+:root[data-tema="claro"] #app::before { --arco: rgba(14, 16, 21, 0.05); }
+
+/* ── Barra lateral ─────────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--lateral); background: var(--f0); border-right: 1px solid var(--filo);
+  padding: 14px 12px calc(12px + env(safe-area-inset-bottom));
+}
+.sn-head { gap: 8px; padding: 2px 9px 30px; }
+.sn-head img { width: 18px; height: 18px; }
+.sn-name { font-size: 13px; font-weight: 500; color: var(--t2); }
+.sn-close { width: 26px; height: 22px; border-radius: 6px; border-color: var(--b2); }
+.sn-titulo {
+  font-size: 21px; font-weight: 700; color: var(--t0); letter-spacing: 0;
+  padding: 0 9px; margin-bottom: 22px; line-height: 1.15;
+}
+.sn-cuenta {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: none; border: none; border-radius: 8px; cursor: pointer;
+  color: var(--t1b); font-size: 14.2px; font-weight: 500; padding: 4px 9px; margin-bottom: 15px; text-align: left;
+}
+.sn-cuenta:hover { background: var(--f1); color: var(--t0); }
+.sn-cuenta svg { margin-left: auto; color: var(--t2); flex-shrink: 0; }
+.sn-avatar {
+  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+  background: #369f9d; color: #ffffff; font-size: 8.5px; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center; letter-spacing: 0;
+}
+.sn-cuenta-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t0); }
+.sn-buscar {
+  display: flex; align-items: center; gap: 7px; height: 33.5px; margin-bottom: 24px;
+  background: var(--f1); border: 1px solid var(--b1); border-radius: 8px; padding: 0 9px; color: var(--t2);
+}
+.sn-buscar:focus-within { border-color: var(--b3); }
+.sn-buscar input {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  color: var(--t0); font-size: 12.4px; padding: 0;
+}
+.sn-buscar input::placeholder { color: var(--t2); opacity: 1; }
+.sn-buscar input::-webkit-search-cancel-button { filter: grayscale(1); opacity: 0.5; }
+.sn-etiqueta {
+  font-size: 10.8px; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 0 9px; margin: 6px 0 8px;
+}
+.sn-list + .sn-etiqueta { margin-top: 18px; }
+.sn-list { gap: 3px; }
+.sn-item {
+  gap: 8px; border-radius: 8px; border: 1px solid transparent;
+  color: var(--t2); font-size: 13px; font-weight: 500; padding: 4px 9px; min-height: 31px;
+}
+.sn-item svg { width: 16px; height: 16px; }
+.sn-item:hover { background: var(--f1); color: var(--t0); }
+.sn-item.active {
+  background: var(--acento-fondo); border-color: var(--acento-borde); color: var(--t0); font-weight: 500;
+}
+.sn-item.active svg { color: var(--acento); }
+.sn-grupo.con-activa > .sn-grupo-btn { color: var(--t0); }
+.sn-grupo-btn .sn-caret { color: var(--t3); }
+.sn-hijos { padding-left: 14px; gap: 3px; margin-top: 3px; }
+.sn-hijos .sn-hijos { padding-left: 12px; }
+.sn-tipo-n { color: var(--t3); }
+/* El buscador: lo que no casa se esconde y los grupos con algo dentro se abren. */
+#sidebar.buscando .sn-no-casa:not(.sn-grupo-btn) { display: none; }
+#sidebar.buscando .sn-grupo:not(.sn-casa-dentro) > .sn-grupo-btn.sn-no-casa { display: none; }
+#sidebar.buscando .sn-grupo.sn-casa-dentro > .sn-hijos { display: flex; }
+#sidebar.buscando .sn-etiqueta { display: none; }
+.sn-pie {
+  margin-top: auto; padding: 18px 9px 2px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 11.5px; font-weight: 600; color: var(--t3);
+}
+.sn-version { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+/* En escritorio la barra lateral está siempre, como en OpenClaw: el contenido
+   se aparta y la barra de arriba solo guarda los botones de la derecha. */
+@media (min-width: 1024px) {
+  #sidebar { transform: none; visibility: visible; z-index: 900; max-width: none; }
+  #sidebar-backdrop { display: none; }
+  .sn-close, #brand-btn { display: none !important; }
+  body { padding: 6px 3rem 3rem calc(var(--lateral) + 3rem); }
+  .header-block { margin-top: 0; }
+  body .navbar { left: var(--lateral); background: transparent; border-bottom: none; pointer-events: none; }
+  .navbar > * { pointer-events: auto; }
+  .navbar-brand { visibility: hidden; }
+  #user-menu.desde-lateral { position: fixed; right: auto; }
+}
+
+/* ── Barra de arriba y menú de cuenta ──────────────────────────────────── */
+.navbar { background: var(--f0); border-bottom: 1px solid var(--filo); }
+.nb-menu, #user-btn {
+  width: 34px; height: 34px; border-radius: 8px; background: var(--f2);
+  border: 1px solid var(--b2); color: var(--t1b);
+}
+#user-btn { border-radius: 50%; }
+.nb-menu:hover, .nb-menu[aria-expanded="true"], #user-btn:hover, #user-btn[aria-expanded="true"] {
+  background: var(--f4); border-color: var(--b3); color: var(--t0);
+}
+.nb-menu[aria-pressed="true"] { background: var(--acento-fondo); border-color: var(--acento-borde); color: var(--acento); }
+#user-badge { background: var(--acento); border-color: var(--f0); }
+#user-menu { background: var(--f2); border: 1px solid var(--b1); border-radius: 12px; padding: 5px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5); }
+.um-head { border-bottom-color: var(--b1); }
+.um-title { font-size: 15px; }
+.um-item { border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--t0); padding: 7px 10px; }
+.um-item:hover { background: var(--f4); }
+
+/* ── Cabecera de cada página: el título en el color del acento ─────────── */
+.header-block { margin: 2.5rem auto 1.75rem; }
+.section-title {
+  font-size: 26px; font-weight: 700; color: var(--acento); text-transform: none;
+  letter-spacing: 0; opacity: 1; margin-bottom: 6px; line-height: 1.15;
+}
+.section-subtitle { font-size: 26px; font-weight: 700; color: var(--t0); letter-spacing: -0.01em; }
+
+/* ── Tarjetas ──────────────────────────────────────────────────────────── */
+.hero-card, .dashboard-panel, .chart-block, .table-container, .legend-box, .aj-body {
+  background: var(--f2); border: 1px solid var(--b1); border-radius: 12px;
+}
+.hero-card { background: var(--f2); }
+.hero-item { background: var(--campo); border-color: var(--b1); border-radius: 10px; }
+.donut-center { background: var(--f2); border-color: var(--b1); box-shadow: none; }
+.chart-block-title, .hero-label, .hero-item-label, .minimal-table th {
+  font-size: 10.8px; font-weight: 700; color: var(--t2); letter-spacing: 0.06em;
+}
+.minimal-table th { border-bottom-color: var(--b1); }
+.minimal-table td { border-bottom-color: var(--b1); }
+.table-row:hover { background: var(--f4); }
+.section-divider { background: var(--b1); }
+
+/* ── Selector segmentado (1M, 3M… y similares) ─────────────────────────── */
+.timeframe-selector { background: var(--campo); border: 1px solid var(--campo); border-radius: 12px; padding: 4px; gap: 2px; }
+.tf-btn, .tf-btn-btc, .tf-btn-msci, .tf-btn-pf, .tf-btn-inv, .tf-btn-neto {
+  color: var(--t2); font-size: 13px; font-weight: 600; border-radius: 9px; padding: 6px 12px; border: none;
+}
+.tf-btn:hover, .tf-btn-btc:hover, .tf-btn-msci:hover, .tf-btn-pf:hover, .tf-btn-inv:hover, .tf-btn-neto:hover { background: transparent; color: var(--t0); }
+.tf-btn.active, .tf-btn-btc.active, .tf-btn-msci.active, .tf-btn-pf.active, .tf-btn-inv.active, .tf-btn-neto.active {
+  background: var(--campo-activo); color: var(--t0); border: none; box-shadow: none;
+}
+
+/* ── Ajustes: como la propia Configuración de OpenClaw ─────────────────── */
+.aj-tab { color: var(--t2); font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 8px; border: 1px solid transparent; }
+.aj-tab:hover { background: var(--f1); color: var(--t0); }
+.aj-tab.active { background: var(--acento-fondo); border-color: var(--acento-borde); color: var(--t0); font-weight: 500; }
+.aj-body { padding: 17px 20px; }
+.aj-sec h3 { font-size: 21px; font-weight: 700; color: var(--acento); letter-spacing: 0; }
+.aj-sec p { font-size: 12.5px; color: var(--t2); }
+.aj-sec input[type="password"], .aj-sec input[type="text"], .aj-sec select {
+  background: var(--campo); border: 1px solid var(--b2); border-radius: 10px; color: var(--t0); font-size: 14.5px;
+}
+.aj-sec button, .aj-sec .filebtn {
+  background: var(--f2); border: 1px solid var(--b2); color: var(--t0);
+  border-radius: 10px; font-size: 14px; font-weight: 500; padding: 7px 14px;
+}
+.aj-sec button:hover, .aj-sec .filebtn:hover { background: var(--f4); border-color: var(--b3); }
+.aj-sec button.primary { background: var(--primario-bg); color: var(--primario-t); border: 1px solid var(--primario-bg); font-weight: 600; }
+.aj-sec button.primary:hover { filter: brightness(1.08); }
+.aj-sec small { color: var(--t2); font-size: 12.5px; }
+.tema-opcion span { background: var(--f1); border-color: var(--b1); border-radius: 12px; font-weight: 500; color: var(--t0); }
+.tema-opcion input:checked + span { background: var(--acento-fondo); border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.tema-opcion input:focus-visible + span { outline-color: var(--acento); }
+/* Los interruptores de Ajustes, como los de OpenClaw: 32 × 18, rojo encendido. */
+.aj-sec input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; flex-shrink: 0; cursor: pointer;
+  width: 32px !important; height: 18px !important; border-radius: 9px; margin: 0.1rem 0 0;
+  background: transparent; border: 1.5px solid var(--b3); position: relative; transition: background 0.15s, border-color 0.15s;
+}
+.aj-sec input[type="checkbox"]::after {
+  content: ""; position: absolute; top: 2.5px; left: 3px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--t3); transition: transform 0.15s, background 0.15s;
+}
+.aj-sec input[type="checkbox"]:checked { background: var(--acento); border-color: var(--acento); }
+.aj-sec input[type="checkbox"]:checked::after { transform: translateX(13px); background: var(--f0); }
+.aj-sec input[type="checkbox"]:disabled { opacity: 0.4; cursor: not-allowed; }
+.aj-sec input[type="checkbox"]:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* ── Móvil: la barra de abajo ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .bottom-nav { background: var(--f0); border-top-color: var(--filo); }
+  .bottom-nav-item { color: var(--t2); font-size: 10.5px; font-weight: 600; }
+  .bottom-nav-item.active { color: var(--acento); }
+  .section-title { font-size: 24px; }
+  .section-subtitle { font-size: 26px; }
+}
+
+/* ── Arranque (login) ──────────────────────────────────────────────────── */
+#boot-overlay { background: var(--f0) !important; }
+#boot-overlay input {
+  background: var(--f1); border: 1px solid var(--b1); border-radius: 8px; color: var(--t0);
+  font-size: 15px; padding: 9px 12px;
+}
+#boot-overlay input::placeholder { color: var(--t2); }
+#boot-overlay input:focus { border-color: var(--b3); }
+#boot-overlay button.primary { background: var(--primario-bg); color: var(--primario-t); border-radius: 10px; font-size: 15px; font-weight: 600; padding: 10px 14px; }
+.boot-title { font-size: 26px; font-weight: 700; color: var(--acento); letter-spacing: 0; }
+.boot-sub { font-size: 12.5px; color: var(--t2); }
+
+/* El subtítulo gris bajo el título de una página. */
+.pagina-sub { font-size: 11.5px; color: var(--t2); margin: 0 0 1.75rem; }

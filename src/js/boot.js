@@ -240,6 +240,9 @@
     el.textContent = txt;
     el.style.color = col;
     el.title = detalle || "Estado del guardado";
+    // Y en el pie del menú lateral, que en escritorio está siempre a la vista.
+    const pie = $("sn-estado");
+    if (pie) { pie.textContent = txt; pie.style.color = col; pie.title = el.title; }
     // Punto de aviso sobre el avatar: así se ve que algo pasa sin abrir el menú
     const badge = $("user-badge");
     if (badge) badge.hidden = !(estado === "pendiente" || estado === "local" || estado === "sintoken" ||
