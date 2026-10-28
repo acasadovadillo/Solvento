@@ -90,8 +90,10 @@
     const inp = $("login-pass"), btn = $("login-ver");
     const ver = inp.type === "password";
     inp.type = ver ? "text" : "password";
-    btn.querySelector(".ojo-ver").hidden = ver;
-    btn.querySelector(".ojo-tachado").hidden = !ver;
+    // toggleAttribute y no «.hidden = …»: un <svg> no tiene esa propiedad, y
+    // asignarla solo crea una variable suelta sin tocar el atributo.
+    btn.querySelector(".ojo-ver").toggleAttribute("hidden", ver);
+    btn.querySelector(".ojo-tachado").toggleAttribute("hidden", !ver);
     btn.title = btn.ariaLabel = ver ? "Ocultar la contraseña" : "Ver la contraseña";
     inp.focus();
   }

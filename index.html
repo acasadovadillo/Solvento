@@ -17,10 +17,10 @@
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
   <!-- El tema, antes que el CSS: si se aplicara después de pintar, quien use
        el tema claro vería un fogonazo oscuro en cada carga. -->
-  <script src="src/js/tema.js?v=p214"></script>
-  <link rel="stylesheet" href="src/css/base.css?v=p214" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p214" />
-  <link rel="stylesheet" href="src/css/components.css?v=p214" />
+  <script src="src/js/tema.js?v=p215"></script>
+  <link rel="stylesheet" href="src/css/base.css?v=p215" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p215" />
+  <link rel="stylesheet" href="src/css/components.css?v=p215" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -34,6 +34,10 @@
       font-size: 0.95rem; font-weight: 700; padding: 0.8rem 1rem; cursor: pointer; font-family: inherit;
     }
     #boot-overlay button.primary:hover { opacity: 0.85; }
+    /* El ojo de la contraseña lleva dos dibujos y boot.js esconde uno con
+       «hidden». Pero el navegador solo oculta así los elementos HTML, no un
+       <svg>: sin esta línea se veían los dos ojos a la vez. */
+    #login-ver svg[hidden] { display: none; }
     .boot-panel { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; }
     .boot-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; margin: 1rem 0 0.35rem; color: var(--t0); }
     .boot-sub { font-size: 0.82rem; color: var(--t2); margin-bottom: 1.75rem; text-align: center; }
@@ -113,7 +117,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="src/css/openclaw.css?v=p214" />
+  <link rel="stylesheet" href="src/css/openclaw.css?v=p215" />
 </head>
 <body>
 
@@ -454,20 +458,20 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/entorno.js?v=p214"></script>
-<script src="src/js/crypto.js?v=p214"></script>
-<script src="src/js/config.js?v=p214"></script>
-<script src="src/js/model.js?v=p214"></script>
-<script src="src/js/charts.js?v=p214"></script>
-<script src="src/js/render.js?v=p214"></script>
-<script src="src/js/db.js?v=p214"></script>
-<script src="src/js/sync.js?v=p214"></script>
-<script src="src/js/nav.js?v=p214"></script>
-<script src="src/js/plan.js?v=p214"></script>
-<script src="src/js/forms.js?v=p214"></script>
-<script src="src/js/perfil.js?v=p214"></script>
-<script src="src/js/exportar.js?v=p214"></script>
-<script src="src/js/boot.js?v=p214"></script>
+<script src="src/js/entorno.js?v=p215"></script>
+<script src="src/js/crypto.js?v=p215"></script>
+<script src="src/js/config.js?v=p215"></script>
+<script src="src/js/model.js?v=p215"></script>
+<script src="src/js/charts.js?v=p215"></script>
+<script src="src/js/render.js?v=p215"></script>
+<script src="src/js/db.js?v=p215"></script>
+<script src="src/js/sync.js?v=p215"></script>
+<script src="src/js/nav.js?v=p215"></script>
+<script src="src/js/plan.js?v=p215"></script>
+<script src="src/js/forms.js?v=p215"></script>
+<script src="src/js/perfil.js?v=p215"></script>
+<script src="src/js/exportar.js?v=p215"></script>
+<script src="src/js/boot.js?v=p215"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.
