@@ -166,20 +166,33 @@
     return _navCargando;
   }
 
+  // La versión es la de los archivos (el ?v= de index.html), no un texto
+  // escrito a mano que se queda viejo. Mismo formato que Ironrack: en
+  // monoespaciada, en el pie de la barra lateral y al final de Ajustes.
+  (function pintarVersion() {
+    const s = document.querySelector('script[src*="boot.js"]');
+    const v = s && (s.getAttribute("src").match(/[?&]v=([^&]+)/) || [])[1];
+    if (!v) return;
+    document.querySelectorAll(".sn-version").forEach((e) => { e.textContent = v; });
+    const pie = document.getElementById("version-pie");
+    if (pie) pie.textContent = "Solvento " + v;
+  })();
+
   let _toastTimer = null;
   function toast(msg, color) {
     let t = $("v2-toast");
     if (!t) {
       t = document.createElement("div");
-      t.id = "v2-toast";
-      t.style.cssText = "position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:var(--f1);border:1px solid var(--b2);color:var(--t1);font-size:0.85rem;font-weight:600;padding:0.6rem 1.1rem;border-radius:10px;z-index:1300;box-shadow:0 6px 20px rgba(0,0,0,0.5);display:none;";
+      t.id = "v2-toast";             // su aspecto, en openclaw.css (el de Ironrack)
+      t.setAttribute("role", "status");
       document.body.appendChild(t);
     }
+    // El color ya no tiñe el texto: va en el punto de la izquierda.
     t.textContent = msg;
-    t.style.color = color || "var(--t1)";
-    t.style.display = "block";
+    t.style.setProperty("--punto", color || "var(--acento)");
+    t.classList.add("visible");
     clearTimeout(_toastTimer);
-    _toastTimer = setTimeout(() => { t.style.display = "none"; }, 3500);
+    _toastTimer = setTimeout(() => { t.classList.remove("visible"); }, 3000);
   }
 
   // ── Estado del guardado (visible en la navbar) ──

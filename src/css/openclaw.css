@@ -27,7 +27,7 @@
   --acento: #1aac8c;  --acento-fondo: #0f1f20;  --acento-borde: #113532;
   --insignia-fondo: #102525;  --insignia-borde: #135348;
   --campo: #101218;  --campo-activo: #191c24;  --filo: #1a1c22;
-  --lateral: 287px;
+  --lateral: 288px;            /* el mismo que Ironrack (y que OpenClaw) */
   --fuente: "Albert Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 /* Claro: las capturas son del modo oscuro; esto es su equivalente, con el
@@ -50,17 +50,15 @@ body {
 button, input, select, textarea { font-family: inherit; }
 a { color: var(--acento); }
 
-/* Los arcos tenues de la esquina, detrás de todo, como en OpenClaw. */
+/* Las curvas de nivel de fondo, detrás de todo: las mismas que en la entrada
+   y que en Ironrack (img/contornos.svg como máscara; el color, del tema). */
 #app::before {
-  content: ""; position: fixed; z-index: -1; pointer-events: none;
-  top: -260px; right: -260px; width: 820px; height: 820px;
-  background:
-    radial-gradient(circle at center, transparent 0 239px, var(--arco) 240px 241px, transparent 242px 279px,
-      var(--arco) 280px 281px, transparent 282px 319px, var(--arco) 320px 321px, transparent 322px 359px,
-      var(--arco) 360px 361px, transparent 362px 399px, var(--arco) 400px 401px, transparent 402px);
-  --arco: rgba(255, 255, 255, 0.035);
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-color: var(--contorno);
+  -webkit-mask: url("../../img/contornos.svg") right center / auto 120% no-repeat;
+  mask: url("../../img/contornos.svg") right center / auto 120% no-repeat;
 }
-:root[data-tema="claro"] #app::before { --arco: rgba(14, 16, 21, 0.05); }
+@media (min-width: 1024px) { #app::before { left: var(--lateral); } }
 
 /* ── Barra lateral ─────────────────────────────────────────────────────── */
 #sidebar {
@@ -145,7 +143,23 @@ a { color: var(--acento); }
   margin-top: auto; padding: 18px 9px 2px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
   font-size: 11.5px; font-weight: 600; color: var(--t3);
 }
-.sn-version { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.sn-version { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; font-weight: 400; color: var(--t2); }
+
+/* El aviso breve, el mismo que en Ironrack: arriba, en una tarjeta, con un
+   punto del color que se pida (el del acento si no se pide ninguno). */
+#v2-toast {
+  position: fixed; z-index: 1300; left: 50%; top: calc(env(safe-area-inset-top) + 74px); /* bajo la barra de 64 px */
+  transform: translate(-50%, -8px); opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--f2); color: var(--t0); border: 1px solid var(--b1); font-size: 14px; font-weight: 500;
+  padding: 10px 16px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  max-width: calc(100% - 32px); text-align: center;
+}
+#v2-toast::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--punto, var(--acento)); }
+#v2-toast.visible { opacity: 1; transform: translate(-50%, 0); }
+@media (min-width: 1024px) { #v2-toast { top: 24px; left: calc(50% + var(--lateral) / 2); } }
+.version-pie { text-align: center; color: var(--t2); margin: 3rem 0 1rem;
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
 
 /* En escritorio la barra lateral está siempre, como en OpenClaw: el contenido
    se aparta y la barra de arriba solo guarda los botones de la derecha. */
@@ -284,8 +298,9 @@ a { color: var(--acento); }
 .boot-title { font-size: 26px; font-weight: 700; color: var(--acento); letter-spacing: 0; }
 .boot-sub { font-size: 12.5px; color: var(--t2); }
 
-/* El subtítulo gris bajo el título de una página. */
-.pagina-sub { font-size: 11.5px; color: var(--t2); margin: 0 0 1.75rem; }
+/* El subtítulo gris bajo el título de una página: 13,5 px, como en Ironrack
+   (lo medido en OpenClaw). */
+.pagina-sub { font-size: 13.5px; color: var(--t2); margin: 6px 0 1.75rem; }
 
 /* Las curvas de nivel de fondo en la pantalla de entrada, como en Ironrack.
    El dibujo (img/contornos.svg) se usa de máscara y el color lo pone el tema:
