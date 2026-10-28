@@ -17,10 +17,10 @@
   <meta name="description" content="Tus finanzas, cifradas y siempre contigo." />
   <!-- El tema, antes que el CSS: si se aplicara después de pintar, quien use
        el tema claro vería un fogonazo oscuro en cada carga. -->
-  <script src="src/js/tema.js?v=p217"></script>
-  <link rel="stylesheet" href="src/css/base.css?v=p217" />
-  <link rel="stylesheet" href="src/css/layout.css?v=p217" />
-  <link rel="stylesheet" href="src/css/components.css?v=p217" />
+  <script src="src/js/tema.js?v=p218"></script>
+  <link rel="stylesheet" href="src/css/base.css?v=p218" />
+  <link rel="stylesheet" href="src/css/layout.css?v=p218" />
+  <link rel="stylesheet" href="src/css/components.css?v=p218" />
   <style>
     /* Arranque (login / importación) — cubre todo hasta desbloquear */
     #boot-overlay input {
@@ -117,7 +117,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="src/css/openclaw.css?v=p217" />
+  <link rel="stylesheet" href="src/css/openclaw.css?v=p218" />
 </head>
 <body>
 
@@ -283,15 +283,9 @@
     <div class="sn-pie"><span id="sn-estado"></span><span class="sn-version"></span></div>
   </aside>
 
-  <nav class="bottom-nav" id="v2-bottom-nav" aria-label="Secciones">
-    <button class="bottom-nav-item active" data-page="patrimonio" onclick="v2Tab('patrimonio')">Patrimonio</button>
-    <button class="bottom-nav-item" data-page="caja" onclick="v2Tab('caja')">Caja</button>
-    <button class="bottom-nav-item" data-page="cartera" onclick="v2Tab('cartera')">Cartera</button>
-    <button class="bottom-nav-item" data-page="propiedades" onclick="v2Tab('propiedades')">Inmuebles</button>
-    <button class="bottom-nav-item" data-page="otros" onclick="v2Tab('otros')">Otros</button>
-    <button class="bottom-nav-item" data-page="pasivos" onclick="v2Tab('pasivos')">Pasivos</button>
-    <button class="bottom-nav-item" data-page="balance" onclick="v2Tab('balance')">Ingresos y gastos</button>
-  </nav>
+  <!-- La barra de abajo del móvil la arma render.js (pintarBarraMovil) con las
+       entradas de arriba del menú lateral: como mucho cinco, con su icono. -->
+  <nav class="bottom-nav" id="v2-bottom-nav" aria-label="Secciones"></nav>
 
   <div class="page active" id="v2-page-patrimonio"></div>
   <div class="page" id="v2-page-caja"></div>
@@ -465,20 +459,20 @@
 <!-- ══ MODAL DE SINCRONIZACIÓN ══ -->
 
 
-<script src="src/js/entorno.js?v=p217"></script>
-<script src="src/js/crypto.js?v=p217"></script>
-<script src="src/js/config.js?v=p217"></script>
-<script src="src/js/model.js?v=p217"></script>
-<script src="src/js/charts.js?v=p217"></script>
-<script src="src/js/render.js?v=p217"></script>
-<script src="src/js/db.js?v=p217"></script>
-<script src="src/js/sync.js?v=p217"></script>
-<script src="src/js/nav.js?v=p217"></script>
-<script src="src/js/plan.js?v=p217"></script>
-<script src="src/js/forms.js?v=p217"></script>
-<script src="src/js/perfil.js?v=p217"></script>
-<script src="src/js/exportar.js?v=p217"></script>
-<script src="src/js/boot.js?v=p217"></script>
+<script src="src/js/entorno.js?v=p218"></script>
+<script src="src/js/crypto.js?v=p218"></script>
+<script src="src/js/config.js?v=p218"></script>
+<script src="src/js/model.js?v=p218"></script>
+<script src="src/js/charts.js?v=p218"></script>
+<script src="src/js/render.js?v=p218"></script>
+<script src="src/js/db.js?v=p218"></script>
+<script src="src/js/sync.js?v=p218"></script>
+<script src="src/js/nav.js?v=p218"></script>
+<script src="src/js/plan.js?v=p218"></script>
+<script src="src/js/forms.js?v=p218"></script>
+<script src="src/js/perfil.js?v=p218"></script>
+<script src="src/js/exportar.js?v=p218"></script>
+<script src="src/js/boot.js?v=p218"></script>
   <script>
     // Registro del service worker: si falla (navegador antiguo, http://), la app
     // funciona igual, solo que sin instalación ni modo sin conexión.

@@ -143,6 +143,11 @@ a { color: var(--acento); }
   margin-top: auto; padding: 18px 9px 2px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
   font-size: 11.5px; font-weight: 600; color: var(--t3);
 }
+/* El estado, como en Ironrack: un punto de su color y la palabra en gris */
+#sn-estado, #sync-estado { display: inline-flex; align-items: center; gap: 7px; color: var(--t2); }
+#sn-estado.con-punto::before, #sync-estado.con-punto::before {
+  content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--punto);
+}
 .sn-version { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; font-weight: 400; color: var(--t2); }
 
 /* El aviso breve, el mismo que en Ironrack: arriba, en una tarjeta, con un
@@ -279,9 +284,21 @@ a { color: var(--acento); }
 
 /* ── Móvil: la barra de abajo ──────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .bottom-nav { background: var(--f0); border-top-color: var(--filo); }
-  .bottom-nav-item { color: var(--t2); font-size: 10.5px; font-weight: 600; }
-  .bottom-nav-item.active { color: var(--acento); }
+  /* La de Ironrack: icono de 22 px y nombre de 11 px; la elegida, con el
+     icono en el acento. */
+  .bottom-nav {
+    background: color-mix(in srgb, var(--f0) 92%, transparent);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--filo); padding: 4px 4px calc(env(safe-area-inset-bottom) + 4px);
+  }
+  .bottom-nav-item {
+    min-height: 50px; padding: 0 2px; gap: 3px; justify-content: center;
+    color: var(--t2); font-size: 11px; font-weight: 400; line-height: 1.1; text-align: center;
+  }
+  .bottom-nav-item::before { display: none; }
+  .bottom-nav-item svg { width: 22px; height: 22px; flex: none; color: #696972; }
+  .bottom-nav-item.active { color: var(--t0); }
+  .bottom-nav-item.active svg { color: var(--acento); }
   .section-title { font-size: 24px; }
   .section-subtitle { font-size: 26px; }
 }
@@ -313,3 +330,25 @@ a { color: var(--acento); }
 }
 :root { --contorno: #ffffff; }
 :root[data-tema="claro"] { --contorno: #0e1015; }
+
+/* ── Ajustes: 1.040 px, como en Ironrack ── */
+#v2-page-ajustes .v2-wrap { max-width: 1040px; }
+
+/* ── Formularios: como las hojas de Ironrack ──
+   Velo al 60 % y tarjeta de radio 16. En el móvil suben desde abajo, a lo
+   ancho y con su asa, que es como se alcanzan con una mano. (La ventana se
+   crea con estilos en línea en forms.js; de ahí los !important.) */
+#form-modal { background: rgba(0, 0, 0, .6) !important; }
+#form-modal .modal-card { border-radius: 16px !important; }
+@media (max-width: 640px) {
+  #form-modal { align-items: flex-end !important; padding: 0 !important; }
+  #form-modal .modal-card {
+    max-width: none !important; max-height: 88vh !important; border-radius: 16px 16px 0 0 !important;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem) !important; animation: hoja-sube .22s ease-out;
+  }
+  #form-modal .modal-card::before {
+    content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--b2); margin: -0.75rem auto 0.9rem;
+  }
+}
+@keyframes hoja-sube { from { transform: translateY(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { #form-modal .modal-card { animation: none; } }

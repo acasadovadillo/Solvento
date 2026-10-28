@@ -252,12 +252,19 @@
       roto:      ["✗ Guardado ilegible", "var(--rojo)"],
     };
     const [txt, col] = mapa[estado] || ["", "var(--t2)"];
-    el.textContent = txt;
-    el.style.color = col;
+    // Como en Ironrack: un punto del color del estado y la palabra en gris
+    // («● Sincronizado»). El símbolo del principio lo hace ahora el punto.
+    const palabra = txt.replace(/^\S+\s+/, "");
+    const pintar = (e) => {
+      e.textContent = palabra;
+      e.style.setProperty("--punto", col);
+      e.classList.toggle("con-punto", !!palabra);
+    };
+    pintar(el);
     el.title = detalle || "Estado del guardado";
     // Y en el pie del menú lateral, que en escritorio está siempre a la vista.
     const pie = $("sn-estado");
-    if (pie) { pie.textContent = txt; pie.style.color = col; pie.title = el.title; }
+    if (pie) { pintar(pie); pie.title = el.title; }
     // Punto de aviso sobre el avatar: así se ve que algo pasa sin abrir el menú
     const badge = $("user-badge");
     if (badge) badge.hidden = !(estado === "pendiente" || estado === "local" || estado === "sintoken" ||

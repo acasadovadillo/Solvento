@@ -2527,7 +2527,11 @@
     document.querySelectorAll("#app .page").forEach((p) => p.classList.remove("active"));
     const pg = document.getElementById("v2-page-" + id);
     if (pg) pg.classList.add("active");
-    document.querySelectorAll('.bottom-nav-item, .sn-item').forEach((b) => b.classList.toggle("active", b.dataset.page === id));
+    document.querySelectorAll(".sn-item").forEach((b) => b.classList.toggle("active", b.dataset.page === id));
+    // En la barra del móvil, la entrada de un grupo (Activos) se marca cuando
+    // se está en cualquiera de sus páginas.
+    document.querySelectorAll(".bottom-nav-item").forEach((b) =>
+      b.classList.toggle("active", (b.dataset.paginas || b.dataset.page || "").split(" ").indexOf(id) >= 0));
     // Si la página está dentro de un grupo, el grupo lo dice —y se abre, para
     // que se vea dónde estás— aunque estuviera plegado.
     document.querySelectorAll("#sidebar .sn-grupo").forEach((g) => {
@@ -2566,15 +2570,36 @@
   //
   // Si la página que estabas viendo es la que acabas de ocultar, no te puedes
   // quedar mirándola sin forma de volver: se vuelve a la portada.
+  // La barra de abajo del móvil, como la de Ironrack: como mucho cinco
+  // entradas con icono y nombre, que son las de arriba del menú lateral en su
+  // orden y con lo que cada uno haya ocultado; el resto está en el cajón. Un
+  // grupo lleva a su primera página visible.
+  function pintarBarraMovil(barra) {
+    const visible = (p) => p.fijo || CFG.paginaVisible(p.id);
+    const actual = (document.querySelector("#app .page.active") || {}).id || "";
+    const entradas = [];
+    CFG.menuArbol().forEach((n) => {
+      const paginas = CFG.paginasDe(n).filter(visible);
+      if (!paginas.length || entradas.length >= 5) return;
+      const destino = n.tipo === "pagina" ? n.id : paginas[0].id;
+      const boton = n.tipo === "pagina"
+        ? document.querySelector(`#sidebar .sn-item[data-page="${n.id}"]`)
+        : document.querySelector(`#sidebar .sn-grupo[data-grupo="${n.id}"] > .sn-grupo-btn`);
+      const icono = boton && boton.querySelector("svg") ? boton.querySelector("svg").outerHTML : "";
+      const nombre = n.tipo === "pagina" ? n.pagina.nombre : n.grupo.nombre;
+      const ids = paginas.map((p) => p.id);
+      const activa = ids.some((id) => actual === "v2-page-" + id);
+      entradas.push(`<button class="bottom-nav-item${activa ? " active" : ""}" data-page="${destino}" data-paginas="${ids.join(" ")}"
+        onclick="v2Tab('${destino}')">${icono}<span>${esc(nombre)}</span></button>`);
+    });
+    barra.innerHTML = entradas.join("");
+  }
+
   function aplicarMenu() {
     if (!CFG.PAGINAS) return;
     // Primero el orden: las entradas son elementos que ya existen, así que
     // ordenarlas es volver a colgarlas del mismo sitio en el orden nuevo.
-    // La barra del móvil es plana: no hay sitio para grupos, y ahí van todas
-    // las páginas en su orden de siempre.
-    const orden = CFG.paginasOrdenadas ? CFG.paginasOrdenadas() : CFG.PAGINAS;
     const barra = document.getElementById("v2-bottom-nav");
-    if (barra) orden.forEach((p) => { const b = barra.querySelector(`[data-page="${p.id}"]`); if (b) barra.appendChild(b); });
     // El menú lateral es un árbol: arriba, páginas sueltas y grupos en su
     // orden; dentro de cada grupo, sus páginas en el suyo. Colgar un elemento
     // de un sitio lo quita del anterior, así que esto también coloca en su
@@ -2600,6 +2625,7 @@
       g.classList.toggle("menu-oculto", !algunaVisible);
     };
     if (lista && CFG.menuArbol) CFG.menuArbol().forEach((n) => colocar(n, lista));
+    if (barra && CFG.menuArbol) pintarBarraMovil(barra);
     let huerfana = false;
     CFG.PAGINAS.forEach((p) => {
       const visible = p.fijo || CFG.paginaVisible(p.id);
