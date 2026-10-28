@@ -555,7 +555,7 @@ comprobar("producción es solo acasadovadillo.github.io; lo demás es desarrollo
   !E.prod && E.esProduccion("acasadovadillo.github.io") && !E.esProduccion("localhost") &&
   !E.esProduccion("acasadovadillo.github.io.evil.com") && E.perfil === "perfil.dev.json");
 comprobar("en desarrollo no sale ni una llamada a GitHub",
-  bloquea("https://api.github.com/repos/acasadovadillo/datos-cifrados/contents/Solvento/alberto-data.enc") &&
+  bloquea("https://api.github.com/repos/acasadovadillo/datos-cifrados/contents/Solvento/alberto-solvento.enc") &&
   bloquea("https://raw.githubusercontent.com/acasadovadillo/Solvento/main/x") &&
   !bloquea("http://localhost:4400/__dev/api/repos/dev/datos-cifrados-dev/contents/a") && E.base.api.indexOf("/__dev/api") > 0);
 var perfilDev = JSON.parse(leer(base + "perfil.dev.json"));
@@ -567,7 +567,7 @@ var perfilProd = JSON.parse(leer(base + "perfil.json"));
 comprobar("en producción, cada cuenta lee de datos-cifrados/Solvento/ (privado) y la app es Solvento",
   perfilProd.cuentas.length === 4 && perfilProd.cuentas.every(function (c) {
     var a = c.almacen || {};
-    return a.repo === "datos-cifrados" && a.privado === true && a.path === "Solvento/" + c.usuario + "-data.enc";
+    return a.repo === "datos-cifrados" && a.privado === true && a.path === "Solvento/" + c.usuario + "-solvento.enc";
   }) && perfilProd.app && perfilProd.app.repo === "Solvento");
 comprobar("ningún dato cifrado puede volver a este repositorio público",
   /^\*\.enc$/m.test(leer(base + ".gitignore")) && /\\\.enc\$/.test(leer(base + ".githooks/pre-commit")) &&

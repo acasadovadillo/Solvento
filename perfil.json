@@ -14,7 +14,7 @@
         "owner": "acasadovadillo",
         "repo": "datos-cifrados",
         "branch": "main",
-        "path": "Solvento/alberto-data.enc",
+        "path": "Solvento/alberto-solvento.enc",
         "privado": true
       }
     },
@@ -26,7 +26,7 @@
         "owner": "acasadovadillo",
         "repo": "datos-cifrados",
         "branch": "main",
-        "path": "Solvento/abies-data.enc",
+        "path": "Solvento/abies-solvento.enc",
         "privado": true
       }
     },
@@ -38,7 +38,7 @@
         "owner": "acasadovadillo",
         "repo": "datos-cifrados",
         "branch": "main",
-        "path": "Solvento/hafsa-data.enc",
+        "path": "Solvento/hafsa-solvento.enc",
         "privado": true
       }
     },
@@ -50,7 +50,7 @@
         "owner": "acasadovadillo",
         "repo": "datos-cifrados",
         "branch": "main",
-        "path": "Solvento/paula-data.enc",
+        "path": "Solvento/paula-solvento.enc",
         "privado": true
       }
     }

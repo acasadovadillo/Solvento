@@ -192,7 +192,7 @@
   // dice perfil.json para cada cuenta; esto es solo lo de por defecto. Los
   // datos están en un repositorio PRIVADO, así que hace falta el token hasta
   // para leer (fine-grained, Contents: Read and write, personal de cada cuenta).
-  const SYNC = { owner: "acasadovadillo", repo: "datos-cifrados", branch: "main", path: "Solvento/alberto-data.enc", privado: true };
+  const SYNC = { owner: "acasadovadillo", repo: "datos-cifrados", branch: "main", path: "Solvento/alberto-solvento.enc", privado: true };
 
 
   // ── Configuración editable ──────────────────────────────────────────

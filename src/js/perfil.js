@@ -10,10 +10,10 @@
  *   { "cuentas": [
  *       { "usuario": "alberto", "nombre": "Alberto", "tipo": "persona",
  *         "almacen": { "owner": "…", "repo": "datos-cifrados", "branch": "main",
- *                      "path": "Solvento/alberto-data.enc", "privado": true } },
+ *                      "path": "Solvento/alberto-solvento.enc", "privado": true } },
  *       { "usuario": "abies", "nombre": "ABIES", "tipo": "organizacion",
  *         "almacen": { "owner": "…", "repo": "datos-cifrados", "branch": "main",
- *                      "path": "Solvento/abies-data.enc", "privado": true } } ] }
+ *                      "path": "Solvento/abies-solvento.enc", "privado": true } } ] }
  *
  * El login solo pide usuario y contraseña, como cualquier login: el usuario dice
  * QUÉ cuenta abrir y la contraseña la abre. Dónde guarda cada una es
