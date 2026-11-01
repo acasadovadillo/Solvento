@@ -37,6 +37,13 @@ def tickers():
     except Exception as e:
         print(f"   tickers.json ilegible ({e}); uso la lista interna")
     return YF_TICKERS
+# Índices de referencia para la comparativa de rentabilidad de la app: no son
+# activos tuyos, se descargan siempre. Son ETF de acumulación que cotizan en
+# euros, así que su precio ya es la rentabilidad total (con dividendos) de un
+# inversor en euros, que es con lo que se compara tu cartera.
+REFERENCIAS = ["IWDA.AS",   # MSCI World
+               "SXR8.DE",   # S&P 500
+               "SXRV.DE"]   # Nasdaq 100
 MONEDA = {"IUAA.L": "USD", "AAPL": "USD"}  # AGGG.L cotiza en USD pese al sufijo .L
 
 
@@ -144,7 +151,11 @@ def fetch_metales(fx):
 def main():
     fx = fetch_fx()
     eur, hist = {}, {}
-    for t in tickers():
+    lista = tickers()
+    for t in REFERENCIAS:
+        if t not in lista:
+            lista.append(t)
+    for t in lista:
         p = fetch_precio_eur(t, fx)
         eur[t] = p
         h = fetch_hist_eur(t, fx)
