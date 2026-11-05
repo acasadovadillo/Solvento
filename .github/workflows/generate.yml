@@ -1,10 +1,9 @@
 name: Actualizar precios Solvento
 
-# El sitio es una app cifrada estática (index.html + src/js). Este workflow
-# ya NO reconstruye HTML ni descarga Google Sheets; solo refresca prices.json
-# (precios públicos en EUR) para que la web valore la cartera. Los datos
-# personales viven cifrados en el repositorio privado datos-cifrados, al que
-# este workflow no tiene acceso.
+# Este repositorio solo sirve los precios públicos: refresca prices.json (en EUR)
+# para que Solvento, dentro de SweetSuite, valore la cartera. Los datos personales
+# viven cifrados en el repositorio privado Solvento-Data, al que este workflow no
+# tiene acceso.
 
 on:
   workflow_dispatch:
